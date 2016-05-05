@@ -17,34 +17,6 @@ from traceback import print_exc
 __version__ = "0.1.0"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"
 
-LICENSE = """
-BSD Licence
------------
-Copyright (c) 2016, Ondřej Tůma. All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-    * Redistributions of source code must retain the above copyright notice,
-      this list of conditions and the following disclaimer.
-    * Redistributions in binary form must reproduce the above copyright notice,
-      this list of conditions and the following disclaimer in the documentation
-      and/or other materials provided with the distribution.
-    * Neither the name of the author nor the names of its contributors may be
-      used to endorse or promote products derived from this software without
-      specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER BE LIABLE FOR ANY DIRECT,
-INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
-BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
-LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE
-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
 
 class VimEditor(Gtk.Socket):
     def __init__(self, app_window, server_name, file_name=None):
@@ -166,8 +138,7 @@ class AboutDialog(Gtk.AboutDialog):
         super(AboutDialog, self).__init__()
         self.set_program_name("Formiko")
         self.set_version(__version__)
-        self.set_copyright("(c) 2016")
-        self.set_license(LICENSE)
+        self.set_copyright("(c) 2016 Ondřej Tůma")
         # self.set_website("https://github.com/ondratu/formiko")
         # self.set_website("https://formiko.zeropage.cz")
         self.set_authors([__author__])
@@ -178,14 +149,14 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
         super(QuitDialogWithoutSave, self).__init__(
             parent,
-            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
-            Gtk.MESSAGE_WARNING,
-            Gtk.BUTTONS_OK_CANCEL,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            Gtk.MessageType.WARNING,
+            Gtk.ButtonsType.OK_CANCEL,
             "File %s not saved.\n"
             "Are you sure to quite without save ?" % file_name)
 
 
-class AppWindow(Gtk.Window):
+class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, application, file_name=None):
         self.server_name = str(uuid4())
         self.runing = True
@@ -208,7 +179,7 @@ class AppWindow(Gtk.Window):
         if self.editor.get_vim_is_modified():
             dialog = QuitDialogWithoutSave(self,
                                            self.editor.get_vim_file_name())
-            if dialog.run() != Gtk.RESPONSE_OK:
+            if dialog.run() != Gtk.ResponseType.OK:
                 dialog.destroy()
                 return True
         self.runing = False
@@ -218,7 +189,7 @@ class AppWindow(Gtk.Window):
         if self.editor.get_vim_is_modified():
             dialog = QuitDialogWithoutSave(self,
                                            self.editor.get_vim_file_name())
-            if dialog.run() != Gtk.RESPONSE_OK:
+            if dialog.run() != Gtk.ResponseType.OK:
                 dialog.destroy()
                 return
         self.runing = False
@@ -305,10 +276,9 @@ class AppWindow(Gtk.Window):
         dialog = Gtk.FileChooserDialog(
             "Open file",
             self,
-            Gtk.FILE_CHOOSER_ACTION_OPEN,
-            (Gtk.STOCK_CANCEL, Gtk.RESPONSE_REJECT,
-             Gtk.STOCK_OPEN, Gtk.RESPONSE_ACCEPT),
-            backend=None)
+            Gtk.FileChooserAction.OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT,
+             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
         filter_rst = Gtk.FileFilter()
         filter_rst.set_name("reSructuredText")
         filter_rst.add_pattern("*.rst")
@@ -325,7 +295,7 @@ class AppWindow(Gtk.Window):
         filter_all.add_pattern("*")
         dialog.add_filter(filter_all)
 
-        if dialog.run() == Gtk.RESPONSE_ACCEPT:
+        if dialog.run() == Gtk.ResponseType.OK:
             self.__application.open(dialog.get_filename())
         dialog.destroy()
 
@@ -347,7 +317,7 @@ class Application(GObject.GObject):
         win = AppWindow(self, file_name)
         win.show_all()
 
-    def activate(self):
+    def activate(self, *args):
         win = AppWindow(self)
         win.show_all()
 
