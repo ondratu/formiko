@@ -43,6 +43,6 @@ setup(
         "Topic :: Text Processing",
         "Topic :: Text Processing :: Markup",
         "Topic :: Utilities"],
-    requires=['docutils (>= 0.12)', 'pygtk'],
+    requires=['docutils (>= 0.12)', 'python-gi'],
     install_requires=['docutils >= 0.12']
 )

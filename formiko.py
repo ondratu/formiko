@@ -5,10 +5,7 @@ from docutils.core import publish_string
 # from docutils_tinyhtml import Writer
 from docutils.writers.html4css1 import Writer
 
-import gtk
-import gobject
-import glib
-import webkit
+from gi.repository import Gtk, Gdk, GObject, GLib, WebKit
 
 from subprocess import Popen, PIPE, check_output
 from threading import Thread
@@ -48,7 +45,7 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 
-class VimEditor(gtk.Socket):
+class VimEditor(Gtk.Socket):
     def __init__(self, app_window, server_name, file_name=None):
         super(VimEditor, self).__init__()
         self.server_name = server_name
@@ -124,11 +121,12 @@ class VimEditor(gtk.Socket):
         self.vim_remote_send("<ESC>:q! <CR>")
 
 
-class Renderer(gtk.ScrolledWindow):
+class Renderer(Gtk.ScrolledWindow):
     def __init__(self):
         super(Renderer, self).__init__()
-        self.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
-        self.webview = webkit.WebView()
+        self.set_policy(Gtk.PolicyType.AUTOMATIC,
+                        Gtk.PolicyType.AUTOMATIC)
+        self.webview = WebKit.WebView()
         self.sb = self.get_vscrollbar()
         self.add(self.webview)
         self.writer = Writer()
@@ -159,7 +157,7 @@ class Renderer(gtk.ScrolledWindow):
         self.webview.load_string(html, "text/html", "UTF-8", "file:///")
 
 
-class AboutDialog(gtk.AboutDialog):
+class AboutDialog(Gtk.AboutDialog):
     def __init__(self):
         super(AboutDialog, self).__init__()
         self.set_program_name("Formiko")
@@ -172,18 +170,18 @@ class AboutDialog(gtk.AboutDialog):
         # self.set_logo("formiko.svg")
 
 
-class QuitDialogWithoutSave(gtk.MessageDialog):
+class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
         super(QuitDialogWithoutSave, self).__init__(
             parent,
-            gtk.DIALOG_MODAL | gtk.DIALOG_DESTROY_WITH_PARENT,
-            gtk.MESSAGE_WARNING,
-            gtk.BUTTONS_OK_CANCEL,
+            Gtk.DIALOG_MODAL | Gtk.DIALOG_DESTROY_WITH_PARENT,
+            Gtk.MESSAGE_WARNING,
+            Gtk.BUTTONS_OK_CANCEL,
             "File %s not saved.\n"
             "Are you sure to quite without save ?" % file_name)
 
 
-class AppWindow(gtk.Window):
+class AppWindow(Gtk.Window):
     def __init__(self, application, file_name=None):
         self.server_name = str(uuid4())
         self.runing = True
@@ -192,12 +190,12 @@ class AppWindow(gtk.Window):
         super(AppWindow, self).__init__()
         self.connect("delete-event", self.on_delete)
         self.set_title("Formiko")
-        self.set_icon(self.render_icon(gtk.STOCK_EDIT, gtk.ICON_SIZE_DIALOG))
+        self.set_icon(self.render_icon(Gtk.STOCK_EDIT, Gtk.IconSize.DIALOG))
         self.layout(file_name)
 
         self.__last_changes = 0
         self.__file_name = ''
-        glib.timeout_add(200, self.check_in_thread)
+        GLib.timeout_add(200, self.check_in_thread)
 
     def __del__(self):
         self.__application.release()
@@ -206,17 +204,17 @@ class AppWindow(gtk.Window):
         if self.editor.get_vim_is_modified():
             dialog = QuitDialogWithoutSave(self,
                                            self.editor.get_vim_file_name())
-            if dialog.run() != gtk.RESPONSE_OK:
+            if dialog.run() != Gtk.RESPONSE_OK:
                 dialog.destroy()
                 return True
         self.runing = False
         self.editor.vim_quit()
 
-    def do_destroy(self, *args):
+    def win_destroy(self, *args):
         if self.editor.get_vim_is_modified():
             dialog = QuitDialogWithoutSave(self,
                                            self.editor.get_vim_file_name())
-            if dialog.run() != gtk.RESPONSE_OK:
+            if dialog.run() != Gtk.RESPONSE_OK:
                 dialog.destroy()
                 return
         self.runing = False
@@ -227,16 +225,16 @@ class AppWindow(gtk.Window):
         self.destroy()
 
     def fill_toolbar(self, toolbar):
-        tb_quit = gtk.ToolButton(gtk.STOCK_QUIT)
-        tb_quit.connect("clicked", self.do_destroy)
+        tb_quit = Gtk.ToolButton(Gtk.STOCK_QUIT)
+        tb_quit.connect("clicked", self.win_destroy)
         toolbar.insert(tb_quit, -1)
-        tb_new = gtk.ToolButton(gtk.STOCK_NEW)
+        tb_new = Gtk.ToolButton(Gtk.STOCK_NEW)
         tb_new.connect("clicked", self.__application.activate)
         toolbar.insert(tb_new, -1)
-        tb_open = gtk.ToolButton(gtk.STOCK_OPEN)
+        tb_open = Gtk.ToolButton(Gtk.STOCK_OPEN)
         tb_open.connect("clicked", self.open)
         toolbar.insert(tb_open, -1)
-        tb_about = gtk.ToolButton(gtk.STOCK_ABOUT)
+        tb_about = Gtk.ToolButton(Gtk.STOCK_ABOUT)
         tb_about.connect("clicked", self.about)
         toolbar.insert(tb_about, -1)
 
@@ -250,21 +248,22 @@ class AppWindow(gtk.Window):
 
     def layout(self, file_name):
         self.set_default_size(800, 600)
-        box = gtk.VBox()
+        box = Gtk.VBox()
         self.add(box)
 
-        toolbar = gtk.Toolbar()
-        box.pack_start(toolbar, False, False)
+        toolbar = Gtk.Toolbar()
+        box.pack_start(toolbar, False, False, 0)
         self.fill_toolbar(toolbar)
 
-        self.paned = gtk.HPaned()
-        box.pack_start(self.paned)
+        self.paned = Gtk.HPaned()
+        box.pack_start(self.paned, True, True, 0)
         self.fill_panned(file_name)
 
     def check_in_thread(self):
         if self.runing:
             thread = Thread(target=self.refresh_html)
             thread.start()
+            pass
 
     def refresh_html(self):
         if not self.runing:
@@ -288,8 +287,8 @@ class AppWindow(gtk.Window):
             if not self.runing:
                 return
             row, col = self.editor.get_vim_pos()
-            glib.idle_add(self.renderer.render, self, buff, row, col)
-        glib.timeout_add(100, self.check_in_thread)
+            GLib.idle_add(self.renderer.render, self, buff, row, col)
+        GLib.timeout_add(100, self.check_in_thread)
 
     def about(self, *args):
         dialog = AboutDialog()
@@ -297,35 +296,35 @@ class AppWindow(gtk.Window):
         dialog.destroy()
 
     def open(self, *args):
-        dialog = gtk.FileChooserDialog(
+        dialog = Gtk.FileChooserDialog(
             "Open file",
             self,
-            gtk.FILE_CHOOSER_ACTION_OPEN,
-            (gtk.STOCK_CANCEL, gtk.RESPONSE_REJECT,
-             gtk.STOCK_OPEN, gtk.RESPONSE_ACCEPT),
+            Gtk.FILE_CHOOSER_ACTION_OPEN,
+            (Gtk.STOCK_CANCEL, Gtk.RESPONSE_REJECT,
+             Gtk.STOCK_OPEN, Gtk.RESPONSE_ACCEPT),
             backend=None)
-        filter_rst = gtk.FileFilter()
+        filter_rst = Gtk.FileFilter()
         filter_rst.set_name("reSructuredText")
         filter_rst.add_pattern("*.rst")
         filter_rst.add_pattern("*.RST")
         dialog.add_filter(filter_rst)
 
-        filter_txt = gtk.FileFilter()
+        filter_txt = Gtk.FileFilter()
         filter_txt.set_name("plain text")
         filter_txt.add_mime_type("plain/text")
         dialog.add_filter(filter_txt)
 
-        filter_all = gtk.FileFilter()
+        filter_all = Gtk.FileFilter()
         filter_all.set_name("all files")
         filter_all.add_pattern("*")
         dialog.add_filter(filter_all)
 
-        if dialog.run() == gtk.RESPONSE_ACCEPT:
+        if dialog.run() == Gtk.RESPONSE_ACCEPT:
             self.__application.open(dialog.get_filename())
         dialog.destroy()
 
 
-class Application(gobject.GObject):
+class Application(GObject.GObject):
     def __init__(self):
         super(Application, self).__init__()
         self.__counter = 0
@@ -336,7 +335,7 @@ class Application(gobject.GObject):
     def release(self, *args):
         self.__counter -= 1
         if self.__counter < 1:
-            gtk.main_quit()
+            Gtk.main_quit()
 
     def open(self, file_name):
         win = AppWindow(self, file_name)
@@ -361,10 +360,10 @@ class Application(gobject.GObject):
             self.open(args.file)
         else:
             self.activate()
-        return gtk.main()
+        return Gtk.main()
 
 
 if __name__ == "__main__":
-    gtk.gdk.threads_init()
+    Gdk.threads_init()
     app = Application()
     exit(app.run())
