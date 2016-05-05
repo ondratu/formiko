@@ -78,7 +78,7 @@ class VimEditor(Gtk.Socket):
             "--servername", self.server_name,
             "--remote-expr", command
             ])
-        return str(out).strip()
+        return out.decode('utf-8').strip()
 
     def vim_remote_send(self, command):
         check_output([
@@ -135,7 +135,7 @@ class Renderer(Gtk.ScrolledWindow):
     def render(self, app_win, rst, row=0, col=0):
         try:
             k = 0
-            for i in xrange(row-1):
+            for i in range(row-1):
                 k = rst.find('\n', k)+1
             k += col
             a, b = len(rst[:k]), len(rst[k:])
@@ -146,7 +146,7 @@ class Renderer(Gtk.ScrolledWindow):
                 writer_name='html',
                 settings_overrides={
                     'warning_stream': StringIO()
-                })
+                }).decode('utf-8')
             html += """
                 <script>
                   window.scrollTo(
