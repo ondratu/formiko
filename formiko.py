@@ -12,6 +12,7 @@ from threading import Thread
 from uuid import uuid4
 from io import StringIO
 from argparse import ArgumentParser
+from traceback import print_exc
 
 __version__ = "0.1.0"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"
@@ -132,29 +133,32 @@ class Renderer(Gtk.ScrolledWindow):
         self.writer = Writer()
 
     def render(self, app_win, rst, row=0, col=0):
-        k = 0
-        for i in xrange(row-1):
-            k = rst.find('\n', k)+1
-        k += col
-        a, b = len(rst[:k]), len(rst[k:])
-        position = (float(a)/(a+b)) if a or b else 0
-        html = publish_string(
-            source=rst,
-            writer=self.writer,
-            writer_name='html',
-            settings_overrides={
-                'warning_stream': StringIO()
-            })
-        html += """
-            <script>
-              window.scrollTo(
-                 0,
-                 (document.documentElement.scrollHeight-window.innerHeight)*%f)
-            </script>
-        """ % position
-        if not app_win.runing:
-            return
-        self.webview.load_string(html, "text/html", "UTF-8", "file:///")
+        try:
+            k = 0
+            for i in xrange(row-1):
+                k = rst.find('\n', k)+1
+            k += col
+            a, b = len(rst[:k]), len(rst[k:])
+            position = (float(a)/(a+b)) if a or b else 0
+            html = publish_string(
+                source=rst,
+                writer=self.writer,
+                writer_name='html',
+                settings_overrides={
+                    'warning_stream': StringIO()
+                })
+            html += """
+                <script>
+                  window.scrollTo(
+                     0,
+                     (document.documentElement.scrollHeight-window.innerHeight)*%f)
+                </script>
+            """ % position
+            if not app_win.runing:
+                return
+            self.webview.load_string(html, "text/html", "UTF-8", "file:///")
+        except:
+            print_exc()
 
 
 class AboutDialog(Gtk.AboutDialog):
@@ -263,32 +267,34 @@ class AppWindow(Gtk.Window):
         if self.runing:
             thread = Thread(target=self.refresh_html)
             thread.start()
-            pass
 
     def refresh_html(self):
-        if not self.runing:
-            return
-        last_changes = self.editor.get_vim_changes()
-        if not self.runing:
-            return
-        file_name = self.editor.get_vim_file_name()
-        if last_changes > self.__last_changes \
-                or file_name != self.__file_name:
-            self.set_title(("%s - " % file_name if file_name else '') +
-                           "Formiko")
-            self.__file_name = file_name
-            self.__last_changes = last_changes
+        try:
             if not self.runing:
                 return
-            lines = self.editor.get_vim_lines()
+            last_changes = self.editor.get_vim_changes()
             if not self.runing:
                 return
-            buff = self.editor.get_vim_get_buffer(lines)
-            if not self.runing:
-                return
-            row, col = self.editor.get_vim_pos()
-            GLib.idle_add(self.renderer.render, self, buff, row, col)
-        GLib.timeout_add(100, self.check_in_thread)
+            file_name = self.editor.get_vim_file_name()
+            if last_changes > self.__last_changes \
+                    or file_name != self.__file_name:
+                self.set_title(("%s - " % file_name if file_name else '') +
+                               "Formiko")
+                self.__file_name = file_name
+                self.__last_changes = last_changes
+                if not self.runing:
+                    return
+                lines = self.editor.get_vim_lines()
+                if not self.runing:
+                    return
+                buff = self.editor.get_vim_get_buffer(lines)
+                if not self.runing:
+                    return
+                row, col = self.editor.get_vim_pos()
+                GLib.idle_add(self.renderer.render, self, buff, row, col)
+            GLib.timeout_add(100, self.check_in_thread)
+        except:
+            print_exc()
 
     def about(self, *args):
         dialog = AboutDialog()
