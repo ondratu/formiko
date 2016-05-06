@@ -5,17 +5,19 @@ from docutils.core import publish_string
 # from docutils_tinyhtml import Writer
 from docutils.writers.html4css1 import Writer
 
-from gi.repository import Gtk, Gdk, GObject, GLib, WebKit
+from gi import require_version
+from gi.repository import Gtk, Gdk, GLib, WebKit, Gio
 
 from subprocess import Popen, PIPE, check_output
 from threading import Thread
 from uuid import uuid4
 from io import StringIO
-from argparse import ArgumentParser
 from traceback import print_exc
+from sys import argv
 
 __version__ = "0.1.0"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"
+require_version('Gtk', '3.0')
 
 
 class VimEditor(Gtk.Socket):
@@ -300,46 +302,63 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.destroy()
 
 
-class Application(GObject.GObject):
-    def __init__(self):
-        super(Application, self).__init__()
-        self.__counter = 0
+class Application(Gtk.Application):
 
-    def hold(self):
-        self.__counter += 1
+    def __init__(self, *args, **kwargs):
+        super(Application, self).__init__(
+            *args, application_id="cz.zeropage.formiko",
+            flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
+            **kwargs)
+        self.add_main_option("test", ord("t"), GLib.OptionFlags.NONE,
+                             GLib.OptionArg.NONE, "Command line test", None)
 
-    def release(self, *args):
-        self.__counter -= 1
-        if self.__counter < 1:
-            Gtk.main_quit()
+    def do_startup(self):
+        Gtk.Application.do_startup(self)
+
+        action = Gio.SimpleAction.new("about", None)
+        action.connect("activate", self.on_about)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("quit", None)
+        action.connect("activate", self.on_quit)
+        self.add_action(action)
+
+    def do_activate(self):
+        win = AppWindow(self)
+        win.show_all()
+        win.present()
+
+    def do_command_line(self, command_line):
+        options = command_line.get_options_dict()
+        arguments = command_line.get_arguments()[1:]
+        print(options, arguments)
+        last = arguments[-1:][0] if arguments else ''
+
+        if options.contains("test"):
+            print("Test argument recieved")
+        elif last and last != '-':
+            print('open')
+            self.open(last)
+        else:
+            print('activate')
+            self.activate()
+        return 0
+
+    def on_about(self, action, param):
+        print(action, param)
+        # about_dialog = Gtk.AboutDialog(transient_for=self.window, modal=True)
+        # about_dialog.present()
+
+    def on_quit(self, action, param):
+        self.quit()
 
     def open(self, file_name):
         win = AppWindow(self, file_name)
         win.show_all()
-
-    def activate(self, *args):
-        win = AppWindow(self)
-        win.show_all()
-
-    def run(self):
-        parser = ArgumentParser(
-            description="reStructuredText editor and live previewer",
-            usage="%(prog)s [options] FILE")
-        parser.add_argument(
-            "file", type=str, default="", nargs='?', metavar="FILE",
-            help="source file (rst)")
-        parser.add_argument(
-            '--version', action='version',
-            version='%%(prog)s %s' % __version__)
-        args = parser.parse_args()
-        if args.file:
-            self.open(args.file)
-        else:
-            self.activate()
-        return Gtk.main()
+        win.present()
 
 
 if __name__ == "__main__":
     Gdk.threads_init()
     app = Application()
-    exit(app.run())
+    exit(app.run(argv))
