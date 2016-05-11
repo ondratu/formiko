@@ -14,6 +14,7 @@ from uuid import uuid4
 from io import StringIO
 from traceback import print_exc
 from sys import argv
+from os import stat
 
 __version__ = "0.1.0"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"
@@ -159,9 +160,10 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
 
 
 class AppWindow(Gtk.ApplicationWindow):
-    def __init__(self, application, file_name=None):
+    def __init__(self, application, file_name=None, preview=False):
         self.server_name = str(uuid4())
         self.runing = True
+        self.preview = file_name if preview else None
         self.__application = application
         application.hold()
         super(AppWindow, self).__init__()
@@ -178,24 +180,32 @@ class AppWindow(Gtk.ApplicationWindow):
         self.__application.release()
 
     def on_delete(self, *args):
-        if self.editor.get_vim_is_modified():
-            dialog = QuitDialogWithoutSave(self,
-                                           self.editor.get_vim_file_name())
-            if dialog.run() != Gtk.ResponseType.OK:
-                dialog.destroy()
-                return True
-        self.runing = False
-        self.editor.vim_quit()
+        if not self.preview:
+            # TODO: move next code to extra method...
+            if self.editor.get_vim_is_modified():
+                dialog = QuitDialogWithoutSave(self,
+                                               self.editor.get_vim_file_name())
+                if dialog.run() != Gtk.ResponseType.OK:
+                    dialog.destroy()
+                    return True
+            self.runing = False
+            self.editor.vim_quit()
+        else:
+            self.runing = False
 
     def win_destroy(self, *args):
-        if self.editor.get_vim_is_modified():
-            dialog = QuitDialogWithoutSave(self,
-                                           self.editor.get_vim_file_name())
-            if dialog.run() != Gtk.ResponseType.OK:
-                dialog.destroy()
-                return
-        self.runing = False
-        self.editor.vim_quit()  # do call destroy_from_vim
+        if not self.preview:
+            if self.editor.get_vim_is_modified():
+                dialog = QuitDialogWithoutSave(self,
+                                               self.editor.get_vim_file_name())
+                if dialog.run() != Gtk.ResponseType.OK:
+                    dialog.destroy()
+                    return
+            self.runing = False
+            self.editor.vim_quit()  # do call destroy_from_vim
+        else:
+            self.runing = False
+            self.destroy()
 
     def destroy_from_vim(self, *args):
         self.runing = False
@@ -206,18 +216,17 @@ class AppWindow(Gtk.ApplicationWindow):
         tb_quit.connect("clicked", self.win_destroy)
         toolbar.insert(tb_quit, -1)
         tb_new = Gtk.ToolButton(Gtk.STOCK_NEW)
-        tb_new.connect("clicked", self.__application.activate)
+        tb_new.set_action_name("app.new-window")
         toolbar.insert(tb_new, -1)
         tb_open = Gtk.ToolButton(Gtk.STOCK_OPEN)
-        tb_open.connect("clicked", self.open)
+        tb_open.connect("clicked", self.open_file)
         toolbar.insert(tb_open, -1)
         tb_about = Gtk.ToolButton(Gtk.STOCK_ABOUT)
-        tb_about.connect("clicked", self.about)
         toolbar.insert(tb_about, -1)
+        tb_about.set_action_name("app.about")
 
     def fill_panned(self, file_name):
         self.paned.set_position(400)
-
         self.editor = VimEditor(self, self.server_name, file_name)
         self.paned.add1(self.editor)
         self.renderer = Renderer()
@@ -232,16 +241,24 @@ class AppWindow(Gtk.ApplicationWindow):
         box.pack_start(toolbar, False, False, 0)
         self.fill_toolbar(toolbar)
 
-        self.paned = Gtk.HPaned()
-        box.pack_start(self.paned, True, True, 0)
-        self.fill_panned(file_name)
+        if not self.preview:
+            self.paned = Gtk.HPaned()
+            box.pack_start(self.paned, True, True, 0)
+            self.fill_panned(file_name)
+        else:
+            self.renderer = Renderer()
+            box.pack_start(self.renderer, True, True, 0)
+    # enddef
 
     def check_in_thread(self):
         if self.runing:
-            thread = Thread(target=self.refresh_html)
+            if not self.preview:
+                thread = Thread(target=self.refresh_from_vim)
+            else:
+                thread = Thread(target=self.refresh_from_file)
             thread.start()
 
-    def refresh_html(self):
+    def refresh_from_vim(self):
         try:
             if not self.runing:
                 return
@@ -269,12 +286,19 @@ class AppWindow(Gtk.ApplicationWindow):
         except:
             print_exc()
 
-    def about(self, *args):
-        dialog = AboutDialog()
-        dialog.run()
-        dialog.destroy()
+    def refresh_from_file(self):
+        try:
+            last_changes = stat(self.preview).st_ctime
+            if last_changes > self.__last_changes:
+                self.__last_changes = last_changes
+                with open(self.preview) as source:
+                    buff = source.read()
+                    GLib.idle_add(self.renderer.render, self, buff)
+        except:
+            print_exc()
+        GLib.timeout_add(500, self.check_in_thread)
 
-    def open(self, *args):
+    def open_file(self, *args):
         dialog = Gtk.FileChooserDialog(
             "Open file",
             self,
@@ -298,7 +322,7 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter(filter_all)
 
         if dialog.run() == Gtk.ResponseType.OK:
-            self.__application.open(dialog.get_filename())
+            self.__application.new_window(dialog.get_filename())
         dialog.destroy()
 
 
@@ -309,8 +333,8 @@ class Application(Gtk.Application):
             *args, application_id="cz.zeropage.formiko",
             flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
             **kwargs)
-        self.add_main_option("test", ord("t"), GLib.OptionFlags.NONE,
-                             GLib.OptionArg.NONE, "Command line test", None)
+        self.add_main_option("preview", ord("p"), GLib.OptionFlags.NONE,
+                             GLib.OptionArg.NONE, "Preview only", None)
 
     def do_startup(self):
         Gtk.Application.do_startup(self)
@@ -319,43 +343,47 @@ class Application(Gtk.Application):
         action.connect("activate", self.on_about)
         self.add_action(action)
 
+        action = Gio.SimpleAction.new("new-window", None)
+        action.connect("activate", self.on_new_window)
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("quit", None)
         action.connect("activate", self.on_quit)
         self.add_action(action)
 
     def do_activate(self):
-        win = AppWindow(self)
-        win.show_all()
-        win.present()
+        self.new_window()
 
     def do_command_line(self, command_line):
         options = command_line.get_options_dict()
         arguments = command_line.get_arguments()[1:]
-        print(options, arguments)
         last = arguments[-1:][0] if arguments else ''
 
-        if options.contains("test"):
-            print("Test argument recieved")
+        if options.contains("preview") and last and last != '-':
+            self.new_window(last, True)
         elif last and last != '-':
-            print('open')
-            self.open(last)
+            self.new_window(last)
         else:
-            print('activate')
-            self.activate()
+            self.new_window()
         return 0
 
-    def on_about(self, action, param):
-        print(action, param)
+    def on_about(self, action, *params):
+        dialog = AboutDialog()
+        dialog.present()
+        # print(action, param)
         # about_dialog = Gtk.AboutDialog(transient_for=self.window, modal=True)
         # about_dialog.present()
 
-    def on_quit(self, action, param):
+    def on_quit(self, action, *params):
         self.quit()
 
-    def open(self, file_name):
-        win = AppWindow(self, file_name)
+    def on_new_window(self, action, *params):
+        self.new_window()
+
+    def new_window(self, file_name=None, preview=False):
+        win = AppWindow(self, file_name, preview)
         win.show_all()
-        win.present()
+        self.add_window(win)
 
 
 if __name__ == "__main__":
