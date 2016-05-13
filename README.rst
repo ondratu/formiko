@@ -7,7 +7,6 @@ At this moment, is based on vim editor included to window next to Webkit html pr
 
 TODO
 ----
-* only preview mode
 * vim will be variable editor to GtkSourceView
 * markdown support
 * other html writers support

@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 
-try:
-    from setuptools import setup
-except:
-    from distutils.core import setup
+from setuptools import setup
 
-__version__ = "0.1.0"
-__url__ = "https://github.com/ondratu/formiko"
+from formiko import __version__, __url__
 
 
 def doc():
@@ -20,8 +16,7 @@ setup(
     author="Ondrej Tuma",
     author_email="mcbig@zeropage.cz",
     url=__url__,
-    # py_modules=['formiko'],
-    scripts=['formiko.py'],
+    packages=['formiko'],
     # data_files=[('css', ['tiny-writer.css'])],
     keywords=["doc", "html", "rst", "editor"],
     license="BSD",
@@ -44,5 +39,10 @@ setup(
         "Topic :: Text Processing :: Markup",
         "Topic :: Utilities"],
     requires=['docutils (>= 0.12)', 'python_gi'],
-    install_requires=['docutils >= 0.12']
+    install_requires=['docutils >= 0.12'],
+    entry_points={
+        'gui_scripts': [
+            'formiko = formiko.main:main',
+        ]
+    }
 )
