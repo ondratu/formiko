@@ -8,7 +8,7 @@ class VimEditor(Gtk.Socket):
     def __init__(self, app_window, server_name, file_name=None):
         super(VimEditor, self).__init__()
         self.server_name = server_name
-        self.file_name = file_name
+        self.__file_name = file_name
         self.connect("plug-removed", app_window.destroy_from_vim)
         self.connect("hierarchy-changed", self.hierarchy_changed)
 
@@ -24,8 +24,8 @@ class VimEditor(Gtk.Socket):
             "--echo-wid",
             # no menu (m) a no toolbar (T)
             "-c", "set go-=m go-=T filetype=rst"]
-        if self.file_name:
-            args.append(self.file_name)
+        if self.__file_name:
+            args.append(self.__file_name)
         server = Popen(args, stdout=PIPE)
         server.stdout.readline()    # read wid, so server was started
         self.show()
@@ -64,12 +64,6 @@ class VimEditor(Gtk.Socket):
     def get_vim_file_path(self):
         return self.vim_remote_expr("expand('%:p')")
 
-    def get_vim_file_name(self):
-        return self.vim_remote_expr("@%")
-
-    def get_vim_is_modified(self):
-        return bool(int(self.vim_remote_expr("&l:modified")))
-
     def get_vim_encoding(self):
         return self.vim_remote_expr("&l:encoding")
 
@@ -78,3 +72,11 @@ class VimEditor(Gtk.Socket):
 
     def vim_quit(self):
         self.vim_remote_send("<ESC>:q! <CR>")
+
+    @property
+    def is_modified(self):
+        return bool(int(self.vim_remote_expr("&l:modified")))
+
+    @property
+    def file_name(self):
+        return self.vim_remote_expr("@%")

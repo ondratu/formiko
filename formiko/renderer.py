@@ -19,13 +19,9 @@ class Renderer(Gtk.ScrolledWindow):
         self.add(self.webview)
         self.writer = Writer()
 
-    def render(self, app_win, rst, row=0, col=0):
+    def render(self, app_win, rst, pos):
         try:
-            k = 0
-            for i in range(row-1):
-                k = rst.find('\n', k)+1
-            k += col
-            a, b = len(rst[:k]), len(rst[k:])
+            a, b = len(rst[:pos]), len(rst[pos:])
             position = (float(a)/(a+b)) if a or b else 0
             html = publish_string(
                 source=rst,

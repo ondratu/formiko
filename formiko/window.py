@@ -7,15 +7,17 @@ from traceback import print_exc
 from os import stat
 
 from formiko.vim import VimEditor
+from formiko.sourceview import SourceView
 from formiko.renderer import Renderer
 from formiko.dialogs import QuitDialogWithoutSave, AboutDialog
 
 
 class AppWindow(Gtk.ApplicationWindow):
-    def __init__(self, file_name=None, preview=False):
+    def __init__(self, editor, file_name=''):
+        assert editor in ('vim', 'source', None)
         self.server_name = str(uuid4())
         self.runing = True
-        self.preview = file_name if preview else None
+        self.editor = editor
         super(AppWindow, self).__init__()
         self.connect("delete-event", self.on_delete)
         self.set_title("Formiko")
@@ -23,38 +25,32 @@ class AppWindow(Gtk.ApplicationWindow):
         self.layout(file_name)
 
         self.__last_changes = 0
-        self.__file_name = ''
+        self.__file_name = file_name
         GLib.timeout_add(200, self.check_in_thread)
 
     def __del__(self):
         pass
 
-    def on_delete(self, *args):
-        if not self.preview:
-            # TODO: move next code to extra method...
-            if self.editor.get_vim_is_modified():
+    def ask_if_modified(self):
+        if self.editor:
+            if self.editor.is_modified:
                 dialog = QuitDialogWithoutSave(self,
-                                               self.editor.get_vim_file_name())
+                                               self.editor.file_name)
                 if dialog.run() != Gtk.ResponseType.OK:
                     dialog.destroy()
-                    return True
+                    return False        # fo not quit
             self.runing = False
-            self.editor.vim_quit()
+            if isinstance(self.editor, VimEditor):
+                self.editor.vim_quit()  # do call destroy_from_vim
         else:
             self.runing = False
+        return True                     # do quit
+
+    def on_delete(self, *args):
+        return not self.ask_if_modified()
 
     def win_destroy(self, *args):
-        if not self.preview:
-            if self.editor.get_vim_is_modified():
-                dialog = QuitDialogWithoutSave(self,
-                                               self.editor.get_vim_file_name())
-                if dialog.run() != Gtk.ResponseType.OK:
-                    dialog.destroy()
-                    return
-            self.runing = False
-            self.editor.vim_quit()  # do call destroy_from_vim
-        else:
-            self.runing = False
+        if self.ask_if_modified():
             self.destroy()
 
     def destroy_from_vim(self, *args):
@@ -80,7 +76,10 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def fill_panned(self, file_name):
         self.paned.set_position(400)
-        self.editor = VimEditor(self, self.server_name, file_name)
+        if self.editor == 'vim':
+            self.editor = VimEditor(self, self.server_name, file_name)
+        else:
+            self.editor = SourceView(file_name)
         self.paned.add1(self.editor)
         self.renderer = Renderer()
         self.paned.add2(self.renderer)
@@ -94,7 +93,7 @@ class AppWindow(Gtk.ApplicationWindow):
         box.pack_start(toolbar, False, False, 0)
         self.fill_toolbar(toolbar)
 
-        if not self.preview:
+        if self.editor:
             self.paned = Gtk.HPaned()
             box.pack_start(self.paned, True, True, 0)
             self.fill_panned(file_name)
@@ -105,9 +104,11 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def check_in_thread(self):
         if self.runing:
-            if not self.preview:
+            if isinstance(self.editor, VimEditor):
                 thread = Thread(target=self.refresh_from_vim)
-            else:
+            elif isinstance(self.editor, SourceView):
+                thread = Thread(target=self.refresh_from_source)
+            else:   # self.editor = None
                 thread = Thread(target=self.refresh_from_file)
             thread.start()
 
@@ -118,7 +119,7 @@ class AppWindow(Gtk.ApplicationWindow):
             last_changes = self.editor.get_vim_changes()
             if not self.runing:
                 return
-            file_name = self.editor.get_vim_file_name()
+            file_name = self.editor.file_name
             if last_changes > self.__last_changes \
                     or file_name != self.__file_name:
                 self.set_title(("%s - " % file_name if file_name else '') +
@@ -134,17 +135,32 @@ class AppWindow(Gtk.ApplicationWindow):
                 if not self.runing:
                     return
                 row, col = self.editor.get_vim_pos()
-                GLib.idle_add(self.renderer.render, self, buff, row, col)
+                pos = 0
+                for i in range(row-1):
+                    pos = buff.find('\n', pos)+1
+                pos += col
+                GLib.idle_add(self.renderer.render, self, buff, pos)
+            GLib.timeout_add(100, self.check_in_thread)
+        except:
+            print_exc()
+
+    def refresh_from_source(self):
+        try:
+            last_changes = self.editor.changes
+            if last_changes > self.__last_changes:
+                self.__last_changes = last_changes
+                GLib.idle_add(self.renderer.render, self,
+                              self.editor.text, self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
         except:
             print_exc()
 
     def refresh_from_file(self):
         try:
-            last_changes = stat(self.preview).st_ctime
+            last_changes = stat(self.file_name).st_ctime
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                with open(self.preview) as source:
+                with open(self.file_name) as source:
                     buff = source.read()
                     GLib.idle_add(self.renderer.render, self, buff)
         except:
