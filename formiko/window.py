@@ -9,7 +9,8 @@ from os import stat
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
 from formiko.renderer import Renderer
-from formiko.dialogs import QuitDialogWithoutSave, AboutDialog
+from formiko.dialogs import QuitDialogWithoutSave, AboutDialog, \
+    FileOpenDialog
 
 
 class AppWindow(Gtk.ApplicationWindow):
@@ -67,12 +68,14 @@ class AppWindow(Gtk.ApplicationWindow):
         tb_open = Gtk.ToolButton(Gtk.STOCK_OPEN)
         tb_open.connect("clicked", self.open_file)
         toolbar.insert(tb_open, -1)
+        if self.editor == 'source':
+            self.tb_save = Gtk.ToolButton(Gtk.STOCK_SAVE)
+            toolbar.insert(self.tb_save, -1)
+            self.tb_save_as = Gtk.ToolButton(Gtk.STOCK_SAVE_AS)
+            toolbar.insert(self.tb_save_as, -1)
         tb_about = Gtk.ToolButton(Gtk.STOCK_ABOUT)
         tb_about.connect("clicked", self.about)
         toolbar.insert(tb_about, -1)
-        tb_new = Gtk.ToolButton(Gtk.STOCK_NEW)
-        tb_new.set_action_name("app.test")
-        toolbar.insert(tb_new, -1)
 
     def fill_panned(self, file_name):
         self.paned.set_position(400)
@@ -80,6 +83,8 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor = VimEditor(self, self.server_name, file_name)
         else:
             self.editor = SourceView(file_name)
+            self.tb_save.connect("clicked", self.editor.save, self)
+            self.tb_save_as.connect("clicked", self.editor.save_as, self)
         self.paned.add1(self.editor)
         self.renderer = Renderer()
         self.paned.add2(self.renderer)
@@ -146,6 +151,11 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def refresh_from_source(self):
         try:
+            star = '*' if self.editor.is_modified else ''
+            title = star + (self.editor.file_name or 'Not saved document')
+            if title != self.get_title():
+                GLib.idle_add(self.set_title, title)
+
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
@@ -168,30 +178,14 @@ class AppWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(500, self.check_in_thread)
 
     def open_file(self, *args):
-        dialog = Gtk.FileChooserDialog(
-            "Open file",
-            self,
-            Gtk.FileChooserAction.OPEN,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.REJECT,
-             Gtk.STOCK_OPEN, Gtk.ResponseType.OK))
-        filter_rst = Gtk.FileFilter()
-        filter_rst.set_name("reSructuredText")
-        filter_rst.add_pattern("*.rst")
-        filter_rst.add_pattern("*.RST")
-        dialog.add_filter(filter_rst)
+        dialog = FileOpenDialog(self)
+        dialog.add_filter_rst()
+        dialog.add_filter_plain()
+        dialog.add_filter_all()
 
-        filter_txt = Gtk.FileFilter()
-        filter_txt.set_name("plain text")
-        filter_txt.add_mime_type("plain/text")
-        dialog.add_filter(filter_txt)
-
-        filter_all = Gtk.FileFilter()
-        filter_all.set_name("all files")
-        filter_all.add_pattern("*")
-        dialog.add_filter(filter_all)
-
-        if dialog.run() == Gtk.ResponseType.OK:
-            self.get_application().new_window(dialog.get_filename())
+        if dialog.run() == Gtk.ResponseType.ACCEPT:
+            editor = 'vim' if isinstance(self.editor, VimEditor) else 'source'
+            self.get_application().new_window(editor, dialog.get_filename())
         dialog.destroy()
 
     def about(self, *args):

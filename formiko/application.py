@@ -62,11 +62,11 @@ class Application(Gtk.Application):
     def on_new_window(self, action, *params):
         self.new_window(self.get_active_window().editor)
 
-    def new_window(self, editor, file_name=None):
+    def new_window(self, editor, file_name=''):
         try:
             win = AppWindow(editor, file_name)
             self.add_window(win)
             win.show_all()
         except:
             print_exc()
-            self.quit()
+            # self.quit()

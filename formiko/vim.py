@@ -5,7 +5,7 @@ from subprocess import Popen, PIPE, check_output
 
 
 class VimEditor(Gtk.Socket):
-    def __init__(self, app_window, server_name, file_name=None):
+    def __init__(self, app_window, server_name, file_name=''):
         super(VimEditor, self).__init__()
         self.server_name = server_name
         self.__file_name = file_name
