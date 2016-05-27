@@ -13,20 +13,16 @@ markdown_lang = default_manager.get_language('markdown')
 
 
 class SourceView(Gtk.ScrolledWindow):
+    __file_name = ''
+    __last_changes = 0
+
     def __init__(self, file_name=''):
-        self.__last_changes = 0
-        self.__file_name = file_name
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
-        name, ext = splitext(file_name)
-        language = markdown_lang if ext == '.md' else rst_lang
-        self.text_buffer = GtkSource.Buffer.new_with_language(language)
+        self.text_buffer = GtkSource.Buffer.new_with_language(rst_lang)
         if file_name:
-            with open(file_name, 'r', encoding="utf-8") as src:
-                self.text_buffer.set_text(src.read())
-            self.__last_changes += 1
-            self.text_buffer.set_modified(False)
+            self.read_from_file(file_name)
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = GtkSource.View.new_with_buffer(self.text_buffer)
         self.source_view.set_auto_indent(True)
@@ -62,6 +58,18 @@ class SourceView(Gtk.ScrolledWindow):
 
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
+
+    def read_from_file(self, file_name):
+        self.__file_name = file_name
+        name, ext = splitext(file_name)
+        language = markdown_lang if ext == '.md' else rst_lang
+        if self.text_buffer.get_language() != language:
+            self.text_buffer.set_language(language)
+
+        with open(file_name, 'r', encoding="utf-8") as src:
+            self.text_buffer.set_text(src.read())
+            self.__last_changes += 1
+        self.text_buffer.set_modified(False)
 
     def save_to_file(self, window):
         try:

@@ -60,7 +60,7 @@ class Application(Gtk.Application):
         self.quit()
 
     def on_new_window(self, action, *params):
-        self.new_window(self.get_active_window().editor)
+        self.new_window(self.get_active_window().editor_type)
 
     def new_window(self, editor, file_name=''):
         try:

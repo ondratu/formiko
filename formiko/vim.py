@@ -2,6 +2,7 @@
 from gi.repository import Gtk
 
 from subprocess import Popen, PIPE, check_output
+from logging import error
 
 
 class VimEditor(Gtk.Socket):
@@ -80,3 +81,12 @@ class VimEditor(Gtk.Socket):
     @property
     def file_name(self):
         return self.vim_remote_expr("@%")
+
+    def read_from_file(self, file_name):
+        error('Not supported call read_from_file in VimEditor')
+
+    def save(self, *args):
+        error('Not supported call save in VimEditor')
+
+    def save_as(self, *args):
+        error('Not supported call save_as in VimEditor')

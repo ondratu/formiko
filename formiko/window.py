@@ -12,28 +12,31 @@ from formiko.renderer import Renderer
 from formiko.dialogs import QuitDialogWithoutSave, AboutDialog, \
     FileOpenDialog
 
+NOT_SAVED_NAME = 'Not saved document'
+
 
 class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, editor, file_name=''):
         assert editor in ('vim', 'source', None)
         self.server_name = str(uuid4())
         self.runing = True
-        self.editor = editor
+        self.editor_type = editor
         super(AppWindow, self).__init__()
         self.connect("delete-event", self.on_delete)
-        self.set_title("Formiko")
+        header = Gtk.HeaderBar()
+        header.set_show_close_button(True)
+        self.set_titlebar(header)
         self.set_icon(self.render_icon(Gtk.STOCK_EDIT, Gtk.IconSize.DIALOG))
         self.layout(file_name)
 
         self.__last_changes = 0
-        self.__file_name = file_name
         GLib.timeout_add(200, self.check_in_thread)
 
     def __del__(self):
         pass
 
     def ask_if_modified(self):
-        if self.editor:
+        if self.editor_type:
             if self.editor.is_modified:
                 dialog = QuitDialogWithoutSave(self,
                                                self.editor.file_name)
@@ -41,7 +44,7 @@ class AppWindow(Gtk.ApplicationWindow):
                     dialog.destroy()
                     return False        # fo not quit
             self.runing = False
-            if isinstance(self.editor, VimEditor):
+            if self.editor_type == 'vim':
                 self.editor.vim_quit()  # do call destroy_from_vim
         else:
             self.runing = False
@@ -68,7 +71,7 @@ class AppWindow(Gtk.ApplicationWindow):
         tb_open = Gtk.ToolButton(Gtk.STOCK_OPEN)
         tb_open.connect("clicked", self.open_file)
         toolbar.insert(tb_open, -1)
-        if self.editor == 'source':
+        if self.editor_type == 'source':
             self.tb_save = Gtk.ToolButton(Gtk.STOCK_SAVE)
             toolbar.insert(self.tb_save, -1)
             self.tb_save_as = Gtk.ToolButton(Gtk.STOCK_SAVE_AS)
@@ -79,7 +82,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def fill_panned(self, file_name):
         self.paned.set_position(400)
-        if self.editor == 'vim':
+        if self.editor_type == 'vim':
             self.editor = VimEditor(self, self.server_name, file_name)
         else:
             self.editor = SourceView(file_name)
@@ -98,61 +101,65 @@ class AppWindow(Gtk.ApplicationWindow):
         box.pack_start(toolbar, False, False, 0)
         self.fill_toolbar(toolbar)
 
-        if self.editor:
+        if self.editor_type:
             self.paned = Gtk.HPaned()
             box.pack_start(self.paned, True, True, 0)
             self.fill_panned(file_name)
         else:
+            self.set_title(file_name)
             self.renderer = Renderer()
             box.pack_start(self.renderer, True, True, 0)
     # enddef
 
     def check_in_thread(self):
         if self.runing:
-            if isinstance(self.editor, VimEditor):
+            if self.editor_type == 'vim':
                 thread = Thread(target=self.refresh_from_vim)
-            elif isinstance(self.editor, SourceView):
+            elif self.editor_type == 'source':
                 thread = Thread(target=self.refresh_from_source)
             else:   # self.editor = None
                 thread = Thread(target=self.refresh_from_file)
             thread.start()
 
+    def not_running(self):
+        if not self.runing:
+            raise SystemExit(0)
+
     def refresh_from_vim(self):
+        another_file = False
         try:
-            if not self.runing:
-                return
+            star = '*' if self.editor.is_modified else ''
+            self.not_running()
+            title = star + (self.editor.file_name or NOT_SAVED_NAME)
+            if title != self.get_title():
+                GLib.idle_add(self.set_title, title)
+                another_file = True
+            self.not_running()
             last_changes = self.editor.get_vim_changes()
-            if not self.runing:
-                return
-            file_name = self.editor.file_name
-            if last_changes > self.__last_changes \
-                    or file_name != self.__file_name:
-                self.set_title(("%s - " % file_name if file_name else '') +
-                               "Formiko")
-                self.__file_name = file_name
+
+            if last_changes > self.__last_changes or another_file:
                 self.__last_changes = last_changes
-                if not self.runing:
-                    return
+                self.not_running()
                 lines = self.editor.get_vim_lines()
-                if not self.runing:
-                    return
+                self.not_running()
                 buff = self.editor.get_vim_get_buffer(lines)
-                if not self.runing:
-                    return
+                self.not_running()
                 row, col = self.editor.get_vim_pos()
                 pos = 0
                 for i in range(row-1):
                     pos = buff.find('\n', pos)+1
                 pos += col
                 GLib.idle_add(self.renderer.render, self, buff, pos)
-            GLib.timeout_add(100, self.check_in_thread)
+            GLib.timeout_add(300, self.check_in_thread)
+        except SystemExit:
+            return
         except:
             print_exc()
 
     def refresh_from_source(self):
         try:
             star = '*' if self.editor.is_modified else ''
-            title = star + (self.editor.file_name or 'Not saved document')
+            title = star + (self.editor.file_name or NOT_SAVED_NAME)
             if title != self.get_title():
                 GLib.idle_add(self.set_title, title)
 
@@ -184,8 +191,12 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter_all()
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
-            editor = 'vim' if isinstance(self.editor, VimEditor) else 'source'
-            self.get_application().new_window(editor, dialog.get_filename())
+            if self.editor_type == 'source' and \
+                    self.get_title() == NOT_SAVED_NAME:
+                self.editor.read_from_file(dialog.get_filename())
+            else:
+                self.get_application().new_window(self.editor_type,
+                                                  dialog.get_filename())
         dialog.destroy()
 
     def about(self, *args):
