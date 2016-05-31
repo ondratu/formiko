@@ -19,7 +19,7 @@ class Renderer(Gtk.ScrolledWindow):
         self.add(self.webview)
         self.writer = Writer()
 
-    def render(self, app_win, rst, pos):
+    def render(self, app_win, rst, pos=0):
         try:
             a, b = len(rst[:pos]), len(rst[pos:])
             position = (float(a)/(a+b)) if a or b else 0

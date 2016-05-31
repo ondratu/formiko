@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, GLib
+from gi.repository import Gtk, GLib, Gio
 
 from threading import Thread
 from uuid import uuid4
@@ -9,8 +9,8 @@ from os import stat
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
 from formiko.renderer import Renderer
-from formiko.dialogs import QuitDialogWithoutSave, AboutDialog, \
-    FileOpenDialog
+from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog
+from formiko.menu import AppMenu
 
 NOT_SAVED_NAME = 'Not saved document'
 
@@ -22,18 +22,66 @@ class AppWindow(Gtk.ApplicationWindow):
         self.runing = True
         self.editor_type = editor
         super(AppWindow, self).__init__()
+        self.actions()
         self.connect("delete-event", self.on_delete)
-        header = Gtk.HeaderBar()
-        header.set_show_close_button(True)
-        self.set_titlebar(header)
+        headerbar = Gtk.HeaderBar()
+        headerbar.set_show_close_button(True)
+        self.fill_headerbar(headerbar)
+        self.set_titlebar(headerbar)
         self.set_icon(self.render_icon(Gtk.STOCK_EDIT, Gtk.IconSize.DIALOG))
         self.layout(file_name)
 
         self.__last_changes = 0
         GLib.timeout_add(200, self.check_in_thread)
 
-    def __del__(self):
-        pass
+    def actions(self):
+        action = Gio.SimpleAction.new("open-document", None)
+        action.connect("activate", self.on_open_document)
+        self.add_action(action)
+
+        if self.editor_type == 'source':
+            action = Gio.SimpleAction.new("save-document", None)
+            action.connect("activate", self.on_save_document)
+            action.set_enabled(False)
+            self.add_action(action)
+
+            action = Gio.SimpleAction.new("save-document-as", None)
+            action.connect("activate", self.on_save_document_as)
+            self.add_action(action)
+
+        action = Gio.SimpleAction.new("close-window", None)
+        action.connect("activate", self.on_close_window)
+        self.add_action(action)
+
+    def on_close_window(self, action, *params):
+        if self.ask_if_modified():
+            self.destroy()
+
+    def on_open_document(self, actions, *params):
+        dialog = FileOpenDialog(self)
+        dialog.add_filter_rst()
+        dialog.add_filter_plain()
+        dialog.add_filter_all()
+
+        if dialog.run() == Gtk.ResponseType.ACCEPT:
+            if self.editor_type == 'source' and \
+                    self.get_title() == NOT_SAVED_NAME:
+                self.editor.read_from_file(dialog.get_filename())
+            else:
+                self.get_application().new_window(self.editor_type,
+                                                  dialog.get_filename())
+        dialog.destroy()
+
+    def on_save_document(self, action, *params):
+        if self.editor_type == 'source':
+            self.editor.save(self)
+
+    def on_save_document_as(self, action, *params):
+        if self.editor_type == 'source':
+            self.editor.save_as(self)
+
+    def on_delete(self, *args):
+        return not self.ask_if_modified()
 
     def ask_if_modified(self):
         if self.editor_type:
@@ -50,44 +98,33 @@ class AppWindow(Gtk.ApplicationWindow):
             self.runing = False
         return True                     # do quit
 
-    def on_delete(self, *args):
-        return not self.ask_if_modified()
-
-    def win_destroy(self, *args):
-        if self.ask_if_modified():
-            self.destroy()
-
     def destroy_from_vim(self, *args):
         self.runing = False
         self.destroy()
 
-    def fill_toolbar(self, toolbar):
-        tb_quit = Gtk.ToolButton(Gtk.STOCK_QUIT)
-        tb_quit.connect("clicked", self.win_destroy)
-        toolbar.insert(tb_quit, -1)
-        tb_new = Gtk.ToolButton(Gtk.STOCK_NEW)
-        tb_new.set_action_name("app.new-window")
-        toolbar.insert(tb_new, -1)
-        tb_open = Gtk.ToolButton(Gtk.STOCK_OPEN)
-        tb_open.connect("clicked", self.open_file)
-        toolbar.insert(tb_open, -1)
+    def fill_headerbar(self, toolbar):
+        btn = Gtk.Button(label="Open")
+        btn.set_action_name("win.open-document")
+        toolbar.pack_start(btn)
+
+        btn = Gtk.MenuButton()
+        btn.set_menu_model(AppMenu())
+        icon = Gio.ThemedIcon(name="view-list-symbolic")
+        btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
+        toolbar.pack_end(btn)
+
         if self.editor_type == 'source':
-            self.tb_save = Gtk.ToolButton(Gtk.STOCK_SAVE)
-            toolbar.insert(self.tb_save, -1)
-            self.tb_save_as = Gtk.ToolButton(Gtk.STOCK_SAVE_AS)
-            toolbar.insert(self.tb_save_as, -1)
-        tb_about = Gtk.ToolButton(Gtk.STOCK_ABOUT)
-        tb_about.connect("clicked", self.about)
-        toolbar.insert(tb_about, -1)
+            btn = Gtk.Button(label="Save")
+            btn.set_action_name("win.save-document")
+            toolbar.pack_end(btn)
 
     def fill_panned(self, file_name):
-        self.paned.set_position(400)
+        width, height = self.get_size()
+        self.paned.set_position(width / 2)
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, self.server_name, file_name)
         else:
             self.editor = SourceView(file_name)
-            self.tb_save.connect("clicked", self.editor.save, self)
-            self.tb_save_as.connect("clicked", self.editor.save_as, self)
         self.paned.add1(self.editor)
         self.renderer = Renderer()
         self.paned.add2(self.renderer)
@@ -97,19 +134,15 @@ class AppWindow(Gtk.ApplicationWindow):
         box = Gtk.VBox()
         self.add(box)
 
-        toolbar = Gtk.Toolbar()
-        box.pack_start(toolbar, False, False, 0)
-        self.fill_toolbar(toolbar)
-
         if self.editor_type:
             self.paned = Gtk.HPaned()
             box.pack_start(self.paned, True, True, 0)
             self.fill_panned(file_name)
         else:
+            self.file_name = file_name
             self.set_title(file_name)
             self.renderer = Renderer()
             box.pack_start(self.renderer, True, True, 0)
-    # enddef
 
     def check_in_thread(self):
         if self.runing:
@@ -158,7 +191,11 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def refresh_from_source(self):
         try:
-            star = '*' if self.editor.is_modified else ''
+            action = self.lookup_action("save-document")
+            modified = self.editor.is_modified
+            action.set_enabled(modified)
+
+            star = '*' if modified else ''
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
             if title != self.get_title():
                 GLib.idle_add(self.set_title, title)
@@ -183,22 +220,3 @@ class AppWindow(Gtk.ApplicationWindow):
         except:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)
-
-    def open_file(self, *args):
-        dialog = FileOpenDialog(self)
-        dialog.add_filter_rst()
-        dialog.add_filter_plain()
-        dialog.add_filter_all()
-
-        if dialog.run() == Gtk.ResponseType.ACCEPT:
-            if self.editor_type == 'source' and \
-                    self.get_title() == NOT_SAVED_NAME:
-                self.editor.read_from_file(dialog.get_filename())
-            else:
-                self.get_application().new_window(self.editor_type,
-                                                  dialog.get_filename())
-        dialog.destroy()
-
-    def about(self, *args):
-        dialog = AboutDialog(self)
-        dialog.present()

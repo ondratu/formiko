@@ -90,13 +90,13 @@ class SourceView(Gtk.ScrolledWindow):
             md.run()
             md.destroy()
 
-    def save(self, widget, window):
+    def save(self, window):
         if not self.__file_name:
             self.__file_name = self.get_new_file_name(window)
         if self.__file_name:
             self.save_to_file(window)
 
-    def save_as(self, widget, window):
+    def save_as(self, window):
         new_file_name = self.get_new_file_name(window)
         if new_file_name:
             self.__file_name = new_file_name

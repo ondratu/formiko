@@ -1,16 +1,17 @@
 # -*- coding: utf-8 -*-
 from gi.repository import Gtk
 
-from formiko import __version__, __author__, __copyright__
+from formiko import __version__, __author__, __copyright__, __comment__
 
 
 class AboutDialog(Gtk.AboutDialog):
     def __init__(self, transient_for):
         super(AboutDialog, self).__init__(transient_for=transient_for,
-                                          modal=True)
+                                          modal=False)
         self.set_program_name("Formiko")
         self.set_version(__version__)
         self.set_copyright(__copyright__ + ' ' + __author__)
+        self.set_comments(__comment__)
         self.set_website("https://github.com/ondratu/formiko")
         # self.set_website("https://formiko.zeropage.cz")
         # self.set_logo("formiko.svg")

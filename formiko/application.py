@@ -1,37 +1,52 @@
-from gi.repository import Gtk, GLib, Gio
+from gi.repository.Gtk import Application as GtkApplication
+from gi.repository.GLib import OptionFlags, OptionArg
+from gi.repository.Gio import ApplicationFlags, SimpleAction
 
 from traceback import print_exc
 
 from formiko.window import AppWindow
+from formiko.dialogs import AboutDialog
+from formiko.menu import AppMenu
 
-EDITOR = 'source'       # will be configurable
 
-
-class Application(Gtk.Application):
+class Application(GtkApplication):
 
     def __init__(self, *args, **kwargs):
         super(Application, self).__init__(
             *args, application_id="cz.zeropage.formiko",
-            flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
+            flags=ApplicationFlags.HANDLES_COMMAND_LINE,
             **kwargs)
-        self.add_main_option("preview", ord("p"), GLib.OptionFlags.NONE,
-                             GLib.OptionArg.NONE, "Preview only", None)
-        self.add_main_option("vim", ord("v"), GLib.OptionFlags.NONE,
-                             GLib.OptionArg.NONE, "Use vim as editor", None)
-        self.add_main_option("source-view", ord("s"), GLib.OptionFlags.NONE,
-                             GLib.OptionArg.NONE,
-                             "Use SourceView as editor", None)
+        self.add_main_option("preview", ord("p"), OptionFlags.NONE,
+                             OptionArg.NONE, "Preview only", None)
+        self.add_main_option("vim", ord("v"), OptionFlags.NONE,
+                             OptionArg.NONE, "Use vim as editor", None)
+        self.add_main_option("source-view", ord("s"), OptionFlags.NONE,
+                             OptionArg.NONE,
+                             "Use SourceView as editor (default)", None)
 
     def do_startup(self):
-        Gtk.Application.do_startup(self)
+        GtkApplication.do_startup(self)
 
-        action = Gio.SimpleAction.new("new-window", None)
+        action = SimpleAction.new("new-window", None)
         action.connect("activate", self.on_new_window)
         self.add_action(action)
+        self.add_accelerator("<Control>n", "app.new-window")
 
-        action = Gio.SimpleAction.new("quit", None)
+        self.add_accelerator("<Control>o", "win.open-document")
+        self.add_accelerator("<Control>s", "win.save-document")
+        self.add_accelerator("<Shift><Control>s", "win.save-document-as")
+        self.add_accelerator("<Control>w", "win.close-window")
+
+        action = SimpleAction.new("about", None)
+        action.connect("activate", self.on_about)
+        self.add_action(action)
+
+        action = SimpleAction.new("quit", None)
         action.connect("activate", self.on_quit)
         self.add_action(action)
+        self.add_accelerator("<Control>q", "app.quit")
+
+        self.set_app_menu(AppMenu())
 
     def do_activate(self):
         self.new_window()
@@ -46,7 +61,7 @@ class Application(Gtk.Application):
         elif options.contains("source-view"):
             editor = 'source'
         else:
-            editor = EDITOR
+            editor = 'source'
 
         if options.contains("preview") and last and last != '-':
             self.new_window(None, last)
@@ -60,7 +75,11 @@ class Application(Gtk.Application):
         self.quit()
 
     def on_new_window(self, action, *params):
-        self.new_window(self.get_active_window().editor_type)
+        self.new_window(self.get_active_window().editor_type or 'source')
+
+    def on_about(self, action, *params):
+        dialog = AboutDialog(None)
+        dialog.present()
 
     def new_window(self, editor, file_name=''):
         try:
