@@ -11,6 +11,8 @@ from formiko.sourceview import SourceView
 from formiko.renderer import Renderer
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog
 from formiko.menu import AppMenu
+from formiko.preferences import Preferences
+from formiko.user import UserCache, UserPreferences
 
 NOT_SAVED_NAME = 'Not saved document'
 
@@ -21,6 +23,8 @@ class AppWindow(Gtk.ApplicationWindow):
         self.server_name = str(uuid4())
         self.runing = True
         self.editor_type = editor
+        self.cache = UserCache()
+        self.preferences = UserPreferences()
         super(AppWindow, self).__init__()
         self.actions()
         self.connect("delete-event", self.on_delete)
@@ -39,22 +43,61 @@ class AppWindow(Gtk.ApplicationWindow):
         action.connect("activate", self.on_open_document)
         self.add_action(action)
 
-        if self.editor_type == 'source':
-            action = Gio.SimpleAction.new("save-document", None)
-            action.connect("activate", self.on_save_document)
-            action.set_enabled(False)
-            self.add_action(action)
+        action = Gio.SimpleAction.new("save-document", None)
+        action.connect("activate", self.on_save_document)
+        action.set_enabled(False)
+        self.add_action(action)
 
-            action = Gio.SimpleAction.new("save-document-as", None)
-            action.connect("activate", self.on_save_document_as)
-            self.add_action(action)
+        action = Gio.SimpleAction.new("save-document-as", None)
+        action.connect("activate", self.on_save_document_as)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
 
         action = Gio.SimpleAction.new("close-window", None)
         action.connect("activate", self.on_close_window)
         self.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "change-preview", GLib.VariantType.new('q'),
+            GLib.Variant('q', self.preferences.preview))
+        action.connect("activate", self.on_change_preview)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new_stateful(
+            "change-writer", GLib.VariantType.new("s"),
+            GLib.Variant('s', self.preferences.writer))
+        action.connect("activate", self.on_change_writer)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new_stateful(
+            "change-parser", GLib.VariantType.new('s'),
+            GLib.Variant('s', self.preferences.parser))
+        action.connect("activate", self.on_change_parser)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new_stateful(
+            "custom-style-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', self.preferences.custom_style))
+        action.connect("activate", self.on_custom_style_toggle)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new_stateful(
+            "change-style", GLib.VariantType.new('s'),
+            GLib.Variant('s', self.preferences.style))
+        action.connect("activate", self.on_change_style)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("reset-preferences", None)
+        action.connect("activate", self.on_reset_preferences)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("save-preferences", None)
+        action.connect("activate", self.on_save_preferences)
+        self.add_action(action)
+
     def on_close_window(self, action, *params):
         if self.ask_if_modified():
+            self.save_win_state()
             self.destroy()
 
     def on_open_document(self, actions, *params):
@@ -81,7 +124,56 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor.save_as(self)
 
     def on_delete(self, *args):
-        return not self.ask_if_modified()
+        rv = self.ask_if_modified()
+        if rv:
+            self.save_win_state()
+        return not rv
+
+    def on_change_preview(self, action, param):
+        if not getattr(self, 'paned', False):
+            return
+        orientation = param.get_uint16()
+        if self.paned.get_orientation() != orientation:
+            self.paned.set_orientation(orientation)
+            if orientation == Gtk.Orientation.HORIZONTAL:
+                self.paned.set_position(self.paned.get_allocated_width()/2)
+            else:
+                self.paned.set_position(self.paned.get_allocated_height()/2)
+            self.preferences.preview = orientation
+
+    def on_change_parser(self, action, param):
+        parser = param.get_string()
+        if parser != self.renderer.get_parser():
+            self.renderer.set_writer(parser)
+            self.preferences.parser = parser
+
+    def on_change_writer(self, action, param):
+        writer = param.get_string()
+        if writer != self.renderer.get_writer():
+            self.renderer.set_writer(writer)
+            self.preferences.writer = writer
+
+    def on_custom_style_toggle(self, action, param):
+        custom_style = not self.preferences.custom_style
+        self.preferences.custom_style = custom_style
+        if custom_style and self.preferences.style:
+            self.renderer.set_style(self.preferences.style)
+        else:
+            self.renderer.set_style('')
+
+    def on_change_style(self, action, param):
+        style = param.get_string()
+        self.preferences.style = style
+        if self.preferences.custom_style and style:
+            self.renderer.set_style(self.preferences.style)
+        else:
+            self.renderer.set_style('')
+
+    def on_reset_preferences(self, action, param):
+        self.pref_menu.reset()
+
+    def on_save_preferences(self, action, param):
+        self.preferences.save()
 
     def ask_if_modified(self):
         if self.editor_type:
@@ -102,15 +194,31 @@ class AppWindow(Gtk.ApplicationWindow):
         self.runing = False
         self.destroy()
 
+    def save_win_state(self):
+        self.cache.width, self.cache.height = self.get_size()
+        if getattr(self, 'paned', False):
+            self.cache.paned = self.paned.get_position()
+        self.cache.is_maximized = self.is_maximized()
+        self.cache.save()
+
     def fill_headerbar(self, toolbar):
         btn = Gtk.Button(label="Open")
         btn.set_action_name("win.open-document")
         toolbar.pack_start(btn)
 
+        self.pref_menu = Preferences()
+
+        btn = Gtk.MenuButton(popover=self.pref_menu)
+        icon = Gio.ThemedIcon(name="emblem-system-symbolic")
+        btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
+        btn.set_tooltip_text("Preferences")
+        toolbar.pack_end(btn)
+
         btn = Gtk.MenuButton()
         btn.set_menu_model(AppMenu())
         icon = Gio.ThemedIcon(name="view-list-symbolic")
         btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
+        btn.set_tooltip_text("Menu")
         toolbar.pack_end(btn)
 
         if self.editor_type == 'source':
@@ -119,30 +227,40 @@ class AppWindow(Gtk.ApplicationWindow):
             toolbar.pack_end(btn)
 
     def fill_panned(self, file_name):
-        width, height = self.get_size()
-        self.paned.set_position(width / 2)
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, self.server_name, file_name)
         else:
             self.editor = SourceView(file_name)
         self.paned.add1(self.editor)
-        self.renderer = Renderer()
+        self.renderer = Renderer(self,
+                                 parser=self.preferences.parser,
+                                 writer=self.preferences.writer)
+        if self.preferences.custom_style and self.preferences.style:
+            self.renderer.set_style(self.preferences.style)
         self.paned.add2(self.renderer)
 
     def layout(self, file_name):
-        self.set_default_size(800, 600)
+        self.set_default_size(self.cache.width, self.cache.height)
         box = Gtk.VBox()
         self.add(box)
 
         if self.editor_type:
-            self.paned = Gtk.HPaned()
+            self.paned = Gtk.Paned(orientation=self.preferences.preview,
+                                   position=self.cache.paned)
             box.pack_start(self.paned, True, True, 0)
             self.fill_panned(file_name)
         else:
             self.file_name = file_name
             self.set_title(file_name)
-            self.renderer = Renderer()
+            self.renderer = Renderer(self,
+                                     parser=self.preferences.parser,
+                                     writer=self.preferences.writer)
+            if self.preferences.custom_style and self.preferences.style:
+                self.renderer.set_style(self.preferences.style)
             box.pack_start(self.renderer, True, True, 0)
+
+        if self.cache.is_maximized:
+            self.maximize()
 
     def check_in_thread(self):
         if self.runing:
@@ -182,7 +300,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 for i in range(row-1):
                     pos = buff.find('\n', pos)+1
                 pos += col
-                GLib.idle_add(self.renderer.render, self, buff, pos)
+                GLib.idle_add(self.renderer.render, buff, pos)
             GLib.timeout_add(300, self.check_in_thread)
         except SystemExit:
             return
@@ -203,7 +321,7 @@ class AppWindow(Gtk.ApplicationWindow):
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                GLib.idle_add(self.renderer.render, self,
+                GLib.idle_add(self.renderer.render,
                               self.editor.text, self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
         except:
@@ -216,7 +334,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.__last_changes = last_changes
                 with open(self.file_name) as source:
                     buff = source.read()
-                    GLib.idle_add(self.renderer.render, self, buff)
+                    GLib.idle_add(self.renderer.render, buff)
         except:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)

@@ -10,9 +10,11 @@ class AboutDialog(Gtk.AboutDialog):
                                           modal=False)
         self.set_program_name("Formiko")
         self.set_version(__version__)
-        self.set_copyright(__copyright__ + ' ' + __author__)
+        self.set_copyright(__copyright__ + ' The Formiko Team')
         self.set_comments(__comment__)
         self.set_website("https://github.com/ondratu/formiko")
+        self.set_license_type(Gtk.License.BSD)
+        self.set_authors([__author__])
         # self.set_website("https://formiko.zeropage.cz")
         # self.set_logo("formiko.svg")
 
@@ -51,7 +53,7 @@ class FileChooserDialog(Gtk.FileChooserDialog):
     def add_filter_plain(self):
         filter_txt = Gtk.FileFilter()
         filter_txt.set_name("plain text")
-        filter_txt.add_mime_type("plain/text")
+        filter_txt.add_mime_type("text/plain")
         self.add_filter(filter_txt)
 
     def add_filter_all(self):

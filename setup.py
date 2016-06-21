@@ -17,7 +17,7 @@ setup(
     author_email="mcbig@zeropage.cz",
     url=__url__,
     packages=['formiko'],
-    # data_files=[('css', ['tiny-writer.css'])],
+    data_files=[('doc', ['README.rst', 'COPYING'])],
     keywords=["doc", "html", "rst", "editor"],
     license="BSD",
     long_description=doc(),

@@ -7,5 +7,9 @@ At this moment, is based on vim editor included to window next to Webkit html pr
 
 TODO
 ----
-* markdown support
-* other html writers support
+* markdown detecion
+
+FIX
+---
+* create non-exist file from command-line
+* autofocus to editor
