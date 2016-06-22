@@ -79,7 +79,7 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
 
 
 class Preferences(Gtk.Popover):
-    def __init__(self):
+    def __init__(self, user_preferences):
         super(Preferences, self).__init__(border_width=20)
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(vbox)
@@ -88,12 +88,16 @@ class Preferences(Gtk.Popover):
             label="Vertical preview",
             action_name="win.change-preview",
             action_target=Variant('q', Gtk.Orientation.VERTICAL))
+        if user_preferences.preview == Gtk.Orientation.VERTICAL:
+            self.vert_btn.set_active(True)
         vbox.pack_start(self.vert_btn, True, True, 0)
         self.hori_btn = Gtk.RadioButton(
             group=self.vert_btn,
             label="Horizontal preview",
             action_name="win.change-preview",
             action_target=Variant('q', Gtk.Orientation.HORIZONTAL))
+        if user_preferences.preview == Gtk.Orientation.HORIZONTAL:
+            self.hori_btn.set_active(True)
         vbox.pack_start(self.hori_btn, True, True, 0)
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 0)
@@ -107,6 +111,8 @@ class Preferences(Gtk.Popover):
                 sensitive=enabled,
                 action_name=("win.change-parser" if enabled else None),
                 action_target=Variant('s', key))
+            if user_preferences.parser == key:
+                item.set_active(True)
             item.parser = key
             if group is None:
                 group = item
@@ -124,6 +130,8 @@ class Preferences(Gtk.Popover):
                 sensitive=enabled,
                 action_name=("win.change-writer" if enabled else None),
                 action_target=Variant('s', key))
+            if user_preferences.writer == key:
+                item.set_active(True)
             item.writer = key
             if group is None:
                 group = item
@@ -137,11 +145,13 @@ class Preferences(Gtk.Popover):
             label='Custom style',
             action_name="win.custom-style-toggle",
             action_target=Variant('b', True))
-        vbox.pack_start(self.custom_btn, True, True, 0)
-        self.style_btn = ActionableFileChooserButton(
-            sensitive=self.custom_btn.get_active(),
-            action_name="win.change-style")
+        self.custom_btn.set_active(user_preferences.custom_style)
         self.custom_btn.connect("toggled", self.on_custom_style_toggle)
+        vbox.pack_start(self.custom_btn, True, True, 0)
+
+        self.style_btn = ActionableFileChooserButton(
+            sensitive=user_preferences.custom_style,
+            action_name="win.change-style")
         vbox.pack_start(self.style_btn, True, True, 0)
 
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
@@ -176,10 +186,10 @@ class Preferences(Gtk.Popover):
             self.hori_btn.set_active(True)
 
         # TODO: auto detection parser
-        for it in self.parser_group:
-            if it.parser == UserPreferences.parser:
-                it.set_active(True)
-                break
+        # for it in self.parser_group:
+        #     if it.parser == UserPreferences.parser:
+        #         it.set_active(True)
+        #        break
 
         for it in self.writer_group:
             if it.writer == UserPreferences.writer:

@@ -56,7 +56,7 @@ class UserPreferences(object):
     def save(self):
         cp = SmartParser()
         cp.add_section('main')
-        cp.set('main', 'preview', int(self.preview))
+        cp.set('main', 'preview', str(int(self.preview)))
         cp.set('main', 'parser', self.parser)
         cp.set('main', 'writer', self.writer)
         cp.set('main', 'style', self.style)

@@ -23,11 +23,6 @@ except:
     Html5Writer = None
 
 try:
-    from remarkdown.parser import MarkdownParser
-except:
-    MarkdownParser = None
-
-try:
     from recommonmark.parser import CommonMarkParser
 except:
     CommonMarkParser = None
@@ -42,12 +37,6 @@ PARSERS = {
         'class': RstParser,
         'url': 'http://docutils.sourceforge.net',
         'extension': '.rst'},
-    'remarkdown': {
-        'key': 'remarkdown',
-        'title': 'The remarkdown Parser',
-        'class': MarkdownParser,
-        'url': 'https://github.com/sgenoud/remarkdown',
-        'extension': '.md'},
     'recommonmark': {
         'key': 'recommonmark',
         'title': 'Common Mark Parser',

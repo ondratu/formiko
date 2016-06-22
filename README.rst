@@ -8,6 +8,7 @@ At this moment, is based on vim editor included to window next to Webkit html pr
 TODO
 ----
 * markdown detecion
+* html preview :-)
 
 FIX
 ---

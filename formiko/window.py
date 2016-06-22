@@ -26,6 +26,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.cache = UserCache()
         self.preferences = UserPreferences()
         super(AppWindow, self).__init__()
+        self.create_renderer()
         self.actions()
         self.connect("delete-event", self.on_delete)
         headerbar = Gtk.HeaderBar()
@@ -60,31 +61,31 @@ class AppWindow(Gtk.ApplicationWindow):
         action = Gio.SimpleAction.new_stateful(
             "change-preview", GLib.VariantType.new('q'),
             GLib.Variant('q', self.preferences.preview))
-        action.connect("activate", self.on_change_preview)
+        action.connect("change-state", self.on_change_preview)
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
             "change-writer", GLib.VariantType.new("s"),
             GLib.Variant('s', self.preferences.writer))
-        action.connect("activate", self.on_change_writer)
+        action.connect("change-state", self.on_change_writer)
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
             "change-parser", GLib.VariantType.new('s'),
             GLib.Variant('s', self.preferences.parser))
-        action.connect("activate", self.on_change_parser)
+        action.connect("change-state", self.on_change_parser)
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
             "custom-style-toggle", GLib.VariantType.new('b'),
             GLib.Variant('b', self.preferences.custom_style))
-        action.connect("activate", self.on_custom_style_toggle)
+        action.connect("change-state", self.on_custom_style_toggle)
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
             "change-style", GLib.VariantType.new('s'),
             GLib.Variant('s', self.preferences.style))
-        action.connect("activate", self.on_change_style)
+        action.connect("change-state", self.on_change_style)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("reset-preferences", None)
@@ -144,7 +145,7 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_change_parser(self, action, param):
         parser = param.get_string()
         if parser != self.renderer.get_parser():
-            self.renderer.set_writer(parser)
+            self.renderer.set_parser(parser)
             self.preferences.parser = parser
 
     def on_change_writer(self, action, param):
@@ -206,7 +207,7 @@ class AppWindow(Gtk.ApplicationWindow):
         btn.set_action_name("win.open-document")
         toolbar.pack_start(btn)
 
-        self.pref_menu = Preferences()
+        self.pref_menu = Preferences(self.preferences)
 
         btn = Gtk.MenuButton(popover=self.pref_menu)
         icon = Gio.ThemedIcon(name="emblem-system-symbolic")
@@ -226,17 +227,19 @@ class AppWindow(Gtk.ApplicationWindow):
             btn.set_action_name("win.save-document")
             toolbar.pack_end(btn)
 
+    def create_renderer(self):
+        self.renderer = Renderer(self,
+                                 parser=self.preferences.parser,
+                                 writer=self.preferences.writer)
+        if self.preferences.custom_style and self.preferences.style:
+            self.renderer.set_style(self.preferences.style)
+
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, self.server_name, file_name)
         else:
             self.editor = SourceView(file_name)
         self.paned.add1(self.editor)
-        self.renderer = Renderer(self,
-                                 parser=self.preferences.parser,
-                                 writer=self.preferences.writer)
-        if self.preferences.custom_style and self.preferences.style:
-            self.renderer.set_style(self.preferences.style)
         self.paned.add2(self.renderer)
 
     def layout(self, file_name):
@@ -252,11 +255,6 @@ class AppWindow(Gtk.ApplicationWindow):
         else:
             self.file_name = file_name
             self.set_title(file_name)
-            self.renderer = Renderer(self,
-                                     parser=self.preferences.parser,
-                                     writer=self.preferences.writer)
-            if self.preferences.custom_style and self.preferences.style:
-                self.renderer.set_style(self.preferences.style)
             box.pack_start(self.renderer, True, True, 0)
 
         if self.cache.is_maximized:
