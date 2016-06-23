@@ -2,7 +2,7 @@
 
 from setuptools import setup
 
-from formiko import __version__, __url__
+from formiko import __version__, __url__, __comment__
 
 
 def doc():
@@ -12,13 +12,13 @@ def doc():
 setup(
     name="formiko",
     version=__version__,
-    description="reStructuredText editor and live previewer",
+    description=__comment__,
     author="Ondrej Tuma",
     author_email="mcbig@zeropage.cz",
     url=__url__,
     packages=['formiko'],
     data_files=[('doc', ['README.rst', 'COPYING'])],
-    keywords=["doc", "html", "rst", "editor"],
+    keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
     long_description=doc(),
     classifiers=[
@@ -30,7 +30,8 @@ setup(
         "Natural Language :: English",
         "Natural Language :: Czech",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
         "Topic :: Documentation",
         "Topic :: Software Development :: Documentation",
         "Topic :: Text Editors :: Documentation",
@@ -38,7 +39,7 @@ setup(
         "Topic :: Text Processing",
         "Topic :: Text Processing :: Markup",
         "Topic :: Utilities"],
-    requires=['docutils (>= 0.12)', 'python_gi'],
+    requires=['docutils (>= 0.12)', 'python_gi', 'webkit', 'gtksourceview'],
     install_requires=['docutils >= 0.12'],
     entry_points={
         'gui_scripts': [

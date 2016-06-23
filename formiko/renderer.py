@@ -33,12 +33,12 @@ from traceback import print_exc
 PARSERS = {
     'rst': {
         'key': 'rst',
-        'title': 'Docutils reStructuredText Parser',
+        'title': 'Docutils reStructuredText parser',
         'class': RstParser,
         'url': 'http://docutils.sourceforge.net'},
     'recommonmark': {
         'key': 'recommonmark',
-        'title': 'Common Mark Parser',
+        'title': 'Common Mark parser',
         'class': CommonMarkParser,
         'url': 'https://github.com/rtfd/recommonmark'}
 }
@@ -51,32 +51,32 @@ EXTS = {
 WRITERS = {
     'html4': {
         'key': 'html4',
-        'title': 'Docutils html4 Writer',
+        'title': 'Docutils HTML4 writer',
         'class': Writer4css1,
         'url': 'http://docutils.sourceforge.net'},
     's5': {
         'key': 's5',
-        'title': 'Docutils S5/HTML Slideshow Writer',
+        'title': 'Docutils S5/HTML slide show writer',
         'class': WriterS5,
         'url': 'http://docutils.sourceforge.net'},
     'pep': {
         'key': 'pep',
-        'title': 'Docutils PEP HTML Writer',
+        'title': 'Docutils PEP HTML writer',
         'class': WriterPep,
         'url': 'http://docutils.sourceforge.net'},
     'tiny': {
         'key': 'tiny',
-        'title': 'Tiny HTML Writer',
+        'title': 'Tiny HTML writer',
         'class': TinyWriter,
         'url': 'https://github.com/ondratu/docutils-tinyhtmlwriter'},
     'html': {
         'key': 'html',
-        'title': 'Yet another HTML Writer',
+        'title': 'Yet another HTML writer',
         'class': HtmlWriter,
         'url': 'https://github.com/masayuko/docutils-htmlwriter'},
     'html5': {
         'key': 'html5',
-        'title': 'HTML 5 Writer',
+        'title': 'HTML 5 writer',
         'class': Html5Writer,
         'url': 'https://github.com/Kozea/docutils-html5-writer'},
 }
