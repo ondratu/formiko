@@ -5,10 +5,11 @@ from threading import Thread
 from uuid import uuid4
 from traceback import print_exc
 from os import stat
+from os.path import splitext
 
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
-from formiko.renderer import Renderer
+from formiko.renderer import Renderer, EXTS
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
@@ -37,6 +38,9 @@ class AppWindow(Gtk.ApplicationWindow):
         self.layout(file_name)
 
         self.__last_changes = 0
+        if self.editor_type is None:
+            name, ext = splitext(file_name)
+            self.on_file_type(None, ext)
         GLib.timeout_add(200, self.check_in_thread)
 
     def actions(self):
@@ -103,8 +107,9 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_open_document(self, actions, *params):
         dialog = FileOpenDialog(self)
-        dialog.add_filter_rst()
         dialog.add_filter_plain()
+        dialog.add_filter_rst()
+        dialog.add_filter_md()
         dialog.add_filter_all()
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
@@ -147,6 +152,10 @@ class AppWindow(Gtk.ApplicationWindow):
         if parser != self.renderer.get_parser():
             self.renderer.set_parser(parser)
             self.preferences.parser = parser
+
+    def on_file_type(self, widget, ext):
+        parser = EXTS.get(ext, self.preferences.parser)
+        self.pref_menu.set_parser(parser)
 
     def on_change_writer(self, action, param):
         writer = param.get_string()
@@ -237,8 +246,12 @@ class AppWindow(Gtk.ApplicationWindow):
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, self.server_name, file_name)
+            self.editor.connect("file_type", self.on_file_type)
         else:
-            self.editor = SourceView(file_name)
+            self.editor = SourceView()
+            self.editor.connect("file_type", self.on_file_type)
+            if file_name:
+                self.editor.read_from_file(file_name)
         self.paned.add1(self.editor)
         self.paned.add2(self.renderer)
 
@@ -298,7 +311,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 for i in range(row-1):
                     pos = buff.find('\n', pos)+1
                 pos += col
-                GLib.idle_add(self.renderer.render, buff, pos)
+                self.renderer.render(buff, pos)
             GLib.timeout_add(300, self.check_in_thread)
         except SystemExit:
             return
@@ -319,8 +332,7 @@ class AppWindow(Gtk.ApplicationWindow):
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                GLib.idle_add(self.renderer.render,
-                              self.editor.text, self.editor.position)
+                self.renderer.render(self.editor.text, self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
         except:
             print_exc()
@@ -332,7 +344,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.__last_changes = last_changes
                 with open(self.file_name) as source:
                     buff = source.read()
-                    GLib.idle_add(self.renderer.render, buff)
+                    self.renderer.render(buff)
         except:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)

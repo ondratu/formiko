@@ -50,6 +50,13 @@ class FileChooserDialog(Gtk.FileChooserDialog):
         filter_rst.add_pattern("*.RST")
         self.add_filter(filter_rst)
 
+    def add_filter_md(self):
+        filter_md = Gtk.FileFilter()
+        filter_md.set_name("MarkDown")
+        filter_md.add_pattern("*.md")
+        filter_md.add_pattern("*.MD")
+        self.add_filter(filter_md)
+
     def add_filter_plain(self):
         filter_txt = Gtk.FileFilter()
         filter_txt.set_name("plain text")

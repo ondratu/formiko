@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, WebKit
+from gi.repository import Gtk, WebKit, GLib
 
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
@@ -35,14 +35,17 @@ PARSERS = {
         'key': 'rst',
         'title': 'Docutils reStructuredText Parser',
         'class': RstParser,
-        'url': 'http://docutils.sourceforge.net',
-        'extension': '.rst'},
+        'url': 'http://docutils.sourceforge.net'},
     'recommonmark': {
         'key': 'recommonmark',
         'title': 'Common Mark Parser',
         'class': CommonMarkParser,
-        'url': 'https://github.com/rtfd/recommonmark',
-        'extension': '.md'}
+        'url': 'https://github.com/rtfd/recommonmark'}
+}
+
+EXTS = {
+    '.rst': 'rst',
+    '.md': 'recommonmark'
 }
 
 WRITERS = {
@@ -118,7 +121,7 @@ class Renderer(Gtk.ScrolledWindow):
         self.__writer = WRITERS[writer]
         klass = self.__writer['class']
         self.writer_instance = klass() if klass is not None else None
-        self.do_render()
+        GLib.idle_add(self.do_render)
 
     def get_writer(self):
         return self.__writer['key']
@@ -128,14 +131,14 @@ class Renderer(Gtk.ScrolledWindow):
         self.__parser = PARSERS[parser]
         klass = self.__parser['class']
         self.parser_instance = klass() if klass is not None else None
-        self.do_render()
+        GLib.idle_add(self.do_render)
 
     def get_parser(self):
         return self.__parser['key']
 
     def set_style(self, style):
         self.style = style
-        self.do_render()
+        GLib.idle_add(self.do_render)
 
     def get_style(self):
         return self.style
@@ -181,4 +184,4 @@ class Renderer(Gtk.ScrolledWindow):
     def render(self, src, pos=0):
         self.src = src
         self.pos = pos
-        self.do_render()
+        GLib.idle_add(self.do_render)

@@ -1,11 +1,16 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk
+from gi.repository import Gtk, GObject
 
 from subprocess import Popen, PIPE, check_output
 from logging import error
+from os.path import splitext
 
 
 class VimEditor(Gtk.Socket):
+    __gsignals__ = {
+        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+    }
+
     def __init__(self, app_window, server_name, file_name=''):
         super(VimEditor, self).__init__()
         self.server_name = server_name
@@ -18,6 +23,9 @@ class VimEditor(Gtk.Socket):
             self.vim_start_server()
 
     def vim_start_server(self):
+        if self.__file_name:
+            name, ext = splitext(self.__file_name)
+            self.emit("file_type", ext)
         args = [
             "/usr/bin/gvim",
             "--socketid", str(self.get_id()),
@@ -74,13 +82,24 @@ class VimEditor(Gtk.Socket):
     def vim_quit(self):
         self.vim_remote_send("<ESC>:q! <CR>")
 
+    def vim_open_file(self, file_name):
+        self.vim_remote_send("<ESC>:e %s<CR>" % file_name)
+
     @property
     def is_modified(self):
         return bool(int(self.vim_remote_expr("&l:modified")))
 
     @property
     def file_name(self):
-        return self.vim_remote_expr("@%")
+        __file_name = self.vim_remote_expr("@%")
+        if __file_name != self.__file_name:
+            name, ext = splitext(__file_name)
+            self.emit("file_type", ext)
+        self.__file_name = __file_name
+        return self.__file_name
+
+    def do_file_type(self, ext):
+        pass
 
     def read_from_file(self, file_name):
         error('Not supported call read_from_file in VimEditor')

@@ -185,11 +185,10 @@ class Preferences(Gtk.Popover):
         else:
             self.hori_btn.set_active(True)
 
-        # TODO: auto detection parser
-        # for it in self.parser_group:
-        #     if it.parser == UserPreferences.parser:
-        #         it.set_active(True)
-        #        break
+        for it in self.parser_group:
+            if it.parser == UserPreferences.parser:
+                it.set_active(True)
+                break
 
         for it in self.writer_group:
             if it.writer == UserPreferences.writer:
@@ -202,6 +201,12 @@ class Preferences(Gtk.Popover):
         else:   # yes, this never happen, but ...
             self.style_btn.set_filename(UserPreferences.style)
         self.style_btn.do_file_set()    # call action
+
+    def set_parser(self, parser):
+        for it in self.parser_group:
+            if it.parser == parser:
+                it.set_active(True)
+                break
 
     def on_custom_style_toggle(self, widget):
         self.style_btn.set_sensitive(widget.get_active())

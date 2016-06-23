@@ -1,4 +1,4 @@
-from gi.repository import Gtk, GtkSource, Pango, GLib
+from gi.repository import Gtk, GtkSource, Pango, GLib, GObject
 
 from os.path import splitext, basename
 from io import open
@@ -16,13 +16,15 @@ class SourceView(Gtk.ScrolledWindow):
     __file_name = ''
     __last_changes = 0
 
-    def __init__(self, file_name=''):
+    __gsignals__ = {
+        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+    }
+
+    def __init__(self):
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = GtkSource.Buffer.new_with_language(rst_lang)
-        if file_name:
-            self.read_from_file(file_name)
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = GtkSource.View.new_with_buffer(self.text_buffer)
         self.source_view.set_auto_indent(True)
@@ -56,15 +58,17 @@ class SourceView(Gtk.ScrolledWindow):
     def file_name(self):
         return basename(self.__file_name)
 
+    @property
+    def file_ext(self):
+        name, ext = splitext(self.__file_name)
+        return ext
+
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
 
     def read_from_file(self, file_name):
         self.__file_name = file_name
-        name, ext = splitext(file_name)
-        language = markdown_lang if ext == '.md' else rst_lang
-        if self.text_buffer.get_language() != language:
-            self.text_buffer.set_language(language)
+        self.emit("file_type", self.file_ext)
 
         with open(file_name, 'r', encoding="utf-8") as src:
             self.text_buffer.set_text(src.read())
@@ -93,6 +97,7 @@ class SourceView(Gtk.ScrolledWindow):
     def save(self, window):
         if not self.__file_name:
             self.__file_name = self.get_new_file_name(window)
+            self.emit("file_type", self.file_ext)
         if self.__file_name:
             self.save_to_file(window)
 
@@ -100,12 +105,14 @@ class SourceView(Gtk.ScrolledWindow):
         new_file_name = self.get_new_file_name(window)
         if new_file_name:
             self.__file_name = new_file_name
+            self.emit("file_type", self.file_ext)
             self.save_to_file(window)
 
     def get_new_file_name(self, window):
         ret_val = ''
         dialog = FileSaveDialog(window)
         dialog.add_filter_rst()
+        dialog.add_filter_md()
         dialog.set_do_overwrite_confirmation(True)
 
         if not self.__file_name:
@@ -115,3 +122,8 @@ class SourceView(Gtk.ScrolledWindow):
             ret_val = dialog.get_filename()
         dialog.destroy()
         return ret_val
+
+    def do_file_type(self, ext):
+        language = markdown_lang if ext == '.md' else rst_lang
+        if self.text_buffer.get_language() != language:
+            self.text_buffer.set_language(language)
