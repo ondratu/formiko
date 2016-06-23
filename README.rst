@@ -46,7 +46,6 @@ optionally:
 
 TODO:
 -----
-* html preview
 * error dialogs with trace_back
 
 FIX:

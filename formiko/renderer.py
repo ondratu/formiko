@@ -30,22 +30,32 @@ except:
 from io import StringIO
 from traceback import print_exc
 
+
+class HtmlPreview:
+    pass
+
 PARSERS = {
     'rst': {
         'key': 'rst',
         'title': 'Docutils reStructuredText parser',
         'class': RstParser,
         'url': 'http://docutils.sourceforge.net'},
-    'recommonmark': {
-        'key': 'recommonmark',
+    'md': {
+        'key': 'md',
         'title': 'Common Mark parser',
         'class': CommonMarkParser,
-        'url': 'https://github.com/rtfd/recommonmark'}
+        'url': 'https://github.com/rtfd/recommonmark'},
+    'html': {
+        'key': 'html',
+        'title': 'HTML preview',
+        'class': HtmlPreview}
 }
 
 EXTS = {
     '.rst': 'rst',
-    '.md': 'recommonmark'
+    '.md': 'md',
+    '.html': 'html',
+    '.htm': 'html',
 }
 
 WRITERS = {
@@ -158,19 +168,24 @@ class Renderer(Gtk.ScrolledWindow):
             else:
                 a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
                 position = (float(a)/(a+b)) if a or b else 0
-                settings = {
-                    'warning_stream': StringIO(),
-                    'embed_stylesheet': True
-                }
-                if self.style:
-                    settings['stylesheet'] = self.style
-                    settings['stylesheet_path'] = []
-                html = publish_string(
-                    source=self.src,
-                    parser=self.parser_instance,
-                    writer=self.writer_instance,
-                    writer_name='html',
-                    settings_overrides=settings).decode('utf-8')
+
+                if not issubclass(self.__parser['class'], HtmlPreview):
+                    settings = {
+                        'warning_stream': StringIO(),
+                        'embed_stylesheet': True
+                    }
+                    if self.style:
+                        settings['stylesheet'] = self.style
+                        settings['stylesheet_path'] = []
+                    html = publish_string(
+                        source=self.src,
+                        parser=self.parser_instance,
+                        writer=self.writer_instance,
+                        writer_name='html',
+                        settings_overrides=settings).decode('utf-8')
+                else:
+                    html = self.src
+
                 html += SCROLL % position
                 if not self.__win.runing:
                     return

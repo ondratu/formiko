@@ -8,8 +8,12 @@ from sys import version_info
 from formiko.dialogs import FileSaveDialog
 
 default_manager = GtkSource.LanguageManager.get_default()
-rst_lang = default_manager.get_language('rst')
-markdown_lang = default_manager.get_language('markdown')
+LANGS = {
+    '.rst': default_manager.get_language('rst'),
+    '.md': default_manager.get_language('markdown'),
+    '.html': default_manager.get_language('html'),
+    '.htm': default_manager.get_language('html'),
+}
 
 
 class SourceView(Gtk.ScrolledWindow):
@@ -20,11 +24,12 @@ class SourceView(Gtk.ScrolledWindow):
         'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
     }
 
-    def __init__(self):
+    def __init__(self, default_parser):
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
-        self.text_buffer = GtkSource.Buffer.new_with_language(rst_lang)
+        self.text_buffer = GtkSource.Buffer.new_with_language(
+            LANGS['.%s' % default_parser])
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = GtkSource.View.new_with_buffer(self.text_buffer)
         self.source_view.set_auto_indent(True)
@@ -111,8 +116,10 @@ class SourceView(Gtk.ScrolledWindow):
     def get_new_file_name(self, window):
         ret_val = ''
         dialog = FileSaveDialog(window)
+        # TODO: set default filtry by select parser
         dialog.add_filter_rst()
         dialog.add_filter_md()
+        dialog.add_filter_html()
         dialog.set_do_overwrite_confirmation(True)
 
         if not self.__file_name:
@@ -124,6 +131,6 @@ class SourceView(Gtk.ScrolledWindow):
         return ret_val
 
     def do_file_type(self, ext):
-        language = markdown_lang if ext == '.md' else rst_lang
+        language = LANGS.get(ext, LANGS['.rst'])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)

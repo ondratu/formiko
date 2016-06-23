@@ -110,6 +110,7 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter_plain()
         dialog.add_filter_rst()
         dialog.add_filter_md()
+        dialog.add_filter_html()
         dialog.add_filter_all()
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
@@ -248,7 +249,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor = VimEditor(self, self.server_name, file_name)
             self.editor.connect("file_type", self.on_file_type)
         else:
-            self.editor = SourceView()
+            self.editor = SourceView(self.preferences.parser)
             self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)

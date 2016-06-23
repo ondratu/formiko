@@ -59,9 +59,15 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
     def add_filter_plain(self):
         filter_txt = Gtk.FileFilter()
-        filter_txt.set_name("plain text")
+        filter_txt.set_name("Plain text")
         filter_txt.add_mime_type("text/plain")
         self.add_filter(filter_txt)
+
+    def add_filter_html(self):
+        filter_html = Gtk.FileFilter()
+        filter_html.set_name("Hypertext files")
+        filter_html.add_mime_type("text/html")
+        self.add_filter(filter_html)
 
     def add_filter_all(self):
         filter_all = Gtk.FileFilter()
