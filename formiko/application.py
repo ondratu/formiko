@@ -1,11 +1,11 @@
 from gi.repository.Gtk import Application as GtkApplication
-from gi.repository.GLib import OptionFlags, OptionArg
+from gi.repository.GLib import OptionFlags, OptionArg, VariantType
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 
 from traceback import print_exc
 
 from formiko.window import AppWindow
-from formiko.dialogs import AboutDialog
+from formiko.dialogs import AboutDialog, TraceBackDialog
 from formiko.menu import AppMenu
 
 
@@ -39,6 +39,10 @@ class Application(GtkApplication):
 
         action = SimpleAction.new("about", None)
         action.connect("activate", self.on_about)
+        self.add_action(action)
+
+        action = SimpleAction.new("traceback", VariantType.new('s'))
+        action.connect("activate", self.on_traceback)
         self.add_action(action)
 
         action = SimpleAction.new("quit", None)
@@ -77,8 +81,12 @@ class Application(GtkApplication):
     def on_new_window(self, action, *params):
         self.new_window(self.get_active_window().editor_type or 'source')
 
-    def on_about(self, action, *params):
+    def on_about(self, action, param):
         dialog = AboutDialog(None)
+        dialog.present()
+
+    def on_traceback(self, action, param):
+        dialog = TraceBackDialog(self.get_active_window(), param.get_string())
         dialog.present()
 
     def new_window(self, editor, file_name=''):

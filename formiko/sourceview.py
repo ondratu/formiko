@@ -1,11 +1,11 @@
 from gi.repository import Gtk, GtkSource, Pango, GLib, GObject
 
-from os.path import splitext, basename
+from os.path import splitext, basename, isfile
 from io import open
-from traceback import print_exc
+from traceback import format_exc
 from sys import version_info
 
-from formiko.dialogs import FileSaveDialog
+from formiko.dialogs import FileSaveDialog, TraceBackDialog
 
 default_manager = GtkSource.LanguageManager.get_default()
 LANGS = {
@@ -75,9 +75,10 @@ class SourceView(Gtk.ScrolledWindow):
         self.__file_name = file_name
         self.emit("file_type", self.file_ext)
 
-        with open(file_name, 'r', encoding="utf-8") as src:
-            self.text_buffer.set_text(src.read())
-            self.__last_changes += 1
+        if isfile(file_name):
+            with open(file_name, 'r', encoding="utf-8") as src:
+                self.text_buffer.set_text(src.read())
+                self.__last_changes += 1
         self.text_buffer.set_modified(False)
 
     def save_to_file(self, window):
@@ -88,14 +89,8 @@ class SourceView(Gtk.ScrolledWindow):
                 else:   # python version 3.x
                     src.write(self.text)
             self.text_buffer.set_modified(False)
-        except Exception as e:
-            print_exc()
-            md = Gtk.MessageDialog(
-                window,
-                Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                Gtk.MessageType.ERROR,
-                Gtk.ButtonsType.OK,
-                str(e))
+        except Exception:
+            md = TraceBackDialog(window, format_exc())
             md.run()
             md.destroy()
 

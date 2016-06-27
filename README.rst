@@ -43,12 +43,3 @@ optionally:
 * docutils-htmlwriter
 * docutils-html5-writer
 * vim-gtk or vim-gnome
-
-TODO:
------
-* error dialogs with trace_back
-
-FIX:
-~~~~
-* create non-exist file from command-line
-* autofocus to editor

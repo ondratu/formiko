@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk
+from gi.repository import Gtk, Pango
 
 from formiko import __version__, __author__, __copyright__, __comment__
 
@@ -28,6 +28,20 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
             Gtk.ButtonsType.OK_CANCEL,
             "File %s not saved.\n"
             "Are you sure to quite without save ?" % file_name)
+
+
+class TraceBackDialog(Gtk.Dialog):
+    def __init__(self, parent, traceback):
+        super(TraceBackDialog, self).__init__(
+            "Traceback error",
+            parent,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            use_header_bar=True)
+        box = self.get_content_area()
+        label = Gtk.Label(traceback)
+        label.override_font(Pango.FontDescription.from_string('Monospace'))
+        label.show_all()
+        box.add(label)
 
 
 class FileChooserDialog(Gtk.FileChooserDialog):

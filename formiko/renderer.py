@@ -28,7 +28,7 @@ except:
     CommonMarkParser = None
 
 from io import StringIO
-from traceback import print_exc
+from traceback import format_exc
 
 
 class HtmlPreview:
@@ -192,9 +192,9 @@ class Renderer(Gtk.ScrolledWindow):
                 self.webview.load_string(html, "text/html", "UTF-8",
                                          "file:///")
         except:
-            print_exc()
-            # TODO: return error to user dialog and confirm sending error to
-            # support email by http post request :-)
+            win = self.get_toplevel()
+            app = win.get_application()
+            app.activate_action("traceback", GLib.Variant("s", format_exc()))
 
     def render(self, src, pos=0):
         self.src = src
