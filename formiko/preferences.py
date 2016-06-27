@@ -1,5 +1,6 @@
 from gi.repository.GLib import Variant
-from gi.repository import GObject, Gtk, Gio
+from gi.repository.Gio import ThemedIcon
+from gi.repository import GObject, Gtk
 
 from sys import argv
 from os.path import commonprefix
@@ -160,13 +161,13 @@ class Preferences(Gtk.Popover):
         btn_box = Gtk.StackSwitcher(orientation=Gtk.Orientation.HORIZONTAL)
 
         sav_btn = Gtk.Button(action_name="win.save-preferences")
-        icon = Gio.ThemedIcon(name="document-save-symbolic")
+        icon = ThemedIcon(name="document-save-symbolic")
         sav_btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         sav_btn.set_tooltip_text("Save preferences")
         btn_box.pack_end(sav_btn, False, False, 0)
 
         rst_btn = Gtk.Button(action_name="win.reset-preferences")
-        icon = Gio.ThemedIcon(name="view-refresh-symbolic")
+        icon = ThemedIcon(name="view-refresh-symbolic")
         rst_btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         rst_btn.set_tooltip_text("Reset preferences")
         btn_box.pack_end(rst_btn, False, False, 0)

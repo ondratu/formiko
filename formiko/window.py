@@ -258,7 +258,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def layout(self, file_name):
         self.set_default_size(self.cache.width, self.cache.height)
-        box = Gtk.VBox()
+        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(box)
 
         if self.editor_type:

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, Pango
+from gi.repository.Pango import FontDescription
+from gi.repository import Gtk
 
 from formiko import __version__, __author__, __copyright__, __comment__
 
@@ -39,7 +40,7 @@ class TraceBackDialog(Gtk.Dialog):
             use_header_bar=True)
         box = self.get_content_area()
         label = Gtk.Label(traceback)
-        label.override_font(Pango.FontDescription.from_string('Monospace'))
+        label.override_font(FontDescription.from_string('Monospace'))
         label.show_all()
         box.add(label)
 

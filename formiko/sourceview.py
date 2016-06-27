@@ -1,4 +1,9 @@
-from gi.repository import Gtk, GtkSource, Pango, GLib, GObject
+from gi.repository.GObject import SIGNAL_RUN_FIRST
+from gi.repository.Pango import FontDescription
+from gi.repository.GtkSource import LanguageManager, Buffer, View
+from gi.repository.GLib import get_home_dir
+
+from gi.repository import Gtk
 
 from os.path import splitext, basename, isfile
 from io import open
@@ -7,7 +12,7 @@ from sys import version_info
 
 from formiko.dialogs import FileSaveDialog, TraceBackDialog
 
-default_manager = GtkSource.LanguageManager.get_default()
+default_manager = LanguageManager.get_default()
 LANGS = {
     '.rst': default_manager.get_language('rst'),
     '.md': default_manager.get_language('markdown'),
@@ -21,22 +26,22 @@ class SourceView(Gtk.ScrolledWindow):
     __last_changes = 0
 
     __gsignals__ = {
-        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+        'file_type': (SIGNAL_RUN_FIRST, None, (str,))
     }
 
     def __init__(self, default_parser):
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
-        self.text_buffer = GtkSource.Buffer.new_with_language(
+        self.text_buffer = Buffer.new_with_language(
             LANGS['.%s' % default_parser])
         self.text_buffer.connect("changed", self.inc_changes)
-        self.source_view = GtkSource.View.new_with_buffer(self.text_buffer)
+        self.source_view = View.new_with_buffer(self.text_buffer)
         self.source_view.set_auto_indent(True)
         self.source_view.set_show_line_numbers(True)
         self.source_view.set_wrap_mode(Gtk.WrapMode.WORD)
         self.source_view.override_font(
-            Pango.FontDescription.from_string('Monospace'))
+            FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
 
@@ -118,7 +123,7 @@ class SourceView(Gtk.ScrolledWindow):
         dialog.set_do_overwrite_confirmation(True)
 
         if not self.__file_name:
-            dialog.set_current_folder(GLib.get_home_dir())
+            dialog.set_current_folder(get_home_dir())
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
             ret_val = dialog.get_filename()

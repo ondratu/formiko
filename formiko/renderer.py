@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, WebKit, GLib
+from gi.repository.WebKit import WebView
+from gi.repository.GLib import Variant, idle_add
+from gi.repository.Gtk import ScrolledWindow, PolicyType
 
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
@@ -113,12 +115,12 @@ SCROLL = """
 """
 
 
-class Renderer(Gtk.ScrolledWindow):
+class Renderer(ScrolledWindow):
     def __init__(self, win, parser='rst', writer='html4', style=''):
         super(Renderer, self).__init__()
-        self.set_policy(Gtk.PolicyType.AUTOMATIC,
-                        Gtk.PolicyType.AUTOMATIC)
-        self.webview = WebKit.WebView()
+        self.set_policy(PolicyType.AUTOMATIC,
+                        PolicyType.AUTOMATIC)
+        self.webview = WebView()
         self.sb = self.get_vscrollbar()
         self.add(self.webview)
         self.set_writer(writer)
@@ -131,7 +133,7 @@ class Renderer(Gtk.ScrolledWindow):
         self.__writer = WRITERS[writer]
         klass = self.__writer['class']
         self.writer_instance = klass() if klass is not None else None
-        GLib.idle_add(self.do_render)
+        idle_add(self.do_render)
 
     def get_writer(self):
         return self.__writer['key']
@@ -141,14 +143,14 @@ class Renderer(Gtk.ScrolledWindow):
         self.__parser = PARSERS[parser]
         klass = self.__parser['class']
         self.parser_instance = klass() if klass is not None else None
-        GLib.idle_add(self.do_render)
+        idle_add(self.do_render)
 
     def get_parser(self):
         return self.__parser['key']
 
     def set_style(self, style):
         self.style = style
-        GLib.idle_add(self.do_render)
+        idle_add(self.do_render)
 
     def get_style(self):
         return self.style
@@ -194,9 +196,9 @@ class Renderer(Gtk.ScrolledWindow):
         except:
             win = self.get_toplevel()
             app = win.get_application()
-            app.activate_action("traceback", GLib.Variant("s", format_exc()))
+            app.activate_action("traceback", Variant("s", format_exc()))
 
     def render(self, src, pos=0):
         self.src = src
         self.pos = pos
-        GLib.idle_add(self.do_render)
+        idle_add(self.do_render)

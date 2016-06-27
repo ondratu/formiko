@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, GObject
+from gi.repository.Gtk import Socket
+from gi.repository.GObject import SIGNAL_RUN_FIRST
 
 from subprocess import Popen, PIPE, check_output
 from logging import error
 from os.path import splitext
 
 
-class VimEditor(Gtk.Socket):
+class VimEditor(Socket):
     __gsignals__ = {
-        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+        'file_type': (SIGNAL_RUN_FIRST, None, (str,))
     }
 
     def __init__(self, app_window, server_name, file_name=''):
