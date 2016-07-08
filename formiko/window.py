@@ -14,6 +14,7 @@ from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences
+from formiko.icons import icon_list
 
 NOT_SAVED_NAME = 'Not saved document'
 
@@ -34,7 +35,7 @@ class AppWindow(Gtk.ApplicationWindow):
         headerbar.set_show_close_button(True)
         self.fill_headerbar(headerbar)
         self.set_titlebar(headerbar)
-        self.set_icon(self.render_icon(Gtk.STOCK_EDIT, Gtk.IconSize.DIALOG))
+        self.set_icon_list(icon_list)
         self.layout(file_name)
 
         self.__last_changes = 0

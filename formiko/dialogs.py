@@ -3,12 +3,14 @@ from gi.repository.Pango import FontDescription
 from gi.repository import Gtk
 
 from formiko import __version__, __author__, __copyright__, __comment__
+from formiko.icons import icon_list, icon_128
 
 
 class AboutDialog(Gtk.AboutDialog):
     def __init__(self, transient_for):
         super(AboutDialog, self).__init__(transient_for=transient_for,
                                           modal=False)
+        self.set_icon_list(icon_list)
         self.set_program_name("Formiko")
         self.set_version(__version__)
         self.set_copyright(__copyright__ + ' The Formiko Team')
@@ -16,8 +18,8 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_website("https://github.com/ondratu/formiko")
         self.set_license_type(Gtk.License.BSD)
         self.set_authors([__author__])
-        # self.set_website("https://formiko.zeropage.cz")
-        # self.set_logo("formiko.svg")
+        self.set_artists(["Petr Šimčík <petrsimi.org@gmail.com>"])
+        self.set_logo(icon_128)
 
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
