@@ -138,6 +138,8 @@ class AppWindow(Gtk.ApplicationWindow):
         return not rv
 
     def on_change_preview(self, action, param):
+        if action.get_state() != param:
+            action.set_state(param)
         if not getattr(self, 'paned', False):
             return
         orientation = param.get_uint16()
@@ -150,8 +152,9 @@ class AppWindow(Gtk.ApplicationWindow):
             self.preferences.preview = orientation
 
     def on_change_parser(self, action, param):
-        parser = param.get_string()
-        if parser != self.renderer.get_parser():
+        if action.get_state() != param:
+            action.set_state(param)
+            parser = param.get_string()
             self.renderer.set_parser(parser)
             self.preferences.parser = parser
 
@@ -160,8 +163,9 @@ class AppWindow(Gtk.ApplicationWindow):
         self.pref_menu.set_parser(parser)
 
     def on_change_writer(self, action, param):
-        writer = param.get_string()
-        if writer != self.renderer.get_writer():
+        if action.get_state() != param:
+            action.set_state(param)
+            writer = param.get_string()
             self.renderer.set_writer(writer)
             self.preferences.writer = writer
 

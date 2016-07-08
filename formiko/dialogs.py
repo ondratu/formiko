@@ -72,6 +72,7 @@ class FileChooserDialog(Gtk.FileChooserDialog):
         filter_md.set_name("MarkDown")
         filter_md.add_pattern("*.md")
         filter_md.add_pattern("*.MD")
+        filter_md.add_pattern("*.markdown")
         self.add_filter(filter_md)
 
     def add_filter_plain(self):
