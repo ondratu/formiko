@@ -9,6 +9,16 @@ def doc():
     with open('README.rst', 'r') as readme:
         return readme.read().strip()
 
+
+def icons_data():
+    path = 'share/icons/hicolor'
+    icons = [("%s/scalable/apps" % path, ["icons/formiko.svg"])]
+    for size in (16, 22, 24, 32, 48, 64, 128, 256, 512):
+        icons.append(("%s/%dx%d/apps" % (path, size, size),
+                     ["icons/%dx%d/formiko.png" % (size, size)]))
+    return icons
+
+
 setup(
     name="formiko",
     version=__version__,
@@ -18,7 +28,8 @@ setup(
     url=__url__,
     packages=['formiko'],
     data_files=[('share/doc/formiko', ['README.rst', 'COPYING']),
-                ('share/formiko/icons', ['icons/formiko.svg'])],
+                ("share/applications", ["formiko.desktop"]),
+                ('share/formiko/icons', ['icons/formiko.svg'])] + icons_data(),
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
     long_description=doc(),

@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Encoding=UTF-8
+Name=Formiko
+Comment=reStructuredText and MarkDown editor and live html previewer
+Exec=formiko %f
+Icon=formiko.png
+Terminal=false
+MimeType=text/plain;text/html;text/x-markdown;text/x-rst;
+Categories=Office;GNOME;GTK;
