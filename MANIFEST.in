@@ -1,0 +1,7 @@
+include *.py
+include MANIFEST.in
+include README.rst
+include COPYING
+include formiko.desktop
+graft icons
+global-exclude *~ *.swp
