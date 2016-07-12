@@ -34,13 +34,12 @@ setup(
     license="BSD",
     long_description=doc(),
     classifiers=[
-        "Development Status :: 4 - Beta",
+        "Development Status :: 5 - Production/Stable",
         "Environment :: X11 Applications :: GTK",
         "Intended Audience :: Developers",
-        "Intended Audience :: End Users/Desktop"
+        "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: BSD License",
         "Natural Language :: English",
-        "Natural Language :: Czech",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
