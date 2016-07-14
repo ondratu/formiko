@@ -3,6 +3,7 @@ from gi.repository.GLib import OptionFlags, OptionArg, VariantType
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 
 from traceback import print_exc
+from os.path import join
 
 from formiko.window import AppWindow
 from formiko.dialogs import AboutDialog, TraceBackDialog
@@ -68,9 +69,9 @@ class Application(GtkApplication):
             editor = 'source'
 
         if options.contains("preview") and last and last != '-':
-            self.new_window(None, last)
+            self.new_window(None, join(command_line.get_cwd(), last))
         elif last and last[0] != '-':
-            self.new_window(editor, last)
+            self.new_window(editor, join(command_line.get_cwd(), last))
         else:
             self.new_window(editor)
         return 0
