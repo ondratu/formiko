@@ -2,6 +2,7 @@ include *.py
 include MANIFEST.in
 include README.rst
 include COPYING
+include ChangeLog
 include formiko.desktop
 graft icons
 global-exclude *~ *.swp

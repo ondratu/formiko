@@ -1,0 +1,29 @@
+Changelog
+=========
+
+Version 1.0.0 - 12.07.2016 08:24
+  * stable version 1.0.0
+  * right source distribution
+  * desktop integration
+  * litle bit fixies
+  * application icon from petr simcik
+  * final clean code
+  * Small fixies from TODO:
+  * html preview mode
+  * clean text and new version
+  * file type detection
+  * working MarkDown support with gui
+  * user preferences
+  * modern Gtk+3 appearance (Menu)
+  * opening file for sourceview editor
+  * sourceview reading from and saving to files
+  * base sourceview version
+  * separating code to modules
+  * preview mode
+  * using Gtk.Application instead of GObject.GObject
+  * full working
+  * python3 support
+  * crashing tread does crash gtk
+  * using Gtk+3
+  * installable project
+  * first based function

@@ -27,7 +27,7 @@ setup(
     author_email="mcbig@zeropage.cz",
     url=__url__,
     packages=['formiko'],
-    data_files=[('share/doc/formiko', ['README.rst', 'COPYING']),
+    data_files=[('share/doc/formiko', ['README.rst', 'COPYING', 'ChangeLog']),
                 ("share/applications", ["formiko.desktop"]),
                 ('share/formiko/icons', ['icons/formiko.svg'])] + icons_data(),
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
