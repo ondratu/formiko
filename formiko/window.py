@@ -315,7 +315,10 @@ class AppWindow(Gtk.ApplicationWindow):
                 row, col = self.editor.get_vim_pos()
                 pos = 0
                 for i in range(row-1):
-                    pos = buff.find('\n', pos)+1
+                    new_line = buff.find('\n', pos)
+                    if new_line < 0:
+                        break
+                    pos = new_line + 1
                 pos += col
                 self.renderer.render(buff, pos)
             GLib.timeout_add(300, self.check_in_thread)
