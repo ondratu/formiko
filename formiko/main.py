@@ -20,5 +20,13 @@ def main():
     return app.run(argv)
 
 
+def main_vim():
+    signal(SIGINT, handler_exit)
+    require_version('Gtk', '3.0')
+    Gdk.threads_init()
+    app = Application(application_id="cz.zeropage.formiko.vim")
+    return app.run(argv)
+
+
 if __name__ == "__main__":
     exit(main())
