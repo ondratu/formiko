@@ -1,3 +1,6 @@
+from gi import require_version
+require_version('GtkSource', '3.0')
+
 from gi.repository.GObject import SIGNAL_RUN_FIRST
 from gi.repository.Pango import FontDescription
 from gi.repository.GtkSource import LanguageManager, Buffer, View

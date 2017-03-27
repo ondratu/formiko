@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from gi import require_version
+require_version('WebKit', '3.0')
+
 from gi.repository.WebKit import WebView
 from gi.repository.GLib import Variant, idle_add
 from gi.repository.Gtk import ScrolledWindow, PolicyType

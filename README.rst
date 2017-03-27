@@ -29,6 +29,7 @@ Requirements:
 * PyGObject
 * Webkit
 * GtkSourceView
+* gir files for all Gtk libraries
 
 recommended:
 ~~~~~~~~~~~~

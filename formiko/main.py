@@ -1,5 +1,8 @@
 
 from gi import require_version
+require_version('Gdk', '3.0')
+require_version('Gtk', '3.0')
+
 from gi.repository import Gdk
 
 from sys import argv
@@ -14,7 +17,6 @@ def handler_exit(*args):
 
 def main():
     signal(SIGINT, handler_exit)
-    require_version('Gtk', '3.0')
     Gdk.threads_init()
     app = Application()
     return app.run(argv)
