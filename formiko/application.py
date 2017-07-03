@@ -31,12 +31,6 @@ class Application(GtkApplication):
         action = SimpleAction.new("new-window", None)
         action.connect("activate", self.on_new_window)
         self.add_action(action)
-        self.add_accelerator("<Control>n", "app.new-window")
-
-        self.add_accelerator("<Control>o", "win.open-document")
-        self.add_accelerator("<Control>s", "win.save-document")
-        self.add_accelerator("<Shift><Control>s", "win.save-document-as")
-        self.add_accelerator("<Control>w", "win.close-window")
 
         action = SimpleAction.new("about", None)
         action.connect("activate", self.on_about)
@@ -49,7 +43,6 @@ class Application(GtkApplication):
         action = SimpleAction.new("quit", None)
         action.connect("activate", self.on_quit)
         self.add_action(action)
-        self.add_accelerator("<Control>q", "app.quit")
 
         self.set_app_menu(AppMenu())
 
@@ -67,6 +60,8 @@ class Application(GtkApplication):
             editor = 'source'
         else:
             editor = 'source'
+        if editor == 'source':  # vim have disabled accels for conflict itself
+            self.set_accels()
 
         if options.contains("preview") and last and last != '-':
             self.new_window(None, join(command_line.get_cwd(), last))
@@ -98,3 +93,13 @@ class Application(GtkApplication):
         except:
             print_exc()
             # self.quit()
+
+    def set_accels(self):
+        self.set_accels_for_action("app.new-window", ["<Control>n"])
+        self.set_accels_for_action("app.quit", ["<Control>q"])
+
+        self.set_accels_for_action("win.open-document", ["<Control>o"])
+        self.set_accels_for_action("win.save-document", ["<Control>s"])
+        self.set_accels_for_action("win.save-document-as",
+                                   ["<Shift><Control>s"])
+        self.set_accels_for_action("win.close-window", ["<Control>w"])
