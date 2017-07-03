@@ -27,8 +27,8 @@ Requirements:
 * GTK+3
 * gobject-introspection
 * PyGObject
-* Webkit
-* GtkSourceView
+* Webkit 3.x
+* GtkSourceView 3.x
 * gir files for all Gtk libraries
 
 recommended:
