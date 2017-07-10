@@ -39,6 +39,7 @@ from traceback import format_exc
 class HtmlPreview:
     pass
 
+
 PARSERS = {
     'rst': {
         'key': 'rst',
@@ -158,22 +159,15 @@ class Renderer(ScrolledWindow):
     def get_style(self):
         return self.style
 
-    def do_render(self):
+    def render_output(self):
         if getattr(self, 'src', None) is None:
-            return
+            return False, ""
         try:
             if self.__parser['class'] is None:
                 html = NOT_FOUND.format(**self.__parser)
-                self.webview.load_string(html, "text/html", "UTF-8",
-                                         "file:///")
             elif self.__writer['class'] is None:
                 html = NOT_FOUND.format(**self.__writer)
-                self.webview.load_string(html, "text/html", "UTF-8",
-                                         "file:///")
             else:
-                a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
-                position = (float(a)/(a+b)) if a or b else 0
-
                 if not issubclass(self.__parser['class'], HtmlPreview):
                     settings = {
                         'warning_stream': StringIO(),
@@ -188,18 +182,27 @@ class Renderer(ScrolledWindow):
                         writer=self.writer_instance,
                         writer_name='html',
                         settings_overrides=settings).decode('utf-8')
+                    return True, html
                 else:
                     html = self.src
 
-                html += SCROLL % position
-                if not self.__win.runing:
-                    return
-                self.webview.load_string(html, "text/html", "UTF-8",
-                                         "file:///")
+            return False, html
+
         except:
             win = self.get_toplevel()
             app = win.get_application()
             app.activate_action("traceback", Variant("s", format_exc()))
+
+    def do_render(self):
+        state, html = self.render_output()
+        if state:
+            a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
+            position = (float(a)/(a+b)) if a or b else 0
+
+            html += SCROLL % position
+        if html and self.__win.runing:
+            self.webview.load_string(html, "text/html", "UTF-8",
+                                     "file:///")
 
     def render(self, src, pos=0):
         self.src = src

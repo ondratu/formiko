@@ -102,4 +102,6 @@ class Application(GtkApplication):
         self.set_accels_for_action("win.save-document", ["<Control>s"])
         self.set_accels_for_action("win.save-document-as",
                                    ["<Shift><Control>s"])
+        self.set_accels_for_action("win.export-document-as",
+                                   ["<Shift><Control>e"])
         self.set_accels_for_action("win.close-window", ["<Control>w"])

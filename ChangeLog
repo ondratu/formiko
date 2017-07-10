@@ -4,6 +4,7 @@ Changelog
 Version development
   * GTK Version check
   * add accels only for SourceView editor
+  * export document as HTML
 
 Version 1.0.1 - 14.07.2016 09:08
 

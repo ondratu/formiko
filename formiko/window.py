@@ -10,7 +10,8 @@ from os.path import splitext
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
 from formiko.renderer import Renderer, EXTS
-from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog
+from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
+    FileSaveDialog
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences
@@ -57,6 +58,11 @@ class AppWindow(Gtk.ApplicationWindow):
         action = Gio.SimpleAction.new("save-document-as", None)
         action.connect("activate", self.on_save_document_as)
         action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("export-document-as", None)
+        action.connect("activate", self.on_export_document_as)
+        action.set_enabled(self.editor_type is not None)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("close-window", None)
@@ -130,6 +136,26 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_save_document_as(self, action, *params):
         if self.editor_type == 'source':
             self.editor.save_as(self)
+
+    def on_export_document_as(self, action, *params):
+        file_name = self.editor.file_name or None
+        dialog = FileSaveDialog(self)
+        dialog.add_filter_html()
+        dialog.set_do_overwrite_confirmation(True)
+
+        if file_name is None:
+            dialog.set_current_folder(GLib.get_home_dir())
+        else:
+            dialog.set_current_name(file_name[:file_name.rfind('.')])
+
+        if dialog.run() == Gtk.ResponseType.ACCEPT:
+            file_name = dialog.get_filename()
+            if not file_name.lower().endswith(".html") \
+                    and not file_name.lower().endswith(".htm"):
+                file_name += ".html"
+            with open(file_name, "w+") as output:
+                output.write(self.renderer.render_output()[1].strip())
+        dialog.destroy()
 
     def on_delete(self, *args):
         rv = self.ask_if_modified()
@@ -329,9 +355,8 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def refresh_from_source(self):
         try:
-            action = self.lookup_action("save-document")
             modified = self.editor.is_modified
-            action.set_enabled(modified)
+            self.lookup_action("save-document").set_enabled(modified)
 
             star = '*' if modified else ''
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
