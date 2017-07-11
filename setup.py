@@ -28,7 +28,8 @@ setup(
     url=__url__,
     packages=['formiko'],
     data_files=[('share/doc/formiko', ['README.rst', 'COPYING', 'ChangeLog']),
-                ("share/applications", ["formiko.desktop"]),
+                ("share/applications", ["formiko.desktop",
+                                        "formiko-vim.desktop"]),
                 ('share/formiko/icons', ['icons/formiko.svg'])] + icons_data(),
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
@@ -56,6 +57,7 @@ setup(
     entry_points={
         'gui_scripts': [
             'formiko = formiko.main:main',
+            'formiko-vim = formiko.main:main_vim'
         ]
     }
 )

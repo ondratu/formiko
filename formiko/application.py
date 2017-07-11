@@ -1,5 +1,6 @@
 from gi.repository.Gtk import Application as GtkApplication
-from gi.repository.GLib import OptionFlags, OptionArg, VariantType
+from gi.repository.GLib import OptionFlags, OptionArg, VariantType, \
+    log_default_handler, LogLevelFlags
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 
 from traceback import print_exc
@@ -12,11 +13,10 @@ from formiko.menu import AppMenu
 
 class Application(GtkApplication):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, application_id="cz.zeropage.formiko"):
         super(Application, self).__init__(
-            *args, application_id="cz.zeropage.formiko",
-            flags=ApplicationFlags.HANDLES_COMMAND_LINE,
-            **kwargs)
+            application_id=application_id,
+            flags=ApplicationFlags.HANDLES_COMMAND_LINE)
         self.add_main_option("preview", ord("p"), OptionFlags.NONE,
                              OptionArg.NONE, "Preview only", None)
         self.add_main_option("vim", ord("v"), OptionFlags.NONE,
@@ -55,13 +55,20 @@ class Application(GtkApplication):
         last = arguments[-1:][0] if arguments else ''
 
         if options.contains("vim"):
+            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
+                                "Use formiko-vim instead", 0)
             editor = 'vim'
         elif options.contains("source-view"):
+            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
+                                "Use formiko instead", 0)
             editor = 'source'
         else:
             editor = 'source'
         if editor == 'source':  # vim have disabled accels for conflict itself
             self.set_accels()
+
+        if self.get_application_id() == "cz.zeropage.formiko.vim":
+            editor = 'vim'
 
         if options.contains("preview") and last and last != '-':
             self.new_window(None, join(command_line.get_cwd(), last))
@@ -69,6 +76,7 @@ class Application(GtkApplication):
             self.new_window(editor, join(command_line.get_cwd(), last))
         else:
             self.new_window(editor)
+
         return 0
 
     def on_quit(self, action, *params):
