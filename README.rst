@@ -3,7 +3,7 @@ Formiko
 
 :author: Ondřej Tůma <mcbig@zeropage.cz>
 
-Formiko is reStructuredText and MarkDown editor and live previewer. It is written in Python with Gtk3, GtkSourceView and Webkit. Use Docutils and recommonmark Common Mark parser.
+Formiko is reStructuredText and MarkDown editor and live previewer. It is written in Python with Gtk3, GtkSourceView and Webkit2. Use Docutils and recommonmark Common Mark parser.
 
 Features:
 ---------
@@ -27,7 +27,7 @@ Requirements:
 * GTK+3
 * gobject-introspection
 * PyGObject
-* Webkit 3.x
+* Webkit2 4.x
 * GtkSourceView 3.x
 * gir files for all Gtk libraries
 

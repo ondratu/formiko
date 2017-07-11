@@ -51,7 +51,7 @@ setup(
         "Topic :: Text Processing :: Markup",
         "Topic :: Text Processing :: Markup :: HTML",
         "Topic :: Utilities"],
-    requires=['docutils (>= 0.12)', 'python_gi', 'webkit', 'gtksourceview'],
+    requires=['docutils (>= 0.12)', 'python_gi', 'webkit2', 'gtksourceview'],
     install_requires=['docutils >= 0.12'],
     entry_points={
         'gui_scripts': [

@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 from gi import require_version
-require_version('WebKit', '3.0')
+require_version('WebKit2', '4.0')
 
-from gi.repository.WebKit import WebView
-from gi.repository.GLib import Variant, idle_add
+from gi.repository.WebKit2 import WebView
+from gi.repository.GLib import Variant, idle_add, Bytes
 from gi.repository.Gtk import ScrolledWindow, PolicyType
 
 from docutils.core import publish_string
@@ -201,8 +201,8 @@ class Renderer(ScrolledWindow):
 
             html += SCROLL % position
         if html and self.__win.runing:
-            self.webview.load_string(html, "text/html", "UTF-8",
-                                     "file:///")
+            self.webview.load_bytes(Bytes(html.encode("utf-8")),
+                                    "text/html", "UTF-8", "file:///")
 
     def render(self, src, pos=0):
         self.src = src
