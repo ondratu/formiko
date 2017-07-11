@@ -88,7 +88,7 @@ class VimEditor(Socket):
 
     @property
     def is_modified(self):
-        return bool(int(self.vim_remote_expr("&l:modified")))
+        return bool(int(self.vim_remote_expr("&l:modified") or '0'))
 
     @property
     def file_name(self):
