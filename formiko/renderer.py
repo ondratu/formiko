@@ -34,7 +34,7 @@ except:
 
 from io import StringIO
 from traceback import format_exc
-
+from sys import version_info
 
 class HtmlPreview:
     pass
@@ -184,7 +184,10 @@ class Renderer(ScrolledWindow):
                         settings_overrides=settings).decode('utf-8')
                     return True, html
                 else:
-                    html = self.src
+                    if version_info.major == 2:
+                        html = self.src.decode("utf-8")
+                    else:
+                        html = self.src
 
             return False, html
 

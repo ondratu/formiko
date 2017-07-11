@@ -6,6 +6,7 @@ Version development
   * add accels only for SourceView editor
   * export document as HTML
   * using WebKit2 engine
+  * Python 2.x encoding fixies
 
 Version 1.0.2 - 19.07.2016 17:39
 
