@@ -329,7 +329,8 @@ class AppWindow(Gtk.ApplicationWindow):
         try:
             star = '*' if self.editor.is_modified else ''
             self.not_running()
-            title = star + (self.editor.file_name or NOT_SAVED_NAME)
+            file_name = self.editor.file_name
+            title = star + (file_name or NOT_SAVED_NAME)
             if title != self.get_title():
                 GLib.idle_add(self.set_title, title)
                 another_file = True
@@ -351,7 +352,7 @@ class AppWindow(Gtk.ApplicationWindow):
                         break
                     pos = new_line + 1
                 pos += col
-                self.renderer.render(buff, pos)
+                self.renderer.render(buff, file_name, pos)
             GLib.timeout_add(300, self.check_in_thread)
         except SystemExit:
             return
@@ -371,7 +372,8 @@ class AppWindow(Gtk.ApplicationWindow):
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                self.renderer.render(self.editor.text, self.editor.position)
+                self.renderer.render(self.editor.text, self.editor.file_name,
+                                     self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
         except:
             print_exc()
@@ -383,7 +385,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.__last_changes = last_changes
                 with open(self.file_name) as source:
                     buff = source.read()
-                    self.renderer.render(buff)
+                    self.renderer.render(buff, self.file_name)
         except:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)

@@ -4,7 +4,8 @@ require_version('WebKit2', '4.0')
 
 from gi.repository.WebKit2 import WebView
 from gi.repository.GLib import Variant, idle_add, Bytes
-from gi.repository.Gtk import ScrolledWindow, PolicyType
+from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
+    Align
 
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
@@ -35,6 +36,9 @@ except:
 from io import StringIO
 from traceback import format_exc
 from sys import version_info
+
+MARKUP = """<span background="#ddd"> %s </span>"""
+
 
 class HtmlPreview:
     pass
@@ -119,18 +123,43 @@ SCROLL = """
 """
 
 
-class Renderer(ScrolledWindow):
+class Renderer(Overlay):
     def __init__(self, win, parser='rst', writer='html4', style=''):
         super(Renderer, self).__init__()
-        self.set_policy(PolicyType.AUTOMATIC,
-                        PolicyType.AUTOMATIC)
+        scrolled = ScrolledWindow.new(None, None)
+        scrolled.set_policy(PolicyType.AUTOMATIC, PolicyType.AUTOMATIC)
+        self.sb = scrolled.get_vscrollbar()
+        self.add(scrolled)
+
         self.webview = WebView()
-        self.sb = self.get_vscrollbar()
-        self.add(self.webview)
+        self.webview.connect("mouse-target-changed", self.on_mouse)
+        scrolled.add(self.webview)
+
+        self.label = Label()
+        self.label.set_halign(Align.START)
+        self.label.set_valign(Align.END)
+
+        self.add_overlay(self.label)
+
         self.set_writer(writer)
         self.set_parser(parser)
         self.style = style
         self.__win = win
+
+    def on_mouse(self, web_view, hit_test_result, modifiers):
+        if hit_test_result.context_is_link():
+            text = "link: %s" % hit_test_result.get_link_uri()
+        elif hit_test_result.context_is_image():
+            text = "image: %s" % hit_test_result.get_image_uri()
+        elif hit_test_result.context_is_media():
+            text = "media: %s" % hit_test_result.get_media_uri()
+        else:
+            if self.label.is_visible():
+                self.label.hide()
+            return
+
+        self.label.set_markup(MARKUP % text)
+        self.label.show()
 
     def set_writer(self, writer):
         assert writer in WRITERS
@@ -204,10 +233,12 @@ class Renderer(ScrolledWindow):
 
             html += SCROLL % position
         if html and self.__win.runing:
+            file_name = self.file_name or GLib.get_home_dir()
             self.webview.load_bytes(Bytes(html.encode("utf-8")),
-                                    "text/html", "UTF-8", "file:///")
+                                    "text/html", "UTF-8", "file://"+file_name)
 
-    def render(self, src, pos=0):
+    def render(self, src, file_name, pos=0):
         self.src = src
         self.pos = pos
+        self.file_name = file_name
         idle_add(self.do_render)

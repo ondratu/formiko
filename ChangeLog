@@ -7,6 +7,7 @@ Version development
   * export document as HTML
   * using WebKit2 engine
   * Python 2.x encoding fixies
+  * links, images and media urls showen in popup bar
 
 Version 1.0.2 - 19.07.2016 17:39
 
