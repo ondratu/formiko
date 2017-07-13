@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from gi import require_version
-require_version('WebKit2', '4.0')
+
+require_version('WebKit2', '4.0')   # noqa
 
 from gi.repository.WebKit2 import WebView
-from gi.repository.GLib import Variant, idle_add, Bytes
+from gi.repository.GLib import Variant, idle_add, Bytes, get_home_dir
 from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
     Align
 
@@ -37,10 +38,9 @@ from io import StringIO
 from traceback import format_exc
 from sys import version_info
 
-MARKUP = """<span background="#ddd"> %s </span>"""
 
-
-class HtmlPreview:
+class HtmlPreview(object):
+    """Empty preview class"""
     pass
 
 
@@ -121,6 +121,8 @@ SCROLL = """
         (document.documentElement.scrollHeight-window.innerHeight)*%f)
 </script>
 """
+
+MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
@@ -233,7 +235,7 @@ class Renderer(Overlay):
 
             html += SCROLL % position
         if html and self.__win.runing:
-            file_name = self.file_name or GLib.get_home_dir()
+            file_name = self.file_name or get_home_dir()
             self.webview.load_bytes(Bytes(html.encode("utf-8")),
                                     "text/html", "UTF-8", "file://"+file_name)
 

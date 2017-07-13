@@ -1,5 +1,5 @@
 from gi import require_version
-require_version('GtkSource', '3.0')
+require_version('GtkSource', '3.0')     # noqa
 
 from gi.repository.GObject import SIGNAL_RUN_FIRST
 from gi.repository.Pango import FontDescription
@@ -93,7 +93,7 @@ class SourceView(Gtk.ScrolledWindow):
         try:
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
-                    src.write(unicode(self.text, 'utf-8'))
+                    src.write(self.text.encode('utf-8'))
                 else:   # python version 3.x
                     src.write(self.text)
             self.text_buffer.set_modified(False)

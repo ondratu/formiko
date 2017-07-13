@@ -7,6 +7,7 @@ from traceback import print_exc
 from os import stat
 from os.path import splitext
 from sys import version_info
+from io import open
 
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
@@ -154,7 +155,7 @@ class AppWindow(Gtk.ApplicationWindow):
             if not file_name.lower().endswith(".html") \
                     and not file_name.lower().endswith(".htm"):
                 file_name += ".html"
-            with open(file_name, "w+") as output:
+            with open(file_name, "w+", encoding="utf-8") as output:
                 data = self.renderer.render_output()[1].strip()
                 if version_info.major == 2:
                     output.write(data.encode("utf-8"))
