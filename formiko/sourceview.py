@@ -21,6 +21,7 @@ LANGS = {
     '.md': default_manager.get_language('markdown'),
     '.html': default_manager.get_language('html'),
     '.htm': default_manager.get_language('html'),
+    '.json': default_manager.get_language('json')
 }
 
 

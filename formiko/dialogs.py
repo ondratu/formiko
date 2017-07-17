@@ -83,9 +83,17 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
     def add_filter_html(self):
         filter_html = Gtk.FileFilter()
+        filter_html.extensions = ('.html', '.htm')
         filter_html.set_name("Hypertext files")
         filter_html.add_mime_type("text/html")
         self.add_filter(filter_html)
+
+    def add_filter_json(self):
+        filter_json = Gtk.FileFilter()
+        filter_json.extensions = ('.json',)
+        filter_json.set_name("JSON files")
+        filter_json.add_mime_type("application/json")
+        self.add_filter(filter_json)
 
     def add_filter_all(self):
         filter_all = Gtk.FileFilter()

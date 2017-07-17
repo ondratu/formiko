@@ -37,10 +37,16 @@ except:
 from io import StringIO
 from traceback import format_exc
 from sys import version_info
+from json import loads, dumps
 
 
 class HtmlPreview(object):
-    """Empty preview class"""
+    """Dummy html preview class"""
+    pass
+
+
+class JSONPreview(object):
+    """Dummy json preview class"""
     pass
 
 
@@ -58,7 +64,11 @@ PARSERS = {
     'html': {
         'key': 'html',
         'title': 'HTML preview',
-        'class': HtmlPreview}
+        'class': HtmlPreview},
+    'json': {
+        'key': 'json',
+        'title': 'JSON preview',
+        'class': JSONPreview}
 }
 
 EXTS = {
@@ -66,6 +76,7 @@ EXTS = {
     '.md': 'md',
     '.html': 'html',
     '.htm': 'html',
+    '.json': 'json'
 }
 
 WRITERS = {
@@ -110,6 +121,16 @@ NOT_FOUND = """
        See <a href="{url}">{url}</a> for mor details and install it
        to system.
     </p>
+  </body>
+</html>
+"""
+
+JSON_ERROR = """
+<html>
+  <head></head>
+  <body>
+    <h1>JSON Error!</h1>
+    <p style="color:red; text-width:weight;">%s</p>
   </body>
 </html>
 """
@@ -192,12 +213,20 @@ class Renderer(Overlay):
 
     def render_output(self):
         if getattr(self, 'src', None) is None:
-            return False, ""
+            return False, "", "text/plain"
         try:
             if self.__parser['class'] is None:
                 html = NOT_FOUND.format(**self.__parser)
             elif self.__writer['class'] is None:
                 html = NOT_FOUND.format(**self.__writer)
+            elif issubclass(self.__parser['class'], JSONPreview):
+                try:
+                    json = loads(self.src)
+                    return (False, dumps(json, sort_keys=True,
+                                         indent=4, separators=(',', ': ')),
+                            'application/json')
+                except ValueError as e:
+                    return False, JSON_ERROR % str(e), "text/html"
             else:
                 if not issubclass(self.__parser['class'], HtmlPreview):
                     settings = {
@@ -213,14 +242,15 @@ class Renderer(Overlay):
                         writer=self.writer_instance,
                         writer_name='html',
                         settings_overrides=settings).decode('utf-8')
-                    return True, html
+                    return True, html, 'text/html'
                 else:
                     if version_info.major == 2:
                         html = self.src.decode("utf-8")
                     else:
                         html = self.src
 
-            return False, html
+            # output to file or html preview
+            return False, html, 'text/html'
 
         except:
             win = self.get_toplevel()
@@ -228,7 +258,7 @@ class Renderer(Overlay):
             app.activate_action("traceback", Variant("s", format_exc()))
 
     def do_render(self):
-        state, html = self.render_output()
+        state, html, mime_type = self.render_output()
         if state:
             a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
             position = (float(a)/(a+b)) if a or b else 0
@@ -237,7 +267,7 @@ class Renderer(Overlay):
         if html and self.__win.runing:
             file_name = self.file_name or get_home_dir()
             self.webview.load_bytes(Bytes(html.encode("utf-8")),
-                                    "text/html", "UTF-8", "file://"+file_name)
+                                    mime_type, "UTF-8", "file://"+file_name)
 
     def render(self, src, file_name, pos=0):
         self.src = src

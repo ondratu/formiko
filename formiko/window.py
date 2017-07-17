@@ -142,7 +142,11 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_export_document_as(self, action, *params):
         file_name = self.editor.file_name or None
         dialog = FileSaveDialog(self)
-        dialog.add_filter_html()
+        if self.renderer.get_parser() == 'json':
+            dialog.add_filter_json()
+        else:
+            dialog.add_filter_html()
+        dialog.add_filter_all()
         dialog.set_do_overwrite_confirmation(True)
 
         if file_name is None:
@@ -151,10 +155,16 @@ class AppWindow(Gtk.ApplicationWindow):
             dialog.set_current_name(file_name[:file_name.rfind('.')])
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
+            extensions = getattr(dialog.get_filter(), 'extensions', ())
             file_name = dialog.get_filename()
-            if not file_name.lower().endswith(".html") \
-                    and not file_name.lower().endswith(".htm"):
-                file_name += ".html"
+            ex_ok = False
+            for extension in extensions:
+                if file_name.lower().endswith(extension):
+                    ex_ok = True
+                    break
+            if not ex_ok and extensions:
+                file_name += extensions[0]
+
             with open(file_name, "w+", encoding="utf-8") as output:
                 data = self.renderer.render_output()[1].strip()
                 if version_info.major == 2:
