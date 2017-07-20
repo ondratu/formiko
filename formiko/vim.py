@@ -99,6 +99,10 @@ class VimEditor(Socket):
         self.__file_name = __file_name
         return self.__file_name
 
+    @property
+    def file_path(self):
+        return self.get_vim_file_path()
+
     def do_file_type(self, ext):
         pass
 

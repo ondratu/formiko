@@ -8,7 +8,7 @@ from gi.repository.GLib import get_home_dir, timeout_add_seconds
 
 from gi.repository import Gtk
 
-from os.path import splitext, basename, isfile
+from os.path import splitext, basename, isfile, dirname
 from io import open
 from traceback import format_exc
 from sys import version_info
@@ -77,6 +77,10 @@ class SourceView(Gtk.ScrolledWindow):
     @property
     def file_name(self):
         return basename(self.__file_name)
+
+    @property
+    def file_path(self):
+        return self.__file_name
 
     @property
     def file_ext(self):
