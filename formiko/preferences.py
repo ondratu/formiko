@@ -158,6 +158,16 @@ class Preferences(Gtk.Popover):
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 5)
 
+        self.period_btn = Gtk.CheckButton(
+            label='Save file each 5 min',
+            action_name="win.period-save-toggle",
+            action_target=Variant('b', True))
+        self.period_btn.set_active(user_preferences.period_save)
+        vbox.pack_start(self.period_btn, True, True, 0)
+
+        vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
+                        True, True, 5)
+
         btn_box = Gtk.StackSwitcher(orientation=Gtk.Orientation.HORIZONTAL)
 
         sav_btn = Gtk.Button(action_name="win.save-preferences")
@@ -202,6 +212,8 @@ class Preferences(Gtk.Popover):
         else:   # yes, this never happen, but ...
             self.style_btn.set_filename(UserPreferences.style)
         self.style_btn.do_file_set()    # call action
+
+        self.period_btn.set_active(UserPreferences.period_save)
 
     def set_parser(self, parser):
         for it in self.parser_group:

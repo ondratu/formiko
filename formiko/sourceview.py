@@ -4,7 +4,7 @@ require_version('GtkSource', '3.0')     # noqa
 from gi.repository.GObject import SIGNAL_RUN_FIRST
 from gi.repository.Pango import FontDescription
 from gi.repository.GtkSource import LanguageManager, Buffer, View
-from gi.repository.GLib import get_home_dir
+from gi.repository.GLib import get_home_dir, timeout_add_seconds
 
 from gi.repository import Gtk
 
@@ -12,6 +12,7 @@ from os.path import splitext, basename, isfile
 from io import open
 from traceback import format_exc
 from sys import version_info
+from threading import Thread
 
 from formiko.dialogs import FileSaveDialog, TraceBackDialog
 
@@ -23,6 +24,7 @@ LANGS = {
     '.htm': default_manager.get_language('html'),
     '.json': default_manager.get_language('json')
 }
+PERIOD_SAVE_TIME = 300      # 5min
 
 
 class SourceView(Gtk.ScrolledWindow):
@@ -33,7 +35,8 @@ class SourceView(Gtk.ScrolledWindow):
         'file_type': (SIGNAL_RUN_FIRST, None, (str,))
     }
 
-    def __init__(self, default_parser):
+    def __init__(self, default_parser, period_save=True):
+        self.period_save = bool(period_save)*PERIOD_SAVE_TIME
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
@@ -48,6 +51,9 @@ class SourceView(Gtk.ScrolledWindow):
             FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
+
+        if period_save:
+            self.period_save_thread()
 
     @property
     def changes(self):
@@ -80,6 +86,18 @@ class SourceView(Gtk.ScrolledWindow):
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
 
+    def set_period_save(self, save):
+        self.period_save = bool(save)*PERIOD_SAVE_TIME
+        if save:
+            save.period_save_thread()
+
+    def period_save_thread(self):
+        if self.period_save:
+            if self.__file_name and self.is_modified:
+                thread = Thread(target=self.save_to_file)
+                thread.start()
+            timeout_add_seconds(self.period_save, self.period_save_thread)
+
     def read_from_file(self, file_name):
         self.__file_name = file_name
         self.emit("file_type", self.file_ext)
@@ -90,7 +108,8 @@ class SourceView(Gtk.ScrolledWindow):
                 self.__last_changes += 1
         self.text_buffer.set_modified(False)
 
-    def save_to_file(self, window):
+    def save_to_file(self, window=None):
+        print("save_to_file")
         try:
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
@@ -99,9 +118,10 @@ class SourceView(Gtk.ScrolledWindow):
                     src.write(self.text)
             self.text_buffer.set_modified(False)
         except Exception:
-            md = TraceBackDialog(window, format_exc())
-            md.run()
-            md.destroy()
+            if window:
+                md = TraceBackDialog(window, format_exc())
+                md.run()
+                md.destroy()
 
     def save(self, window):
         if not self.__file_name:

@@ -101,6 +101,13 @@ class AppWindow(Gtk.ApplicationWindow):
         action.connect("change-state", self.on_change_style)
         self.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "period-save-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', self.preferences.period_save))
+        action.connect("change-state", self.on_period_save_toggle)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("reset-preferences", None)
         action.connect("activate", self.on_reset_preferences)
         self.add_action(action)
@@ -227,6 +234,10 @@ class AppWindow(Gtk.ApplicationWindow):
         else:
             self.renderer.set_style('')
 
+    def on_period_save_toggle(self, action, param):
+        period_save = not self.preferences.period_save
+        self.preferences.period_save = period_save
+
     def on_reset_preferences(self, action, param):
         self.pref_menu.reset()
 
@@ -296,7 +307,8 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor = VimEditor(self, self.server_name, file_name)
             self.editor.connect("file_type", self.on_file_type)
         else:
-            self.editor = SourceView(self.preferences.parser)
+            self.editor = SourceView(self.preferences.parser,
+                                     self.preferences.period_save)
             self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)

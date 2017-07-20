@@ -11,6 +11,7 @@ Features:
 * possible use Vim editor
 * vertical or horizontal window splitting
 * preview mode
+* periodic save file
 
 It support these parsers and writers:
 

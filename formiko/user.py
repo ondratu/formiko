@@ -21,9 +21,9 @@ def smart_bool(value):
 
 
 class SmartParser(ConfigParser):
-    def smart_get(self, obj, key, conv=str):
+    def smart_get(self, obj, key, conv=str, sec='main'):
         try:
-            val = self.get('main', key)
+            val = self.get(sec, key)
             setattr(obj, key, conv(val))
         except NoSectionError:
             pass
@@ -39,6 +39,7 @@ class UserPreferences(object):
     writer = 'html4'
     style = ''
     custom_style = False
+    period_save = True
 
     def __init__(self):
         self.load()
@@ -52,6 +53,7 @@ class UserPreferences(object):
         cp.smart_get(self, 'writer')
         cp.smart_get(self, 'style')
         cp.smart_get(self, 'custom_style', smart_bool)
+        cp.smart_get(self, 'period_save', smart_bool, 'editor')
 
     def save(self):
         cp = SmartParser()
@@ -61,6 +63,8 @@ class UserPreferences(object):
         cp.set('main', 'writer', self.writer)
         cp.set('main', 'style', self.style)
         cp.set('main', 'custom_style', str(self.custom_style))
+        cp.add_section('editor')
+        cp.set('editor', 'period_save', str(self.period_save))
 
         directory = get_user_config_dir()
         if not exists(directory):
