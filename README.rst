@@ -12,6 +12,7 @@ Features:
 * vertical or horizontal window splitting
 * preview mode
 * periodic save file
+* json and html preview
 
 It support these parsers and writers:
 
