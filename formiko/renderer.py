@@ -4,10 +4,11 @@ from gi import require_version
 require_version('WebKit2', '4.0')   # noqa
 
 from gi.repository.WebKit2 import WebView
-from gi.repository.GLib import Variant, idle_add, Bytes, get_home_dir
+from gi.repository.GLib import idle_add, Bytes, get_home_dir
 from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
     Align
 
+from docutils import DataError
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
@@ -125,12 +126,22 @@ NOT_FOUND = """
 </html>
 """
 
-JSON_ERROR = """
+DATA_ERROR = """
 <html>
   <head></head>
   <body>
-    <h1>JSON Error!</h1>
+    <h1>%s Error!</h1>
     <p style="color:red; text-width:weight;">%s</p>
+  </body>
+</html>
+"""
+
+EXCEPTION_ERROR = """
+<html>
+  <head></head>
+  <body>
+    <h1>Exception Error!</h1>
+    <pre style="color:red; text-width:weight;">%s</pre>
   </body>
 </html>
 """
@@ -226,7 +237,7 @@ class Renderer(Overlay):
                                          indent=4, separators=(',', ': ')),
                             'application/json')
                 except ValueError as e:
-                    return False, JSON_ERROR % str(e), "text/html"
+                    return False, DATA_ERROR % ('JSON', str(e)), "text/html"
             else:
                 if not issubclass(self.__parser['class'], HtmlPreview):
                     settings = {
@@ -236,12 +247,15 @@ class Renderer(Overlay):
                     if self.style:
                         settings['stylesheet'] = self.style
                         settings['stylesheet_path'] = []
-                    html = publish_string(
-                        source=self.src,
-                        parser=self.parser_instance,
-                        writer=self.writer_instance,
-                        writer_name='html',
-                        settings_overrides=settings).decode('utf-8')
+                    kwargs = {'source': self.src,
+                              'parser': self.parser_instance,
+                              'writer': self.writer_instance,
+                              'writer_name': 'html',
+                              'settings_overrides': settings}
+                    if self.__writer['key'] == 'pep':
+                        kwargs['reader_name'] = 'pep'
+                        kwargs.pop('parser')    # pep is allways rst
+                    html = publish_string(**kwargs).decode('utf-8')
                     return True, html, 'text/html'
                 else:
                     if version_info.major == 2:
@@ -251,11 +265,12 @@ class Renderer(Overlay):
 
             # output to file or html preview
             return False, html, 'text/html'
+        except DataError as e:
+            return False, DATA_ERROR % ('Data', e), 'text/html'
 
         except:
-            win = self.get_toplevel()
-            app = win.get_application()
-            app.activate_action("traceback", Variant("s", format_exc()))
+            exc_str = format_exc()
+            return False, EXCEPTION_ERROR % exc_str, 'text/html'
 
     def do_render(self):
         state, html, mime_type = self.render_output()
