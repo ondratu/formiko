@@ -8,7 +8,7 @@ from gi.repository.GLib import get_home_dir, timeout_add_seconds
 
 from gi.repository import Gtk
 
-from os.path import splitext, basename, isfile, dirname
+from os.path import splitext, basename, isfile
 from io import open
 from traceback import format_exc
 from sys import version_info
@@ -113,7 +113,6 @@ class SourceView(Gtk.ScrolledWindow):
         self.text_buffer.set_modified(False)
 
     def save_to_file(self, window=None):
-        print("save_to_file")
         try:
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
