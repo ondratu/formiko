@@ -14,7 +14,6 @@ from formiko.sourceview import SourceView
 from formiko.renderer import Renderer, EXTS
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
-from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences
 from formiko.icons import icon_list
@@ -281,13 +280,6 @@ class AppWindow(Gtk.ApplicationWindow):
         icon = Gio.ThemedIcon(name="emblem-system-symbolic")
         btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         btn.set_tooltip_text("Preferences")
-        toolbar.pack_end(btn)
-
-        btn = Gtk.MenuButton()
-        btn.set_menu_model(AppMenu())
-        icon = Gio.ThemedIcon(name="view-list-symbolic")
-        btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
-        btn.set_tooltip_text("Menu")
         toolbar.pack_end(btn)
 
         if self.editor_type == 'source':
