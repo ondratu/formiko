@@ -6,6 +6,7 @@ from subprocess import Popen, PIPE, check_output
 from logging import error
 from os.path import splitext
 
+VIM_PATH = "/usr/pkg/bin"
 
 class VimEditor(Socket):
     __gsignals__ = {
@@ -28,7 +29,7 @@ class VimEditor(Socket):
             name, ext = splitext(self.__file_name)
             self.emit("file_type", ext)
         args = [
-            "/usr/bin/gvim",
+            VIM_PATH+"/gvim",
             "--socketid", str(self.get_id()),
             "--servername", self.server_name,
             "--echo-wid",
@@ -42,7 +43,7 @@ class VimEditor(Socket):
 
     def vim_remote_expr(self, command):
         out = check_output([
-            "/usr/bin/vim",
+            VIM_PATH+"/vim",
             "--servername", self.server_name,
             "--remote-expr", command
             ])
@@ -50,25 +51,23 @@ class VimEditor(Socket):
 
     def vim_remote_send(self, command):
         check_output([
-            "/usr/bin/vim",
+            VIM_PATH+"/vim",
             "--servername", self.server_name,
             "--remote-send", command
             ])
 
     def get_vim_changes(self):
-        try:
-            return int(self.vim_remote_expr("b:changedtick"))
-        except:
-            return 0
+        return int(self.vim_remote_expr("b:changedtick") or '0')
 
     def get_vim_lines(self):
-        return int(self.vim_remote_expr("line('$')"))
+        return int(self.vim_remote_expr("line('$')") or '0')
 
     def get_vim_get_buffer(self, count):
         return self.vim_remote_expr("getline(0, %d)" % count)
 
     def get_vim_pos(self):
-        buff, row, col, off = self.vim_remote_expr("getpos('.')").split('\n')
+        pos = self.vim_remote_expr("getpos('.')") or ',0,0,'
+        buff, row, col, off = pos.split('\n')
         return int(row), int(col)
 
     def get_vim_file_path(self):
