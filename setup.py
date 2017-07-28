@@ -2,11 +2,13 @@
 
 from setuptools import setup
 
+from io import open
+
 from formiko import __version__, __url__, __comment__
 
 
 def doc():
-    with open('README.rst', 'r') as readme:
+    with open("README.rst", "r", encoding="utf-8") as readme:
         return readme.read().strip()
 
 
