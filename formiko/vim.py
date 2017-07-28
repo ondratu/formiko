@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE, check_output
 from logging import error
 from os.path import splitext
 
-VIM_PATH = "/usr/pkg/bin"
+VIM_PATH = "/usr/bin"
 
 class VimEditor(Socket):
     __gsignals__ = {
