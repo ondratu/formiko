@@ -38,6 +38,7 @@ recommended:
 
 * docutils - reStrucured support
 * recommonmark - for Common Mark support
+* Pygments
 
 optionally:
 ~~~~~~~~~~~
@@ -46,3 +47,19 @@ optionally:
 * docutils-htmlwriter
 * docutils-html5-writer
 * vim-gtk or vim-gnome
+
+NetBSD
+~~~~~~
+NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
+Formiko call vim and gvim directly. If you want to use vim version with
+pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
+
+.. code:: sh
+
+    # python3.6 is in dependecies as like gtk3
+    pkgin install py36-pip py36-gobject3 py36-docutils-0.13.1 gtksourceview3 librsvg webkit-gtk py36-pygments
+    pip3.6 install formiko
+
+    # optionaly
+    pkgin install vim-gtk3
+    pip3.6 install docutils-tinyhtmlwriter
