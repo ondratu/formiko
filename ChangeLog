@@ -1,7 +1,8 @@
 Changelog
 =========
 
-Version development
+Version 1.1.0 - 03.08.2017 7:00
+
   * GTK Version check
   * add accels only for SourceView editor
   * export document as HTML
@@ -55,4 +56,3 @@ Version 1.0.0 - 12.07.2016 08:24
   * using Gtk+3
   * installable project
   * first based function
-  
