@@ -9,10 +9,14 @@ Version development
   * Python 2.x encoding fixies
   * links, images and media urls showen in popup bar
   * JSON preview
-  * periodic save file
   * PEP writer fix
   * only one application menu
   * info for Debian and NetBSD users
+  * SourceView editor settings:
+     - tab width
+     - usinng spaces intead of tabs
+     - 80 chars length line visualization
+     - periodic saving file
 
 Version 1.0.2 - 19.07.2016 17:39
 
@@ -51,3 +55,4 @@ Version 1.0.0 - 12.07.2016 08:24
   * using Gtk+3
   * installable project
   * first based function
+  

@@ -79,6 +79,50 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
             go.activate_action(action, self.action_target)
 
 
+class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):
+
+    action_name = GObject.property(type=str)
+    action_target = GObject.property(type=GObject.TYPE_VARIANT)
+
+    def __init__(self, action_name=None, value=0.0, min=0.0, max=0.0,
+                 step=0.0, page=0.0, **kwargs):
+        Gtk.SpinButton.__init__(self, **kwargs)
+        self.set_increments(step, page)
+        self.set_range(min, max)
+        self.set_value(value)
+        if action_name:
+            self.action_name = action_name
+
+    def do_realize(self):
+        Gtk.SpinButton.do_realize(self)
+        action, go = self.get_action_owner()
+        if go:
+            self.set_value(go.get_action_state(action).get_double())
+            self.set_sensitive(go.get_action_enabled(action))
+
+    def set_action_name(self, action_name):
+        self.action_name = action_name
+        if self.get_realized():
+            action, go = self.get_action_owner()
+            if go:
+                self.set_value(go.get_action_state(action).get_double())
+
+    def get_action_name(self):
+        return self.action_name
+
+    def set_action_target_value(self, target_value):
+        self.action_target = target_value
+
+    def get_action_target_value(self):
+        return self.action_target
+
+    def do_value_changed(self):
+        self.action_target = Variant("d", self.get_value() or 0.0)
+        action, go = self.get_action_owner()
+        if go:
+            go.activate_action(action, self.action_target)
+
+
 class Preferences(Gtk.Popover):
     def __init__(self, user_preferences):
         super(Preferences, self).__init__(border_width=20)
@@ -165,6 +209,23 @@ class Preferences(Gtk.Popover):
         self.period_btn.set_active(user_preferences.period_save)
         vbox.pack_start(self.period_btn, True, True, 0)
 
+        self.spaces_btn = Gtk.CheckButton(
+            label='Use spaces instead of tabs',
+            action_name="win.spaces-instead-of-tabs-toggle",
+            action_target=Variant('b', True))
+        self.spaces_btn.set_active(user_preferences.spaces_instead_of_tabs)
+        vbox.pack_start(self.spaces_btn, True, True, 0)
+
+        self.tab_width_btn = ActionableSpinButton(
+            action_name="win.tab-width",
+            value=user_preferences.tab_width,
+            min=1, max=100, step=1, page=2)
+
+        tab_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        tab_box.pack_start(Gtk.Label.new("Tab char width"), True, True, 0)
+        tab_box.pack_start(self.tab_width_btn, True, True, 0)
+        vbox.pack_start(tab_box, True, True, 0)
+
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 5)
 
@@ -213,7 +274,10 @@ class Preferences(Gtk.Popover):
             self.style_btn.set_filename(UserPreferences.style)
         self.style_btn.do_file_set()    # call action
 
-        self.period_btn.set_active(UserPreferences.period_save)
+        if self.period_btn.get_sensitive():
+            self.period_btn.set_active(UserPreferences.period_save)
+            self.spaces_btn.set_active(UserPreferences.spaces_instead_of_tabs)
+            self.tab_width_btn.set_value(UserPreferences.tab_width)
 
     def set_parser(self, parser):
         for it in self.parser_group:

@@ -107,6 +107,20 @@ class AppWindow(Gtk.ApplicationWindow):
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "spaces-instead-of-tabs-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', self.preferences.spaces_instead_of_tabs))
+        action.connect("change-state", self.on_spaces_instead_of_tabs_toogle)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new_stateful(
+            "tab-width", GLib.VariantType.new('d'),
+            GLib.Variant('d', self.preferences.tab_width))
+        action.connect("change-state", self.on_tab_width)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("reset-preferences", None)
         action.connect("activate", self.on_reset_preferences)
         self.add_action(action)
@@ -236,6 +250,17 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_period_save_toggle(self, action, param):
         period_save = not self.preferences.period_save
         self.preferences.period_save = period_save
+        self.editor.set_period_save(period_save)
+
+    def on_spaces_instead_of_tabs_toogle(self, action, param):
+        use_spaces = not self.preferences.spaces_instead_of_tabs
+        self.preferences.spaces_instead_of_tabs = use_spaces
+        self.editor.set_spaces_instead_of_tabs(use_spaces)
+
+    def on_tab_width(self, action, param):
+        width = int(param.get_double())
+        self.preferences.tab_width = width
+        self.editor.set_tab_width(width)
 
     def on_reset_preferences(self, action, param):
         self.pref_menu.reset()
@@ -299,8 +324,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor = VimEditor(self, self.server_name, file_name)
             self.editor.connect("file_type", self.on_file_type)
         else:
-            self.editor = SourceView(self.preferences.parser,
-                                     self.preferences.period_save)
+            self.editor = SourceView(self.preferences)
             self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)

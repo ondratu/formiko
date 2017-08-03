@@ -35,25 +35,26 @@ class SourceView(Gtk.ScrolledWindow):
         'file_type': (SIGNAL_RUN_FIRST, None, (str,))
     }
 
-    def __init__(self, default_parser, period_save=True):
-        self.period_save = bool(period_save)*PERIOD_SAVE_TIME
+    def __init__(self, preferences):
         super(Gtk.ScrolledWindow, self).__init__()
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = Buffer.new_with_language(
-            LANGS['.%s' % default_parser])
+            LANGS['.%s' % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
         self.source_view.set_auto_indent(True)
         self.source_view.set_show_line_numbers(True)
         self.source_view.set_wrap_mode(Gtk.WrapMode.WORD)
+        self.source_view.set_show_right_margin(True)
         self.source_view.override_font(
             FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
 
-        if period_save:
-            self.period_save_thread()
+        self.set_period_save(preferences.period_save)
+        self.set_spaces_instead_of_tabs(preferences.spaces_instead_of_tabs)
+        self.set_tab_width(preferences.tab_width)
 
     @property
     def changes(self):
@@ -93,7 +94,14 @@ class SourceView(Gtk.ScrolledWindow):
     def set_period_save(self, save):
         self.period_save = bool(save)*PERIOD_SAVE_TIME
         if save:
-            save.period_save_thread()
+            self.period_save_thread()
+
+    def set_spaces_instead_of_tabs(self, use_spaces):
+        self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)
+        self.source_view.set_smart_backspace(use_spaces)
+
+    def set_tab_width(self, width):
+        self.source_view.set_tab_width(width)
 
     def period_save_thread(self):
         if self.period_save:
@@ -116,7 +124,7 @@ class SourceView(Gtk.ScrolledWindow):
         try:
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
-                    src.write(self.text.encode('utf-8'))
+                    src.write(self.text.decode('utf-8'))
                 else:   # python version 3.x
                     src.write(self.text)
             self.text_buffer.set_modified(False)
