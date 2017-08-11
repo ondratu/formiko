@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Version 1.1.1dev
+
+  * vim with working application menu
+  * realy disabled accels for vim
+
 Version 1.1.0 - 03.08.2017 7:00
 
   * GTK Version check

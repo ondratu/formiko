@@ -5,46 +5,51 @@ from gi.repository.GObject import SIGNAL_RUN_FIRST
 from subprocess import Popen, PIPE, check_output
 from logging import error
 from os.path import splitext
+from uuid import uuid4
+from time import sleep
 
 VIM_PATH = "/usr/bin"
+
 
 class VimEditor(Socket):
     __gsignals__ = {
         'file_type': (SIGNAL_RUN_FIRST, None, (str,))
     }
 
-    def __init__(self, app_window, server_name, file_name=''):
+    def __init__(self, app_window, file_name=''):
         super(VimEditor, self).__init__()
-        self.server_name = server_name
         self.__file_name = file_name
+        self.__server_name = str(uuid4())
         self.connect("plug-removed", app_window.destroy_from_vim)
-        self.connect("hierarchy-changed", self.hierarchy_changed)
+        self.connect("realize", self.print_state)
 
-    def hierarchy_changed(self, widget, previous_toplevel, *args):
-        if previous_toplevel is None:
-            self.vim_start_server()
+    def print_state(self, *args):
+        self.vim_start_server()
 
     def vim_start_server(self):
         if self.__file_name:
             name, ext = splitext(self.__file_name)
             self.emit("file_type", ext)
+            file_type = ""
+        else:
+            file_type = " filetype=rst"
         args = [
             VIM_PATH+"/gvim",
             "--socketid", str(self.get_id()),
-            "--servername", self.server_name,
+            "--servername", self.__server_name,
             "--echo-wid",
             # no menu (m) a no toolbar (T)
-            "-c", "set go-=m go-=T filetype=rst"]
+            "-c", "set go-=m go-=T" + file_type]
         if self.__file_name:
             args.append(self.__file_name)
         server = Popen(args, stdout=PIPE)
         server.stdout.readline()    # read wid, so server was started
-        self.show()
+        sleep(0.1)                  # some time for vim server
 
     def vim_remote_expr(self, command):
         out = check_output([
             VIM_PATH+"/vim",
-            "--servername", self.server_name,
+            "--servername", self.__server_name,
             "--remote-expr", command
             ])
         return out.decode('utf-8').strip()
@@ -52,7 +57,7 @@ class VimEditor(Socket):
     def vim_remote_send(self, command):
         check_output([
             VIM_PATH+"/vim",
-            "--servername", self.server_name,
+            "--servername", self.__server_name,
             "--remote-send", command
             ])
 

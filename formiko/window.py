@@ -2,7 +2,6 @@
 from gi.repository import Gtk, GLib, Gio
 
 from threading import Thread
-from uuid import uuid4
 from traceback import print_exc
 from os import stat
 from os.path import splitext
@@ -24,7 +23,6 @@ NOT_SAVED_NAME = 'Not saved document'
 class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, editor, file_name=''):
         assert editor in ('vim', 'source', None)
-        self.server_name = str(uuid4())
         self.runing = True
         self.editor_type = editor
         self.cache = UserCache()
@@ -321,7 +319,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':
-            self.editor = VimEditor(self, self.server_name, file_name)
+            self.editor = VimEditor(self, file_name)
             self.editor.connect("file_type", self.on_file_type)
         else:
             self.editor = SourceView(self.preferences)

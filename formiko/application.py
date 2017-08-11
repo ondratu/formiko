@@ -64,11 +64,12 @@ class Application(GtkApplication):
             editor = 'source'
         else:
             editor = 'source'
-        if editor == 'source':  # vim have disabled accels for conflict itself
-            self.set_accels()
 
         if self.get_application_id() == "cz.zeropage.formiko.vim":
             editor = 'vim'
+
+        if editor == 'source':  # vim have disabled accels for conflict itself
+            self.set_accels()
 
         if options.contains("preview") and last and last != '-':
             self.new_window(None, join(command_line.get_cwd(), last))
