@@ -259,6 +259,7 @@ class AppWindow(Gtk.ApplicationWindow):
         width = int(param.get_double())
         self.preferences.tab_width = width
         self.editor.set_tab_width(width)
+        self.renderer.set_tab_width(width)
 
     def on_reset_preferences(self, action, param):
         self.pref_menu.reset()
@@ -316,6 +317,7 @@ class AppWindow(Gtk.ApplicationWindow):
                                  writer=self.preferences.writer)
         if self.preferences.custom_style and self.preferences.style:
             self.renderer.set_style(self.preferences.style)
+        self.renderer.set_tab_width(self.preferences.tab_width)
 
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':

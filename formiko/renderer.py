@@ -178,6 +178,7 @@ class Renderer(Overlay):
         self.set_writer(writer)
         self.set_parser(parser)
         self.style = style
+        self.tab_width = 8
         self.__win = win
 
     def on_mouse(self, web_view, hit_test_result, modifiers):
@@ -222,6 +223,9 @@ class Renderer(Overlay):
     def get_style(self):
         return self.style
 
+    def set_tab_width(self, width):
+        self.tab_width = width
+
     def render_output(self):
         if getattr(self, 'src', None) is None:
             return False, "", "text/plain"
@@ -234,6 +238,7 @@ class Renderer(Overlay):
                 try:
                     json = loads(self.src)
                     return (False, dumps(json, sort_keys=True,
+                                         ensure_ascii=False,
                                          indent=4, separators=(',', ': ')),
                             'application/json')
                 except ValueError as e:
@@ -242,7 +247,8 @@ class Renderer(Overlay):
                 if not issubclass(self.__parser['class'], HtmlPreview):
                     settings = {
                         'warning_stream': StringIO(),
-                        'embed_stylesheet': True
+                        'embed_stylesheet': True,
+                        'tab_width': self.tab_width
                     }
                     if self.style:
                         settings['stylesheet'] = self.style
