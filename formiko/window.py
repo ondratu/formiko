@@ -69,6 +69,20 @@ class AppWindow(Gtk.ApplicationWindow):
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
+            "editor-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', True))
+        action.connect("change-state", self.on_change_editor_toogle)
+        self.add_action(action)
+        self.show_editor = True
+
+        action = Gio.SimpleAction.new_stateful(
+            "preview-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', True))
+        action.connect("change-state", self.on_change_preview_toogle)
+        self.add_action(action)
+        self.show_preview = True
+
+        action = Gio.SimpleAction.new_stateful(
             "change-preview", GLib.VariantType.new('q'),
             GLib.Variant('q', self.preferences.preview))
         action.connect("change-state", self.on_change_preview)
@@ -197,9 +211,28 @@ class AppWindow(Gtk.ApplicationWindow):
             self.save_win_state()
         return not rv
 
+    def on_change_editor_toogle(self, action, param):
+        self.show_editor = not self.show_editor
+        if self.show_editor:
+            self.editor.show()
+            return
+        elif not self.show_preview:
+            self.preview_toggle_btn.set_active(True)
+        self.editor.hide()
+
+    def on_change_preview_toogle(self, action, param):
+        self.show_preview = not self.show_preview
+        if self.show_preview:
+            self.renderer.show()
+            return
+        elif not self.show_editor:
+            self.editor_toggle_btn.set_active(True)
+        self.renderer.hide()
+
     def on_change_preview(self, action, param):
         if action.get_state() != param:
             action.set_state(param)
+
         if not getattr(self, 'paned', False):
             return
         orientation = param.get_uint16()
@@ -294,9 +327,13 @@ class AppWindow(Gtk.ApplicationWindow):
         self.cache.save()
 
     def fill_headerbar(self, toolbar):
-        btn = Gtk.Button(label="Open")
-        btn.set_action_name("win.open-document")
+        btn = Gtk.Button(label="Open", action_name="win.open-document")
         toolbar.pack_start(btn)
+
+        if self.editor_type == 'source':
+            btn = Gtk.Button(label="Save")
+            btn.set_action_name("win.save-document")
+            toolbar.pack_start(btn)
 
         self.pref_menu = Preferences(self.preferences)
 
@@ -306,10 +343,23 @@ class AppWindow(Gtk.ApplicationWindow):
         btn.set_tooltip_text("Preferences")
         toolbar.pack_end(btn)
 
-        if self.editor_type == 'source':
-            btn = Gtk.Button(label="Save")
-            btn.set_action_name("win.save-document")
-            toolbar.pack_end(btn)
+        if self.editor_type != 'preview':
+            btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
+            Gtk.StyleContext.add_class(btn_box.get_style_context(), "linked")
+
+            self.editor_toggle_btn = Gtk.ToggleButton(
+                label="Editor",
+                action_name="win.editor-toggle",
+                action_target=GLib.Variant('b', True))
+            btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
+
+            self.preview_toggle_btn = Gtk.ToggleButton(
+                label="Preview",
+                action_name="win.preview-toggle",
+                action_target=GLib.Variant('b', True))
+            btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
+
+            toolbar.pack_end(btn_box)
 
     def create_renderer(self):
         self.renderer = Renderer(self,
