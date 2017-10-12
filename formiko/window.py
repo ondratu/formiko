@@ -31,10 +31,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.create_renderer()
         self.actions()
         self.connect("delete-event", self.on_delete)
-        headerbar = Gtk.HeaderBar()
-        headerbar.set_show_close_button(True)
-        self.fill_headerbar(headerbar)
-        self.set_titlebar(headerbar)
+        self.set_titlebar(self.create_headerbar())
         self.set_icon_list(icon_list)
         self.layout(file_name)
 
@@ -326,14 +323,16 @@ class AppWindow(Gtk.ApplicationWindow):
         self.cache.is_maximized = self.is_maximized()
         self.cache.save()
 
-    def fill_headerbar(self, toolbar):
+    def create_headerbar(self):
+        headerbar = Gtk.HeaderBar()
+        headerbar.set_show_close_button(True)
+
         btn = Gtk.Button(label="Open", action_name="win.open-document")
-        toolbar.pack_start(btn)
+        headerbar.pack_start(btn)
 
         if self.editor_type == 'source':
-            btn = Gtk.Button(label="Save")
-            btn.set_action_name("win.save-document")
-            toolbar.pack_start(btn)
+            btn = Gtk.Button(label="Save", action_name="win.save-document")
+            headerbar.pack_start(btn)
 
         self.pref_menu = Preferences(self.preferences)
 
@@ -341,7 +340,7 @@ class AppWindow(Gtk.ApplicationWindow):
         icon = Gio.ThemedIcon(name="emblem-system-symbolic")
         btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         btn.set_tooltip_text("Preferences")
-        toolbar.pack_end(btn)
+        headerbar.pack_end(btn)
 
         if self.editor_type != 'preview':
             btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
@@ -359,7 +358,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 action_target=GLib.Variant('b', True))
             btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
 
-            toolbar.pack_end(btn_box)
+            headerbar.pack_end(btn_box)
+        return headerbar
 
     def create_renderer(self):
         self.renderer = Renderer(self,
