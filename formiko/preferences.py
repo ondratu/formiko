@@ -209,23 +209,6 @@ class Preferences(Gtk.Popover):
         self.period_btn.set_active(user_preferences.period_save)
         vbox.pack_start(self.period_btn, True, True, 0)
 
-        self.spaces_btn = Gtk.CheckButton(
-            label='Use spaces instead of tabs',
-            action_name="win.spaces-instead-of-tabs-toggle",
-            action_target=Variant('b', True))
-        self.spaces_btn.set_active(user_preferences.spaces_instead_of_tabs)
-        vbox.pack_start(self.spaces_btn, True, True, 0)
-
-        self.tab_width_btn = ActionableSpinButton(
-            action_name="win.tab-width",
-            value=user_preferences.tab_width,
-            min=1, max=100, step=1, page=2)
-
-        tab_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        tab_box.pack_start(Gtk.Label.new("Tab char width"), True, True, 0)
-        tab_box.pack_start(self.tab_width_btn, True, True, 0)
-        vbox.pack_start(tab_box, True, True, 0)
-
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 5)
 
@@ -276,8 +259,6 @@ class Preferences(Gtk.Popover):
 
         if self.period_btn.get_sensitive():
             self.period_btn.set_active(UserPreferences.period_save)
-            self.spaces_btn.set_active(UserPreferences.spaces_instead_of_tabs)
-            self.tab_width_btn.set_value(UserPreferences.tab_width)
 
     def set_parser(self, parser):
         for it in self.parser_group:

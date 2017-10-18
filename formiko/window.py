@@ -13,9 +13,10 @@ from formiko.sourceview import SourceView
 from formiko.renderer import Renderer, EXTS
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
-from formiko.preferences import Preferences
+from formiko.preferences import Preferences, ActionableSpinButton
 from formiko.user import UserCache, UserPreferences
 from formiko.icons import icon_list
+from formiko.status_menu import Statusbar
 
 NOT_SAVED_NAME = 'Not saved document'
 
@@ -117,15 +118,15 @@ class AppWindow(Gtk.ApplicationWindow):
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
-            "spaces-instead-of-tabs-toggle", GLib.VariantType.new('b'),
+            "use-spaces-toggle", GLib.VariantType.new('b'),
             GLib.Variant('b', self.preferences.spaces_instead_of_tabs))
-        action.connect("change-state", self.on_spaces_instead_of_tabs_toogle)
+        action.connect("change-state", self.on_use_spaces_toogle)
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
         action = Gio.SimpleAction.new_stateful(
-            "tab-width", GLib.VariantType.new('d'),
-            GLib.Variant('d', self.preferences.tab_width))
+            "tab-width", GLib.VariantType.new('i'),
+            GLib.Variant('i', self.preferences.tab_width))
         action.connect("change-state", self.on_tab_width)
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
@@ -280,16 +281,18 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.period_save = period_save
         self.editor.set_period_save(period_save)
 
-    def on_spaces_instead_of_tabs_toogle(self, action, param):
+    def on_use_spaces_toogle(self, action, param):
         use_spaces = not self.preferences.spaces_instead_of_tabs
         self.preferences.spaces_instead_of_tabs = use_spaces
         self.editor.set_spaces_instead_of_tabs(use_spaces)
+        self.preferences.save()
 
     def on_tab_width(self, action, param):
-        width = int(param.get_double())
+        width = param.get_int32()
         self.preferences.tab_width = width
         self.editor.set_tab_width(width)
         self.renderer.set_tab_width(width)
+        self.preferences.save()
 
     def on_reset_preferences(self, action, param):
         self.pref_menu.reset()
@@ -398,6 +401,9 @@ class AppWindow(Gtk.ApplicationWindow):
 
         if self.cache.is_maximized:
             self.maximize()
+
+        if self.editor_type == 'source':
+            box.pack_end(Statusbar(self.preferences), False, True, 0)
 
     def check_in_thread(self):
         if self.runing:
