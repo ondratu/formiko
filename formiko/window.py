@@ -131,6 +131,13 @@ class AppWindow(Gtk.ApplicationWindow):
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "auto-indent-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', self.preferences.auto_indent))
+        action.connect("change-state", self.on_auto_indent)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
     def on_close_window(self, action, *params):
         if self.ask_if_modified():
             self.save_win_state()
@@ -290,6 +297,12 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.tab_width = width
         self.editor.set_tab_width(width)
         self.renderer.set_tab_width(width)
+        self.preferences.save()
+
+    def on_auto_indent(self, action, param):
+        auto_indent = not self.preferences.auto_indent
+        self.preferences.auto_indent = auto_indent
+        self.editor.set_auto_indent(auto_indent)
         self.preferences.save()
 
     def ask_if_modified(self):

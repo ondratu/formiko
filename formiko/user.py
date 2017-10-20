@@ -42,6 +42,7 @@ class UserPreferences(object):
     period_save = True
     spaces_instead_of_tabs = False
     tab_width = 8
+    auto_indent = True
 
     def __init__(self):
         self.load()
@@ -59,6 +60,7 @@ class UserPreferences(object):
         cp.smart_get(self, 'period_save', smart_bool, 'editor')
         cp.smart_get(self, 'spaces_instead_of_tabs', smart_bool, 'editor')
         cp.smart_get(self, 'tab_width', int, 'editor')
+        cp.smart_get(self, 'auto_indent', smart_bool, 'editor')
 
     def save(self):
         cp = SmartParser()
@@ -73,6 +75,7 @@ class UserPreferences(object):
         cp.set('editor', 'spaces_instead_of_tabs',
                str(self.spaces_instead_of_tabs))
         cp.set('editor', 'tab_width', str(self.tab_width))
+        cp.set('editor', 'auto_indent', str(self.auto_indent))
 
         directory = get_user_config_dir()
         if not exists(directory):

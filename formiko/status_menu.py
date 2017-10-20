@@ -54,6 +54,14 @@ class Statusbar(Gtk.Statusbar):
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
         pop.add(box)
 
+        auto_indent = Gtk.CheckButton(label="Auto indent",
+            action_name="win.auto-indent-toggle",
+            action_target=GLib.Variant('b', True))
+        box.pack_start(auto_indent, True, True, 0)
+
+        box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
+                       True, True, 5)
+
         tab_spaces_2 = Gtk.RadioButton(
             label="2",
             action_name="win.tab-width",
