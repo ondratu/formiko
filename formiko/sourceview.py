@@ -43,7 +43,6 @@ class SourceView(Gtk.ScrolledWindow):
             LANGS['.%s' % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
-        self.source_view.set_show_line_numbers(True)
         self.source_view.set_wrap_mode(Gtk.WrapMode.WORD)
         self.source_view.set_show_right_margin(True)
         self.source_view.override_font(
@@ -55,6 +54,7 @@ class SourceView(Gtk.ScrolledWindow):
         self.set_spaces_instead_of_tabs(preferences.spaces_instead_of_tabs)
         self.set_tab_width(preferences.tab_width)
         self.source_view.set_auto_indent(preferences.auto_indent)
+        self.source_view.set_show_line_numbers(preferences.line_numbers)
 
     @property
     def changes(self):
@@ -105,6 +105,9 @@ class SourceView(Gtk.ScrolledWindow):
 
     def set_auto_indent(self, auto_indent):
         self.source_view.set_auto_indent(auto_indent)
+
+    def set_line_numbers(self, line_numbers):
+        self.source_view.set_show_line_numbers(line_numbers)
 
     def period_save_thread(self):
         if self.period_save:

@@ -138,6 +138,13 @@ class AppWindow(Gtk.ApplicationWindow):
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
+        action = Gio.SimpleAction.new_stateful(
+            "line-numbers-toggle", GLib.VariantType.new('b'),
+            GLib.Variant('b', self.preferences.line_numbers))
+        action.connect("change-state", self.on_line_numbers)
+        action.set_enabled(self.editor_type == 'source')
+        self.add_action(action)
+
     def on_close_window(self, action, *params):
         if self.ask_if_modified():
             self.save_win_state()
@@ -304,6 +311,13 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.auto_indent = auto_indent
         self.editor.set_auto_indent(auto_indent)
         self.preferences.save()
+
+    def on_line_numbers(self, action, param):
+        line_numbers = not self.preferences.line_numbers
+        self.preferences.line_numbers = line_numbers
+        self.editor.set_line_numbers(line_numbers)
+        self.preferences.save()
+
 
     def ask_if_modified(self):
         if self.editor_type:

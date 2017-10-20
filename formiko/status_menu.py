@@ -32,15 +32,28 @@ class StatusMenuButton(Gtk.MenuButton):
         self.label.set_label(label)
 # endclass
 
+
+class LineColPopover(Gtk.Popover):
+    def __init__(self, preferences):
+        super(LineColPopover, self).__init__()
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
+        self.add(box)
+
+        btn = Gtk.CheckButton(
+            label='Display line numbers',
+            action_name="win.line-numbers-toggle",
+            action_target=GLib.Variant('b', True))
+        btn.set_active(preferences.line_numbers)
+        box.pack_start(btn, True, True, 0)
+
+        box.show_all()
+
+
+
 class Statusbar(Gtk.Statusbar):
     def __init__(self, preferences):
         super(Statusbar, self).__init__()
-
-        self.tab_popover = self.create_tab_popover(preferences)
-        self.width_btn = StatusMenuButton(
-            "Tabulator width %d" % preferences.tab_width,
-            self.tab_popover)
-        self.pack_start(self.width_btn, False, False, 1)
 
         self.editor_popover = self.create_editor_popover(preferences)
         self.editor_btn = StatusMenuButton(
@@ -48,6 +61,16 @@ class Statusbar(Gtk.Statusbar):
             self.editor_popover)
         self.pack_start(self.editor_btn, False, False, 1)
 
+        self.tab_popover = self.create_tab_popover(preferences)
+        self.width_btn = StatusMenuButton(
+            "Tabulator width %d" % preferences.tab_width,
+            self.tab_popover)
+        self.pack_start(self.width_btn, False, False, 1)
+
+        btn = StatusMenuButton(
+            "Line 1, Col 1",
+            LineColPopover(preferences))
+        self.pack_start(btn, False, False, 1)
 
     def create_tab_popover(self, preferences):
         pop = Gtk.Popover()
@@ -120,5 +143,3 @@ class Statusbar(Gtk.Statusbar):
 
         box.show_all()
         return pop
-
-
