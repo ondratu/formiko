@@ -37,44 +37,50 @@ class Statusbar(Gtk.Statusbar):
         super(Statusbar, self).__init__()
 
         self.tab_popover = self.create_tab_popover(preferences)
-
         self.width_btn = StatusMenuButton(
             "Tabulator width %d" % preferences.tab_width,
             self.tab_popover)
         self.pack_start(self.width_btn, False, False, 1)
+
+        self.editor_popover = self.create_editor_popover(preferences)
+        self.editor_btn = StatusMenuButton(
+            "Editor",
+            self.editor_popover)
+        self.pack_start(self.editor_btn, False, False, 1)
+
 
     def create_tab_popover(self, preferences):
         pop = Gtk.Popover()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
         pop.add(box)
 
-        self.tab_spaces_2 = Gtk.RadioButton(
+        tab_spaces_2 = Gtk.RadioButton(
             label="2",
             action_name="win.tab-width",
             action_target=GLib.Variant('i', 2))
-        self.tab_spaces_2.connect("toggled", self.on_tab_spaces)
+        tab_spaces_2.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 2:
-            self.tab_spaces_2.set_active(True)
-        box.pack_start(self.tab_spaces_2, True, True, 0)
+            tab_spaces_2.set_active(True)
+        box.pack_start(tab_spaces_2, True, True, 0)
 
-        self.tab_spaces_4 = Gtk.RadioButton(
+        tab_spaces_4 = Gtk.RadioButton(
             label="4",
             action_name="win.tab-width",
             action_target=GLib.Variant('i', 4),
-            group=self.tab_spaces_2)
-        self.tab_spaces_4.connect("toggled", self.on_tab_spaces)
+            group=tab_spaces_2)
+        tab_spaces_4.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 4:
-            self.tab_spaces_2.set_active(True)
-        box.pack_start(self.tab_spaces_4, True, True, 0)
+            tab_spaces_2.set_active(True)
+        box.pack_start(tab_spaces_4, True, True, 0)
 
-        self.tab_spaces_8 = Gtk.RadioButton(label="8",
+        tab_spaces_8 = Gtk.RadioButton(label="8",
             action_name="win.tab-width",
             action_target=GLib.Variant('i', 8),
-            group=self.tab_spaces_2)
-        self.tab_spaces_8.connect("toggled", self.on_tab_spaces)
+            group=tab_spaces_2)
+        tab_spaces_8.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 8:
-            self.tab_spaces_2.set_active(True)
-        box.pack_start(self.tab_spaces_8, True, True, 0)
+            tab_spaces_2.set_active(True)
+        box.pack_start(tab_spaces_8, True, True, 0)
 
         box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                        True, True, 5)
@@ -91,3 +97,20 @@ class Statusbar(Gtk.Statusbar):
         if widget.get_active():
             self.width_btn.set_label("Tabulator width %s" %
                                       widget.get_action_target_value())
+
+    def create_editor_popover(self, preferences):
+        pop = Gtk.Popover()
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
+        pop.add(box)
+
+        period_btn = Gtk.CheckButton(
+            label='Save file each 5 min',
+            action_name="win.period-save-toggle",
+            action_target=GLib.Variant('b', True))
+        period_btn.set_active(preferences.period_save)
+        box.pack_start(period_btn, True, True, 0)
+
+        box.show_all()
+        return pop
+
+

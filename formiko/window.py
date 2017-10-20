@@ -131,14 +131,6 @@ class AppWindow(Gtk.ApplicationWindow):
         action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
-        action = Gio.SimpleAction.new("reset-preferences", None)
-        action.connect("activate", self.on_reset_preferences)
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new("save-preferences", None)
-        action.connect("activate", self.on_save_preferences)
-        self.add_action(action)
-
     def on_close_window(self, action, *params):
         if self.ask_if_modified():
             self.save_win_state()
@@ -241,6 +233,7 @@ class AppWindow(Gtk.ApplicationWindow):
             else:
                 self.paned.set_position(self.paned.get_allocated_height()/2)
             self.preferences.preview = orientation
+            self.preferences.save()
 
     def on_change_parser(self, action, param):
         if action.get_state() != param:
@@ -248,6 +241,7 @@ class AppWindow(Gtk.ApplicationWindow):
             parser = param.get_string()
             self.renderer.set_parser(parser)
             self.preferences.parser = parser
+        self.preferences.save()
 
     def on_file_type(self, widget, ext):
         parser = EXTS.get(ext, self.preferences.parser)
@@ -259,6 +253,7 @@ class AppWindow(Gtk.ApplicationWindow):
             writer = param.get_string()
             self.renderer.set_writer(writer)
             self.preferences.writer = writer
+            self.preferences.save()
 
     def on_custom_style_toggle(self, action, param):
         custom_style = not self.preferences.custom_style
@@ -267,6 +262,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.renderer.set_style(self.preferences.style)
         else:
             self.renderer.set_style('')
+        self.preferences.save()
 
     def on_change_style(self, action, param):
         style = param.get_string()
@@ -275,11 +271,13 @@ class AppWindow(Gtk.ApplicationWindow):
             self.renderer.set_style(self.preferences.style)
         else:
             self.renderer.set_style('')
+        self.preferences.save()
 
     def on_period_save_toggle(self, action, param):
         period_save = not self.preferences.period_save
         self.preferences.period_save = period_save
         self.editor.set_period_save(period_save)
+        self.preferences.save()
 
     def on_use_spaces_toogle(self, action, param):
         use_spaces = not self.preferences.spaces_instead_of_tabs
@@ -292,12 +290,6 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.tab_width = width
         self.editor.set_tab_width(width)
         self.renderer.set_tab_width(width)
-        self.preferences.save()
-
-    def on_reset_preferences(self, action, param):
-        self.pref_menu.reset()
-
-    def on_save_preferences(self, action, param):
         self.preferences.save()
 
     def ask_if_modified(self):

@@ -199,66 +199,8 @@ class Preferences(Gtk.Popover):
             action_name="win.change-style")
         vbox.pack_start(self.style_btn, True, True, 0)
 
-        vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-                        True, True, 5)
-
-        self.period_btn = Gtk.CheckButton(
-            label='Save file each 5 min',
-            action_name="win.period-save-toggle",
-            action_target=Variant('b', True))
-        self.period_btn.set_active(user_preferences.period_save)
-        vbox.pack_start(self.period_btn, True, True, 0)
-
-        vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-                        True, True, 5)
-
-        btn_box = Gtk.StackSwitcher(orientation=Gtk.Orientation.HORIZONTAL)
-
-        sav_btn = Gtk.Button(action_name="win.save-preferences")
-        icon = ThemedIcon(name="document-save-symbolic")
-        sav_btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
-        sav_btn.set_tooltip_text("Save preferences")
-        btn_box.pack_end(sav_btn, False, False, 0)
-
-        rst_btn = Gtk.Button(action_name="win.reset-preferences")
-        icon = ThemedIcon(name="view-refresh-symbolic")
-        rst_btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
-        rst_btn.set_tooltip_text("Reset preferences")
-        btn_box.pack_end(rst_btn, False, False, 0)
-
-        vbox.pack_start(btn_box, True, True, 0)
-
         vbox.show_all()
     # end def
-
-    def reset(self):
-        """Reset dialogs, and preferences states to default values.
-
-        Because actions are not restate widgets."""
-        if UserPreferences.preview == Gtk.Orientation.VERTICAL:
-            self.vert_btn.set_active(True)
-        else:
-            self.hori_btn.set_active(True)
-
-        for it in self.parser_group:
-            if it.parser == UserPreferences.parser:
-                it.set_active(True)
-                break
-
-        for it in self.writer_group:
-            if it.writer == UserPreferences.writer:
-                it.set_active(True)
-                break
-
-        self.custom_btn.set_active(UserPreferences.custom_style)
-        if not UserPreferences.style:
-            self.style_btn.unselect_all()
-        else:   # yes, this never happen, but ...
-            self.style_btn.set_filename(UserPreferences.style)
-        self.style_btn.do_file_set()    # call action
-
-        if self.period_btn.get_sensitive():
-            self.period_btn.set_active(UserPreferences.period_save)
 
     def set_parser(self, parser):
         for it in self.parser_group:
