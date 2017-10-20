@@ -79,50 +79,6 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
             go.activate_action(action, self.action_target)
 
 
-class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):
-
-    action_name = GObject.property(type=str)
-    action_target = GObject.property(type=GObject.TYPE_VARIANT)
-
-    def __init__(self, action_name=None, value=0.0, min=0.0, max=0.0,
-                 step=0.0, page=0.0, **kwargs):
-        Gtk.SpinButton.__init__(self, **kwargs)
-        self.set_increments(step, page)
-        self.set_range(min, max)
-        self.set_value(value)
-        if action_name:
-            self.action_name = action_name
-
-    def do_realize(self):
-        Gtk.SpinButton.do_realize(self)
-        action, go = self.get_action_owner()
-        if go:
-            self.set_value(go.get_action_state(action).get_double())
-            self.set_sensitive(go.get_action_enabled(action))
-
-    def set_action_name(self, action_name):
-        self.action_name = action_name
-        if self.get_realized():
-            action, go = self.get_action_owner()
-            if go:
-                self.set_value(go.get_action_state(action).get_double())
-
-    def get_action_name(self):
-        return self.action_name
-
-    def set_action_target_value(self, target_value):
-        self.action_target = target_value
-
-    def get_action_target_value(self):
-        return self.action_target
-
-    def do_value_changed(self):
-        self.action_target = Variant("d", self.get_value() or 0.0)
-        action, go = self.get_action_owner()
-        if go:
-            go.activate_action(action, self.action_target)
-
-
 class Preferences(Gtk.Popover):
     def __init__(self, user_preferences):
         super(Preferences, self).__init__(border_width=20)

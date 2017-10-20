@@ -13,7 +13,7 @@ from formiko.sourceview import SourceView
 from formiko.renderer import Renderer, EXTS
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
-from formiko.preferences import Preferences, ActionableSpinButton
+from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences
 from formiko.icons import icon_list
 from formiko.status_menu import Statusbar
