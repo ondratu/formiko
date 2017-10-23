@@ -17,6 +17,7 @@ from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences
 from formiko.icons import icon_list
 from formiko.status_menu import Statusbar
+from formiko.editor_actions import EditorActionGroup
 
 NOT_SAVED_NAME = 'Not saved document'
 
@@ -108,41 +109,6 @@ class AppWindow(Gtk.ApplicationWindow):
             "change-style", GLib.VariantType.new('s'),
             GLib.Variant('s', self.preferences.style))
         action.connect("change-state", self.on_change_style)
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "period-save-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', self.preferences.period_save))
-        action.connect("change-state", self.on_period_save_toggle)
-        action.set_enabled(self.editor_type == 'source')
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "use-spaces-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', self.preferences.spaces_instead_of_tabs))
-        action.connect("change-state", self.on_use_spaces_toogle)
-        action.set_enabled(self.editor_type == 'source')
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "tab-width", GLib.VariantType.new('i'),
-            GLib.Variant('i', self.preferences.tab_width))
-        action.connect("change-state", self.on_tab_width)
-        action.set_enabled(self.editor_type == 'source')
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "auto-indent-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', self.preferences.auto_indent))
-        action.connect("change-state", self.on_auto_indent)
-        action.set_enabled(self.editor_type == 'source')
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "line-numbers-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', self.preferences.line_numbers))
-        action.connect("change-state", self.on_line_numbers)
-        action.set_enabled(self.editor_type == 'source')
         self.add_action(action)
 
     def on_close_window(self, action, *params):
@@ -287,38 +253,6 @@ class AppWindow(Gtk.ApplicationWindow):
             self.renderer.set_style('')
         self.preferences.save()
 
-    def on_period_save_toggle(self, action, param):
-        period_save = not self.preferences.period_save
-        self.preferences.period_save = period_save
-        self.editor.set_period_save(period_save)
-        self.preferences.save()
-
-    def on_use_spaces_toogle(self, action, param):
-        use_spaces = not self.preferences.spaces_instead_of_tabs
-        self.preferences.spaces_instead_of_tabs = use_spaces
-        self.editor.set_spaces_instead_of_tabs(use_spaces)
-        self.preferences.save()
-
-    def on_tab_width(self, action, param):
-        width = param.get_int32()
-        self.preferences.tab_width = width
-        self.editor.set_tab_width(width)
-        self.renderer.set_tab_width(width)
-        self.preferences.save()
-
-    def on_auto_indent(self, action, param):
-        auto_indent = not self.preferences.auto_indent
-        self.preferences.auto_indent = auto_indent
-        self.editor.set_auto_indent(auto_indent)
-        self.preferences.save()
-
-    def on_line_numbers(self, action, param):
-        line_numbers = not self.preferences.line_numbers
-        self.preferences.line_numbers = line_numbers
-        self.editor.set_line_numbers(line_numbers)
-        self.preferences.save()
-
-
     def ask_if_modified(self):
         if self.editor_type:
             if self.editor.is_modified:
@@ -397,6 +331,10 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor.connect("file_type", self.on_file_type)
         else:
             self.editor = SourceView(self.preferences)
+            self.insert_action_group("editor",
+                                     EditorActionGroup(self.editor,
+                                                       self.renderer,
+                                                       self.preferences))
             self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)

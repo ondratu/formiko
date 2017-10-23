@@ -42,7 +42,7 @@ class LineColPopover(Gtk.Popover):
 
         btn = Gtk.CheckButton(
             label='Display line numbers',
-            action_name="win.line-numbers-toggle",
+            action_name="editor.line-numbers-toggle",
             action_target=GLib.Variant('b', True))
         btn.set_active(preferences.line_numbers)
         box.pack_start(btn, True, True, 0)
@@ -78,7 +78,7 @@ class Statusbar(Gtk.Statusbar):
         pop.add(box)
 
         auto_indent = Gtk.CheckButton(label="Auto indent",
-            action_name="win.auto-indent-toggle",
+            action_name="editor.auto-indent-toggle",
             action_target=GLib.Variant('b', True))
         box.pack_start(auto_indent, True, True, 0)
 
@@ -87,7 +87,7 @@ class Statusbar(Gtk.Statusbar):
 
         tab_spaces_2 = Gtk.RadioButton(
             label="2",
-            action_name="win.tab-width",
+            action_name="editor.tab-width",
             action_target=GLib.Variant('i', 2))
         tab_spaces_2.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 2:
@@ -96,7 +96,7 @@ class Statusbar(Gtk.Statusbar):
 
         tab_spaces_4 = Gtk.RadioButton(
             label="4",
-            action_name="win.tab-width",
+            action_name="editor.tab-width",
             action_target=GLib.Variant('i', 4),
             group=tab_spaces_2)
         tab_spaces_4.connect("toggled", self.on_tab_spaces)
@@ -105,7 +105,7 @@ class Statusbar(Gtk.Statusbar):
         box.pack_start(tab_spaces_4, True, True, 0)
 
         tab_spaces_8 = Gtk.RadioButton(label="8",
-            action_name="win.tab-width",
+            action_name="editor.tab-width",
             action_target=GLib.Variant('i', 8),
             group=tab_spaces_2)
         tab_spaces_8.connect("toggled", self.on_tab_spaces)
@@ -117,7 +117,7 @@ class Statusbar(Gtk.Statusbar):
                        True, True, 5)
 
         self.tab_use_space = Gtk.CheckButton(label="Use spaces",
-            action_name="win.use-spaces-toggle",
+            action_name="editor.use-spaces-toggle",
             action_target=GLib.Variant('b', True))
         box.pack_start(self.tab_use_space, True, True, 0)
 
