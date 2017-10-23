@@ -1,5 +1,6 @@
 from gi import require_version
 require_version('GtkSource', '3.0')     # noqa
+require_version('Pango', '1.0')         # noqa
 
 from gi.repository.GObject import SIGNAL_RUN_FIRST
 from gi.repository.Pango import FontDescription

@@ -24,10 +24,10 @@ class EditorActionGroup(SimpleActionGroup):
             "line-numbers-toggle", 'b', preferences.line_numbers,
             self.on_line_numbers)
 
-    def create_stateful_action(self, name, _type, variable, method):
+    def create_stateful_action(self, name, _type, default_value, method):
         action = SimpleAction.new_stateful(
             name, VariantType.new(_type),
-            Variant(_type, variable))
+            Variant(_type, default_value))
         action.connect("change-state", method)
         self.add_action(action)
 

@@ -67,48 +67,32 @@ class AppWindow(Gtk.ApplicationWindow):
         action.connect("activate", self.on_close_window)
         self.add_action(action)
 
-        action = Gio.SimpleAction.new_stateful(
-            "editor-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', True))
-        action.connect("change-state", self.on_change_editor_toogle)
-        self.add_action(action)
-        self.show_editor = True
+        pref = self.preferences
 
-        action = Gio.SimpleAction.new_stateful(
-            "preview-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', True))
-        action.connect("change-state", self.on_change_preview_toogle)
-        self.add_action(action)
+        self.show_editor = True
         self.show_preview = True
 
-        action = Gio.SimpleAction.new_stateful(
-            "change-preview", GLib.VariantType.new('q'),
-            GLib.Variant('q', self.preferences.preview))
-        action.connect("change-state", self.on_change_preview)
-        self.add_action(action)
+        self.create_stateful_action(
+            "editor-toggle", 'b', True, self.on_change_editor_toogle)
+        self.create_stateful_action(
+            "preview-toggle", 'b', True, self.on_change_preview_toogle)
+        self.create_stateful_action(
+            "change-preview", 'q', pref.preview, self.on_change_preview)
+        self.create_stateful_action(
+            "change-writer", 's', pref.writer, self.on_change_writer)
+        self.create_stateful_action(
+            "change-params", 's', pref.parser, self.on_change_parser)
+        self.create_stateful_action(
+            "custom-style-toggle", 'b', pref.custom_style,
+            self.on_custom_style_toggle)
+        self.create_stateful_action(
+            "change-style", 's', pref.style, self.on_change_style)
 
+    def create_stateful_action(self, name, _type, default_value, method):
         action = Gio.SimpleAction.new_stateful(
-            "change-writer", GLib.VariantType.new("s"),
-            GLib.Variant('s', self.preferences.writer))
-        action.connect("change-state", self.on_change_writer)
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "change-parser", GLib.VariantType.new('s'),
-            GLib.Variant('s', self.preferences.parser))
-        action.connect("change-state", self.on_change_parser)
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "custom-style-toggle", GLib.VariantType.new('b'),
-            GLib.Variant('b', self.preferences.custom_style))
-        action.connect("change-state", self.on_custom_style_toggle)
-        self.add_action(action)
-
-        action = Gio.SimpleAction.new_stateful(
-            "change-style", GLib.VariantType.new('s'),
-            GLib.Variant('s', self.preferences.style))
-        action.connect("change-state", self.on_change_style)
+            name, GLib.VariantType.new(_type),
+            GLib.Variant(_type, default_value))
+        action.connect("change-state", method)
         self.add_action(action)
 
     def on_close_window(self, action, *params):
