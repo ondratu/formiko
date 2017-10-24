@@ -23,6 +23,9 @@ class EditorActionGroup(SimpleActionGroup):
         self.create_stateful_action(
             "line-numbers-toggle", 'b', preferences.line_numbers,
             self.on_line_numbers)
+        self.create_stateful_action(
+            "right-margin-toggle", 'b', preferences.right_margin,
+            self.on_right_margin)
 
     def create_stateful_action(self, name, _type, default_value, method):
         action = SimpleAction.new_stateful(
@@ -60,4 +63,10 @@ class EditorActionGroup(SimpleActionGroup):
         line_numbers = not self.preferences.line_numbers
         self.preferences.line_numbers = line_numbers
         self.editor.set_line_numbers(line_numbers)
+        self.preferences.save()
+
+    def on_right_margin(self, action, param):
+        right_margin = not self.preferences.right_margin
+        self.preferences.right_margin = right_margin
+        self.editor.source_view.set_show_right_margin(right_margin)
         self.preferences.save()

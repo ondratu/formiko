@@ -45,7 +45,6 @@ class SourceView(Gtk.ScrolledWindow):
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
         self.source_view.set_wrap_mode(Gtk.WrapMode.WORD)
-        self.source_view.set_show_right_margin(True)
         self.source_view.override_font(
             FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
@@ -56,6 +55,7 @@ class SourceView(Gtk.ScrolledWindow):
         self.set_tab_width(preferences.tab_width)
         self.source_view.set_auto_indent(preferences.auto_indent)
         self.source_view.set_show_line_numbers(preferences.line_numbers)
+        self.source_view.set_show_right_margin(preferences.right_margin)
 
     @property
     def changes(self):
