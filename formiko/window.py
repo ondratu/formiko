@@ -18,8 +18,9 @@ from formiko.user import UserCache, UserPreferences
 from formiko.icons import icon_list
 from formiko.status_menu import Statusbar
 from formiko.editor_actions import EditorActionGroup
+from formiko.widgets import IconButton
 
-NOT_SAVED_NAME = 'Not saved document'
+NOT_SAVED_NAME = 'Not Saved Document'
 
 
 class AppWindow(Gtk.ApplicationWindow):
@@ -267,12 +268,17 @@ class AppWindow(Gtk.ApplicationWindow):
         headerbar = Gtk.HeaderBar()
         headerbar.set_show_close_button(True)
 
-        btn = Gtk.Button(label="Open", action_name="win.open-document")
-        headerbar.pack_start(btn)
+        headerbar.pack_start(IconButton(symbol="document-new-symbolic",
+                             tooltip="New Document",
+                             action_name="app.new-window"))
+        headerbar.pack_start(IconButton(symbol="document-open-symbolic",
+                             tooltip="Open Document",
+                             action_name="win.open-document"))
 
         if self.editor_type == 'source':
-            btn = Gtk.Button(label="Save", action_name="win.save-document")
-            headerbar.pack_start(btn)
+            headerbar.pack_start(IconButton(symbol="document-save-symbolic",
+                                            tooltip="Save Document",
+                                            action_name="win.save-document"))
 
         self.pref_menu = Preferences(self.preferences)
 
@@ -290,12 +296,14 @@ class AppWindow(Gtk.ApplicationWindow):
                 label="Editor",
                 action_name="win.editor-toggle",
                 action_target=GLib.Variant('b', True))
+            self.editor_toggle_btn.set_tooltip_text("Show Editor")
             btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
 
             self.preview_toggle_btn = Gtk.ToggleButton(
                 label="Preview",
                 action_name="win.preview-toggle",
                 action_target=GLib.Variant('b', True))
+            self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
             btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
 
             headerbar.pack_end(btn_box)
