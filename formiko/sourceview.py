@@ -50,12 +50,13 @@ class SourceView(Gtk.ScrolledWindow):
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
 
-        self.set_period_save(preferences.period_save)
-        self.set_spaces_instead_of_tabs(preferences.spaces_instead_of_tabs)
-        self.set_tab_width(preferences.tab_width)
-        self.source_view.set_auto_indent(preferences.auto_indent)
-        self.source_view.set_show_line_numbers(preferences.line_numbers)
-        self.source_view.set_show_right_margin(preferences.right_margin)
+        self.set_period_save(preferences.editor.period_save)
+        self.set_spaces_instead_of_tabs(
+            preferences.editor.spaces_instead_of_tabs)
+        self.source_view.set_tab_width(preferences.editor.tab_width)
+        self.source_view.set_auto_indent(preferences.editor.auto_indent)
+        self.source_view.set_show_line_numbers(preferences.editor.line_numbers)
+        self.source_view.set_show_right_margin(preferences.editor.right_margin)
 
     @property
     def changes(self):
@@ -100,15 +101,6 @@ class SourceView(Gtk.ScrolledWindow):
     def set_spaces_instead_of_tabs(self, use_spaces):
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)
         self.source_view.set_smart_backspace(use_spaces)
-
-    def set_tab_width(self, width):
-        self.source_view.set_tab_width(width)
-
-    def set_auto_indent(self, auto_indent):
-        self.source_view.set_auto_indent(auto_indent)
-
-    def set_line_numbers(self, line_numbers):
-        self.source_view.set_show_line_numbers(line_numbers)
 
     def period_save_thread(self):
         if self.period_save:

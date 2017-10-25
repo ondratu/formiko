@@ -307,7 +307,7 @@ class AppWindow(Gtk.ApplicationWindow):
                                  writer=self.preferences.writer)
         if self.preferences.custom_style and self.preferences.style:
             self.renderer.set_style(self.preferences.style)
-        self.renderer.set_tab_width(self.preferences.tab_width)
+        self.renderer.set_tab_width(self.preferences.editor.tab_width)
 
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':
@@ -344,7 +344,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.maximize()
 
         if self.editor_type == 'source':
-            box.pack_end(Statusbar(self.preferences), False, True, 0)
+            box.pack_end(Statusbar(self.preferences.editor), False, True, 0)
 
     def check_in_thread(self):
         if self.runing:

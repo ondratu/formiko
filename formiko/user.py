@@ -1,7 +1,6 @@
 from gi.repository.GLib import get_user_config_dir, get_user_cache_dir
 from gi.repository.Gtk import Orientation
 
-
 try:
     from configparser import ConfigParser, NoSectionError, NoOptionError
 except:
@@ -32,6 +31,18 @@ class SmartParser(ConfigParser):
         except Exception:
             print_exc()
 
+    def smart_set(self, obj, key, sec='main'):
+        self.set(sec, key, str(getattr(obj, key)))
+
+
+class EditorPreferences(object):
+    period_save = True
+    spaces_instead_of_tabs = False
+    tab_width = 8
+    auto_indent = True
+    line_numbers = True
+    right_margin = True
+
 
 class UserPreferences(object):
     preview = Orientation.HORIZONTAL.numerator
@@ -39,12 +50,7 @@ class UserPreferences(object):
     writer = 'html4'
     style = ''
     custom_style = False
-    period_save = True
-    spaces_instead_of_tabs = False
-    tab_width = 8
-    auto_indent = True
-    line_numbers = True
-    right_margin = True
+    editor = EditorPreferences()
 
     def __init__(self):
         self.load()
@@ -59,29 +65,30 @@ class UserPreferences(object):
         cp.smart_get(self, 'style')
         cp.smart_get(self, 'custom_style', smart_bool)
 
-        cp.smart_get(self, 'period_save', smart_bool, 'editor')
-        cp.smart_get(self, 'spaces_instead_of_tabs', smart_bool, 'editor')
-        cp.smart_get(self, 'tab_width', int, 'editor')
-        cp.smart_get(self, 'auto_indent', smart_bool, 'editor')
-        cp.smart_get(self, 'line_numbers', smart_bool, 'editor')
-        cp.smart_get(self, 'right_margin', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'period_save', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'spaces_instead_of_tabs', smart_bool,
+                     'editor')
+        cp.smart_get(self.editor, 'tab_width', int, 'editor')
+        cp.smart_get(self.editor, 'auto_indent', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'line_numbers', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'right_margin', smart_bool, 'editor')
 
     def save(self):
         cp = SmartParser()
         cp.add_section('main')
         cp.set('main', 'preview', str(int(self.preview)))
-        cp.set('main', 'parser', self.parser)
-        cp.set('main', 'writer', self.writer)
-        cp.set('main', 'style', self.style)
-        cp.set('main', 'custom_style', str(self.custom_style))
+        cp.smart_set(self, 'parser')
+        cp.smart_set(self, 'writer')
+        cp.smart_set(self, 'style')
+        cp.smart_set(self, 'custom_style')
+
         cp.add_section('editor')
-        cp.set('editor', 'period_save', str(self.period_save))
-        cp.set('editor', 'spaces_instead_of_tabs',
-               str(self.spaces_instead_of_tabs))
-        cp.set('editor', 'tab_width', str(self.tab_width))
-        cp.set('editor', 'auto_indent', str(self.auto_indent))
-        cp.set('editor', 'line_numbers', str(self.auto_indent))
-        cp.set('editor', 'right_margin', str(self.right_margin))
+        cp.smart_set(self.editor, 'period_save', 'editor')
+        cp.smart_set(self.editor, 'spaces_instead_of_tabs', 'editor')
+        cp.smart_set(self.editor, 'tab_width', 'editor')
+        cp.smart_set(self.editor, 'auto_indent', 'editor')
+        cp.smart_set(self.editor, 'line_numbers', 'editor')
+        cp.smart_set(self.editor, 'right_margin', 'editor')
 
         directory = get_user_config_dir()
         if not exists(directory):
@@ -102,7 +109,7 @@ class UserCache(object):
     def load(self):
         directory = get_user_cache_dir()
         cp = SmartParser()
-        cp.read("%s/formiko.ini" % directory)
+        cp.read("%s/formiko/window.ini" % directory)
         cp.smart_get(self, 'width', int)
         cp.smart_get(self, 'height', int)
         cp.smart_get(self, 'paned', int)
@@ -119,5 +126,5 @@ class UserCache(object):
         directory = get_user_cache_dir()
         if not exists(directory):
             makedirs(directory)
-        with open("%s/formiko.ini" % directory, 'w+') as fp:
+        with open("%s/formiko/window.ini" % directory, 'w+') as fp:
             cp.write(fp)
