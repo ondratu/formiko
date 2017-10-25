@@ -44,19 +44,19 @@ class SourceView(Gtk.ScrolledWindow):
             LANGS['.%s' % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
-        self.source_view.set_wrap_mode(Gtk.WrapMode.WORD)
         self.source_view.override_font(
             FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
 
-        self.set_period_save(preferences.editor.period_save)
-        self.set_spaces_instead_of_tabs(
-            preferences.editor.spaces_instead_of_tabs)
-        self.source_view.set_tab_width(preferences.editor.tab_width)
-        self.source_view.set_auto_indent(preferences.editor.auto_indent)
-        self.source_view.set_show_line_numbers(preferences.editor.line_numbers)
-        self.source_view.set_show_right_margin(preferences.editor.right_margin)
+        editor_pref = preferences.editor
+        self.set_period_save(editor_pref.period_save)
+        self.set_spaces_instead_of_tabs(editor_pref.spaces_instead_of_tabs)
+        self.source_view.set_tab_width(editor_pref.tab_width)
+        self.source_view.set_auto_indent(editor_pref.auto_indent)
+        self.source_view.set_show_line_numbers(editor_pref.line_numbers)
+        self.source_view.set_show_right_margin(editor_pref.right_margin)
+        self.set_text_wrapping(editor_pref.text_wrapping)
 
     @property
     def changes(self):
@@ -101,6 +101,12 @@ class SourceView(Gtk.ScrolledWindow):
     def set_spaces_instead_of_tabs(self, use_spaces):
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)
         self.source_view.set_smart_backspace(use_spaces)
+
+    def set_text_wrapping(self, text_wrapping):
+        if text_wrapping:
+            self.source_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        else:
+            self.source_view.set_wrap_mode(Gtk.WrapMode.NONE)
 
     def period_save_thread(self):
         if self.period_save:

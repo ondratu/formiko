@@ -48,6 +48,9 @@ class LineColPopover(Gtk.Popover):
         self.add_check_button(
             'Display right margin', "editor.right-margin-toggle",
             preferences.right_margin)
+        self.add_check_button(
+            'Text wrapping', "editor.text-wrapping-toggle",
+            preferences.text_wrapping)
 
         self.box.show_all()
 

@@ -27,6 +27,9 @@ class EditorActionGroup(SimpleActionGroup):
         self.create_stateful_action(
             "right-margin-toggle", 'b', self.editor_pref.right_margin,
             self.on_right_margin)
+        self.create_stateful_action(
+            "text-wrapping-toggle", 'b', self.editor_pref.text_wrapping,
+            self.on_text_wrapping)
 
     def create_stateful_action(self, name, _type, default_value, method):
         action = SimpleAction.new_stateful(
@@ -70,4 +73,10 @@ class EditorActionGroup(SimpleActionGroup):
         right_margin = not self.editor_pref.right_margin
         self.editor_pref.right_margin = right_margin
         self.editor.source_view.set_show_right_margin(right_margin)
+        self.preferences.save()
+
+    def on_text_wrapping(self, action, param):
+        text_wrapping = not self.editor_pref.text_wrapping
+        self.editor_pref.text_wrapping = text_wrapping
+        self.editor.set_text_wrapping(text_wrapping)
         self.preferences.save()
