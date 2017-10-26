@@ -82,7 +82,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.create_stateful_action(
             "change-writer", 's', pref.writer, self.on_change_writer)
         self.create_stateful_action(
-            "change-params", 's', pref.parser, self.on_change_parser)
+            "change-parser", 's', pref.parser, self.on_change_parser)
         self.create_stateful_action(
             "custom-style-toggle", 'b', pref.custom_style,
             self.on_custom_style_toggle)
