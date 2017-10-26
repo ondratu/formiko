@@ -65,10 +65,18 @@ class LineColPopover(Gtk.Popover):
 
 
 class Statusbar(Gtk.Statusbar):
+    css = Gtk.CssProvider()
+    css.load_from_data(bytes("* {border-top: 1px solid #91918c;}", "utf-8"))
+
     def __init__(self, preferences):
         super(Statusbar, self).__init__()
         self.set_margin_top(0)
         self.set_margin_bottom(0)
+        self.set_margin_start(0)
+        self.set_margin_end(0)
+        ctx = self.get_style_context()
+        ctx.add_provider(Statusbar.css,
+                         Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
         self.editor_popover = self.create_editor_popover(preferences)
         self.editor_btn = StatusMenuButton(

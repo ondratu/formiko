@@ -23,6 +23,12 @@ from formiko.widgets import IconButton
 NOT_SAVED_NAME = 'Not Saved Document'
 
 
+class View:
+    EDITOR = 1
+    PREVIEW = 2
+    BOTH = 3
+
+
 class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, editor, file_name=''):
         assert editor in ('vim', 'source', None)
@@ -74,9 +80,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.show_preview = True
 
         self.create_stateful_action(
-            "editor-toggle", 'b', True, self.on_change_editor_toogle)
-        self.create_stateful_action(
-            "preview-toggle", 'b', True, self.on_change_preview_toogle)
+            "switch-view-toggle", 'q', View.BOTH, self.on_switch_view_toggle)
         self.create_stateful_action(
             "change-preview", 'q', pref.preview, self.on_change_preview)
         self.create_stateful_action(
@@ -166,23 +170,23 @@ class AppWindow(Gtk.ApplicationWindow):
             self.save_win_state()
         return not rv
 
-    def on_change_editor_toogle(self, action, param):
-        self.show_editor = not self.show_editor
-        if self.show_editor:
-            self.editor.show()
-            return
-        elif not self.show_preview:
-            self.preview_toggle_btn.set_active(True)
-        self.editor.hide()
+    def on_switch_view_toggle(self, action, param):
+        if action.get_state() != param:
+            action.set_state(param)
 
-    def on_change_preview_toogle(self, action, param):
-        self.show_preview = not self.show_preview
-        if self.show_preview:
+        state = param.get_uint16()
+        if state == View.BOTH:
+            self.editor.show()
             self.renderer.show()
-            return
-        elif not self.show_editor:
+            self.both_toggle_btn.set_active(True)
+        elif state == View.EDITOR:
+            self.editor.show()
+            self.renderer.hide()
             self.editor_toggle_btn.set_active(True)
-        self.renderer.hide()
+        else:
+            self.editor.hide()
+            self.renderer.show()
+            self.preview_toggle_btn.set_active(True)
 
     def on_change_preview(self, action, param):
         if action.get_state() != param:
@@ -294,17 +298,25 @@ class AppWindow(Gtk.ApplicationWindow):
 
             self.editor_toggle_btn = Gtk.ToggleButton(
                 label="Editor",
-                action_name="win.editor-toggle",
-                action_target=GLib.Variant('b', True))
+                action_name="win.switch-view-toggle",
+                action_target=GLib.Variant('q', View.EDITOR))
             self.editor_toggle_btn.set_tooltip_text("Show Editor")
             btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
 
             self.preview_toggle_btn = Gtk.ToggleButton(
                 label="Preview",
-                action_name="win.preview-toggle",
-                action_target=GLib.Variant('b', True))
+                action_name="win.switch-view-toggle",
+                action_target=GLib.Variant('q', View.PREVIEW))
             self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
             btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
+
+            self.both_toggle_btn = Gtk.ToggleButton(
+                label="Both",
+                action_name="win.switch-view-toggle",
+                action_target=GLib.Variant('q', View.BOTH))
+            self.both_toggle_btn.set_tooltip_text(
+                "Show Editor and Web Preview")
+            btn_box.pack_start(self.both_toggle_btn, True, True, 0)
 
             headerbar.pack_end(btn_box)
         return headerbar
