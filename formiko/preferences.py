@@ -1,25 +1,13 @@
 from gi.repository.GLib import Variant
-from gi.repository.Gio import ThemedIcon
 from gi.repository import GObject, Gtk
 
 from sys import argv
 from os.path import commonprefix
 
 from formiko.renderer import PARSERS, WRITERS
-from formiko.user import UserPreferences
+from formiko.widgets import ActionHelper
 
 PREFIX = commonprefix((argv[0], __file__))
-
-
-class ActionHelper(object):
-    def get_action_owner(self):
-        if self.action_name:
-            prefix, action = self.action_name.split('.')
-            win = self.get_toplevel()
-            if prefix == "win":     # yust hack :-(
-                if win.has_action(action):
-                    return action, win
-        return '', None
 
 
 class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
