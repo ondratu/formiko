@@ -1,6 +1,5 @@
 [Desktop Entry]
 Type=Application
-Encoding=UTF-8
 Name=Formiko Vim
 Comment=reStructuredText and MarkDown editor and live html previewer - Vim mode
 Exec=formiko-vim %f

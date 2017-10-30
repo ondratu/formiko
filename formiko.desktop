@@ -1,6 +1,5 @@
 [Desktop Entry]
 Type=Application
-Encoding=UTF-8
 Name=Formiko
 Comment=reStructuredText and MarkDown editor and live html previewer
 Exec=formiko %f
