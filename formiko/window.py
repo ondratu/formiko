@@ -334,7 +334,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor = VimEditor(self, file_name)
             self.editor.connect("file_type", self.on_file_type)
         else:
-            self.editor = SourceView(self.preferences)
+            self.editor = SourceView(self.preferences, "editor.spell-lang")
             self.insert_action_group("editor",
                                      EditorActionGroup(self.editor,
                                                        self.renderer,

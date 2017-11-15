@@ -167,5 +167,12 @@ class Statusbar(Gtk.Statusbar):
         period_btn.set_active(preferences.period_save)
         box.pack_start(period_btn, True, True, 0)
 
+        spell_btn = Gtk.CheckButton(
+            label='Check Spelling',
+            action_name="editor.check-spelling-toggle",
+            action_target=GLib.Variant('b', True))
+        spell_btn.set_active(preferences.check_spelling)
+        box.pack_start(spell_btn, True, True, 0)
+
         box.show_all()
         return pop

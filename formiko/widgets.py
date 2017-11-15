@@ -14,8 +14,7 @@ class ActionHelper(object):
     def get_action_owner(self):
         if self.action_name:
             prefix, action = self.action_name.split('.')
-            win = self.get_toplevel()
-            if prefix == "win":     # yust hack :-(
-                if win.has_action(action):
-                    return action, win
+            go = self.get_toplevel().get_action_group(prefix)
+            if go and go.has_action(action):
+                return action, go
         return '', None

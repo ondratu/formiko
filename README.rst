@@ -67,7 +67,7 @@ version name.
 
     # python3.5, gtk3, librsvg etc are in dependencies
     apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-3.0 \
-                gir1.2-webkit2-4.0
+                gir1.2-webkit2-4.0 gir1.2-gtkspell3-3.0
     pip3 install formiko
 
     # optionaly
@@ -76,6 +76,8 @@ version name.
 
 NetBSD
 ~~~~~~
+On NetBSD is not GtkSpell, which is for next 1.3.x version. So Formiko works only to 1.2.x version.
+
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
 Formiko call vim and gvim directly. If you want to use vim version with
 pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.

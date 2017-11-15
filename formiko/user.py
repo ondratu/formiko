@@ -37,6 +37,8 @@ class SmartParser(ConfigParser):
 
 class EditorPreferences(object):
     period_save = True
+    check_spelling = True
+    spell_lang = ""
     spaces_instead_of_tabs = False
     tab_width = 8
     auto_indent = True
@@ -67,6 +69,8 @@ class UserPreferences(object):
         cp.smart_get(self, 'custom_style', smart_bool)
 
         cp.smart_get(self.editor, 'period_save', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'check_spelling', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'spell_lang', str, 'editor')
         cp.smart_get(self.editor, 'spaces_instead_of_tabs', smart_bool,
                      'editor')
         cp.smart_get(self.editor, 'tab_width', int, 'editor')
@@ -86,6 +90,8 @@ class UserPreferences(object):
 
         cp.add_section('editor')
         cp.smart_set(self.editor, 'period_save', 'editor')
+        cp.smart_set(self.editor, 'check_spelling', 'editor')
+        cp.smart_set(self.editor, 'spell_lang', 'editor')
         cp.smart_set(self.editor, 'spaces_instead_of_tabs', 'editor')
         cp.smart_set(self.editor, 'tab_width', 'editor')
         cp.smart_set(self.editor, 'auto_indent', 'editor')

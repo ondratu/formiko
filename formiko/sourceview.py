@@ -1,12 +1,14 @@
 from gi import require_version
 require_version('GtkSource', '3.0')     # noqa
 require_version('Pango', '1.0')         # noqa
+require_version('GtkSpell', '3.0')      # noqa
 
-from gi.repository.GObject import SIGNAL_RUN_FIRST
 from gi.repository.Pango import FontDescription
 from gi.repository.GtkSource import LanguageManager, Buffer, View
-from gi.repository.GLib import get_home_dir, timeout_add_seconds
+from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant
+from gi.repository.GtkSpell import Checker
 
+from gi.repository import GObject
 from gi.repository import Gtk
 
 from os.path import splitext, basename, isfile
@@ -16,6 +18,7 @@ from sys import version_info
 from threading import Thread
 
 from formiko.dialogs import FileSaveDialog, TraceBackDialog
+from formiko.widgets import ActionHelper
 
 default_manager = LanguageManager.get_default()
 LANGS = {
@@ -28,22 +31,32 @@ LANGS = {
 PERIOD_SAVE_TIME = 300      # 5min
 
 
-class SourceView(Gtk.ScrolledWindow):
+class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __file_name = ''
     __last_changes = 0
 
     __gsignals__ = {
-        'file_type': (SIGNAL_RUN_FIRST, None, (str,))
+        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
     }
 
-    def __init__(self, preferences):
-        super(Gtk.ScrolledWindow, self).__init__()
+    action_name = GObject.property(type=str)
+    action_target = GObject.property(type=GObject.TYPE_VARIANT)
+
+    def __init__(self, preferences, action_name=None):
+        super(SourceView, self).__init__()
+        if action_name:
+            self.action_name = action_name
+
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = Buffer.new_with_language(
             LANGS['.%s' % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
+
+        self.spellchecker = Checker()
+        self.spellchecker.connect("language-changed", self.language_changed)
+
         self.source_view.override_font(
             FontDescription.from_string('Monospace'))
         # self.source_view.set_monospace(True) since 3.16
@@ -51,6 +64,8 @@ class SourceView(Gtk.ScrolledWindow):
 
         editor_pref = preferences.editor
         self.set_period_save(editor_pref.period_save)
+        self.set_check_spelling(editor_pref.check_spelling,
+                                editor_pref.spell_lang)
         self.set_spaces_instead_of_tabs(editor_pref.spaces_instead_of_tabs)
         self.source_view.set_tab_width(editor_pref.tab_width)
         self.source_view.set_auto_indent(editor_pref.auto_indent)
@@ -93,10 +108,29 @@ class SourceView(Gtk.ScrolledWindow):
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
 
+    def language_changed(self, spellchecker, language):
+        action, go = self.get_action_owner()
+        if go:
+            action_target = Variant("s", language)
+            go.activate_action(action, action_target)
+
     def set_period_save(self, save):
         self.period_save = bool(save)*PERIOD_SAVE_TIME
         if save:
             self.period_save_thread()
+
+    def set_check_spelling(self, check_spelling, spell_lang):
+        if check_spelling:
+            if spell_lang in Checker.get_language_list():
+                self.spellchecker.set_language(spell_lang)
+            else:
+                # refresh from temporary off check spelling
+                self.language_changed(self.spellchecker,
+                                      self.spellchecker.get_language())
+            self.spellchecker.attach(self.source_view)
+        else:
+            self.spellchecker.detach()
+            self.language_changed(self.spellchecker, "")
 
     def set_spaces_instead_of_tabs(self, use_spaces):
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)

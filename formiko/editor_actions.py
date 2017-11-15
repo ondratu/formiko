@@ -14,6 +14,14 @@ class EditorActionGroup(SimpleActionGroup):
             "period-save-toggle", 'b', self.editor_pref.period_save,
             self.on_period_save)
         self.create_stateful_action(
+            "check-spelling-toggle", 'b', self.editor_pref.check_spelling,
+            self.on_check_spelling)
+
+        action = SimpleAction.new("spell-lang", VariantType('s'))
+        action.connect("activate", self.on_spell_lang)
+        self.add_action(action)
+
+        self.create_stateful_action(
             "use-spaces-toggle", 'b', self.editor_pref.spaces_instead_of_tabs,
             self.on_use_spaces)
         self.create_stateful_action(
@@ -42,6 +50,17 @@ class EditorActionGroup(SimpleActionGroup):
         period_save = not self.editor_pref.period_save
         self.editor_pref.period_save = period_save
         self.editor.set_period_save(period_save)
+        self.preferences.save()
+
+    def on_check_spelling(self, action, param):
+        check_spelling = not self.editor_pref.check_spelling
+        self.editor_pref.check_spelling = check_spelling
+        self.editor.set_check_spelling(check_spelling,
+                                       self.editor_pref.spell_lang)
+        self.preferences.save()
+
+    def on_spell_lang(self, action, param):
+        self.editor_pref.spell_lang = param.get_string()
         self.preferences.save()
 
     def on_use_spaces(self, action, param):
