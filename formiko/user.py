@@ -132,8 +132,8 @@ class UserCache(object):
         cp.set('main', 'paned', str(self.paned))
         cp.set('main', 'is_maximized', str(self.is_maximized))
 
-        directory = get_user_cache_dir()
+        directory = get_user_cache_dir()+"/formiko"
         if not exists(directory):
             makedirs(directory)
-        with open("%s/formiko/window.ini" % directory, 'w+') as fp:
+        with open("%s/window.ini" % directory, 'w+') as fp:
             cp.write(fp)
