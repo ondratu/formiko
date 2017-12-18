@@ -25,6 +25,16 @@ It support these parsers and writers:
 * Yet another HTML writer - https://github.com/masayuko/docutils-htmlwriter
 * HTML 5 writer - https://github.com/Kozea/docutils-html5-writer
 
+Vim support
+~~~~~~~~~~~
+Formiko have Vim editor support aka ``formiko-vim`` command. This run `Vim
+<https://vim.sourceforge.io/>`_ editor in GtkSocket. At this moment, this
+socket work only on X11 backend, so this is not work on Wayland yet.
+
+There is bug for GTK+:
+  Bug `721224 <https://bugzilla.gnome.org/show_bug.cgi?id=721224>`_ - please
+  add support for GtkSocket/GtkPlug in Wayland backend
+
 Requirements:
 -------------
 * python 2.7 or 3
@@ -52,7 +62,7 @@ optionally:
 
 **System**:
 
-* vim-gtk or vim-gnome
+* vim-gtk or vim-gnome for ``formiko-vim``
 
 Installation
 ------------
@@ -76,7 +86,8 @@ version name.
 
 NetBSD
 ~~~~~~
-On NetBSD is not GtkSpell, which is for next 1.3.x version. So Formiko works only to 1.2.x version.
+On NetBSD is not GtkSpell, which is for next 1.3.x version. So Formiko works
+only to 1.2.x version.
 
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
 Formiko call vim and gvim directly. If you want to use vim version with
