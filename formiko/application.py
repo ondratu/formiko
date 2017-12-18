@@ -73,7 +73,7 @@ class Application(GtkApplication):
             display = Display.get_default()
             if display.__class__.__name__ != "X11Display":
                 log_default_handler("Application", LogLevelFlags.LEVEL_ERROR,
-                                    "Vim is not support only on X11 backend")
+                                    "Vim is supported only on X11 backend")
 
         if editor == 'source':  # vim have disabled accels for conflict itself
             self.set_accels()
