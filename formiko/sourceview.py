@@ -72,6 +72,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.set_auto_indent(editor_pref.auto_indent)
         self.source_view.set_show_line_numbers(editor_pref.line_numbers)
         self.source_view.set_show_right_margin(editor_pref.right_margin)
+        self.source_view.set_highlight_current_line(editor_pref.current_line)
         self.set_text_wrapping(editor_pref.text_wrapping)
         self.set_white_chars(editor_pref.white_chars)
 

@@ -8,6 +8,7 @@ Version 1.3.dev1
   * fix SIGSEGV - gui threads conflict
   * min size of editor and preview when both widgets are visible
   * display white chars switch
+  * highlighting current line switch
 
 Version 1.2.0 - 26.10.2017 19:40
 

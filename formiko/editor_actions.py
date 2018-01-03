@@ -36,6 +36,9 @@ class EditorActionGroup(SimpleActionGroup):
             "right-margin-toggle", 'b', self.editor_pref.right_margin,
             self.on_right_margin)
         self.create_stateful_action(
+            "current-line-toggle", 'b', self.editor_pref.current_line,
+            self.on_current_line)
+        self.create_stateful_action(
             "text-wrapping-toggle", 'b', self.editor_pref.text_wrapping,
             self.on_text_wrapping)
         self.create_stateful_action(
@@ -95,6 +98,12 @@ class EditorActionGroup(SimpleActionGroup):
         right_margin = not self.editor_pref.right_margin
         self.editor_pref.right_margin = right_margin
         self.editor.source_view.set_show_right_margin(right_margin)
+        self.preferences.save()
+
+    def on_current_line(self, action, param):
+        current_line = not self.editor_pref.current_line
+        self.editor_pref.current_line = current_line
+        self.editor.source_view.set_highlight_current_line(current_line)
         self.preferences.save()
 
     def on_text_wrapping(self, action, param):

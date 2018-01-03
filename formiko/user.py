@@ -44,6 +44,7 @@ class EditorPreferences(object):
     auto_indent = True
     line_numbers = True
     right_margin = True
+    current_line = False
     text_wrapping = True
     white_chars = False
 
@@ -78,6 +79,7 @@ class UserPreferences(object):
         cp.smart_get(self.editor, 'auto_indent', smart_bool, 'editor')
         cp.smart_get(self.editor, 'line_numbers', smart_bool, 'editor')
         cp.smart_get(self.editor, 'right_margin', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'current_line', smart_bool, 'editor')
         cp.smart_get(self.editor, 'text_wrapping', smart_bool, 'editor')
         cp.smart_get(self.editor, 'white_chars', smart_bool, 'editor')
 
@@ -99,6 +101,7 @@ class UserPreferences(object):
         cp.smart_set(self.editor, 'auto_indent', 'editor')
         cp.smart_set(self.editor, 'line_numbers', 'editor')
         cp.smart_set(self.editor, 'right_margin', 'editor')
+        cp.smart_set(self.editor, 'current_line', 'editor')
         cp.smart_set(self.editor, 'text_wrapping', 'editor')
         cp.smart_set(self.editor, 'white_chars', 'editor')
 
