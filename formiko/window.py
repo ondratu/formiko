@@ -342,8 +342,8 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)
-        self.paned.add1(self.editor)
-        self.paned.add2(self.renderer)
+        self.paned.pack1(self.editor, True, False)
+        self.paned.pack2(self.renderer, True, False)
 
     def layout(self, file_name):
         self.set_default_size(self.cache.width, self.cache.height)
@@ -411,7 +411,7 @@ class AppWindow(Gtk.ApplicationWindow):
             GLib.timeout_add(300, self.check_in_thread)
         except SystemExit:
             return
-        except:
+        except BaseException:
             print_exc()
 
     def refresh_from_source(self):
@@ -430,7 +430,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.renderer.render(self.editor.text, self.editor.file_path,
                                      self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
-        except:
+        except BaseException:
             print_exc()
 
     def refresh_from_file(self):
@@ -441,6 +441,6 @@ class AppWindow(Gtk.ApplicationWindow):
                 with open(self.file_name) as source:
                     buff = source.read()
                     self.renderer.render(buff, self.file_name)
-        except:
+        except BaseException:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)
