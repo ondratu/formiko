@@ -4,7 +4,8 @@ require_version('Pango', '1.0')         # noqa
 require_version('GtkSpell', '3.0')      # noqa
 
 from gi.repository.Pango import FontDescription
-from gi.repository.GtkSource import LanguageManager, Buffer, View
+from gi.repository.GtkSource import LanguageManager, Buffer, View, \
+    DrawSpacesFlags
 from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant
 from gi.repository.GtkSpell import Checker
 
@@ -72,6 +73,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.set_show_line_numbers(editor_pref.line_numbers)
         self.source_view.set_show_right_margin(editor_pref.right_margin)
         self.set_text_wrapping(editor_pref.text_wrapping)
+        self.set_white_chars(editor_pref.white_chars)
 
     @property
     def changes(self):
@@ -141,6 +143,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.source_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         else:
             self.source_view.set_wrap_mode(Gtk.WrapMode.NONE)
+
+    def set_white_chars(self, white_chars):
+        if white_chars:
+            self.source_view.set_draw_spaces(DrawSpacesFlags.ALL)
+        else:
+            self.source_view.set_draw_spaces(0)
 
     def period_save_thread(self):
         if self.period_save:

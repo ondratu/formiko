@@ -38,6 +38,9 @@ class EditorActionGroup(SimpleActionGroup):
         self.create_stateful_action(
             "text-wrapping-toggle", 'b', self.editor_pref.text_wrapping,
             self.on_text_wrapping)
+        self.create_stateful_action(
+            "white-chars-toggle", 'b', self.editor_pref.white_chars,
+            self.on_white_chars)
 
     def create_stateful_action(self, name, _type, default_value, method):
         action = SimpleAction.new_stateful(
@@ -98,4 +101,10 @@ class EditorActionGroup(SimpleActionGroup):
         text_wrapping = not self.editor_pref.text_wrapping
         self.editor_pref.text_wrapping = text_wrapping
         self.editor.set_text_wrapping(text_wrapping)
+        self.preferences.save()
+
+    def on_white_chars(self, action, param):
+        white_chars = not self.editor_pref.white_chars
+        self.editor_pref.white_chars = white_chars
+        self.editor.set_white_chars(white_chars)
         self.preferences.save()

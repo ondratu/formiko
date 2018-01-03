@@ -51,6 +51,9 @@ class LineColPopover(Gtk.Popover):
         self.add_check_button(
             'Text wrapping', "editor.text-wrapping-toggle",
             preferences.text_wrapping)
+        self.add_check_button(
+            'Draw white chars', "editor.white-chars-toggle",
+            preferences.white_chars)
 
         self.box.show_all()
 

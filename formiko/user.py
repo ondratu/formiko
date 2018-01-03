@@ -45,6 +45,7 @@ class EditorPreferences(object):
     line_numbers = True
     right_margin = True
     text_wrapping = True
+    white_chars = False
 
 
 class UserPreferences(object):
@@ -78,6 +79,7 @@ class UserPreferences(object):
         cp.smart_get(self.editor, 'line_numbers', smart_bool, 'editor')
         cp.smart_get(self.editor, 'right_margin', smart_bool, 'editor')
         cp.smart_get(self.editor, 'text_wrapping', smart_bool, 'editor')
+        cp.smart_get(self.editor, 'white_chars', smart_bool, 'editor')
 
     def save(self):
         cp = SmartParser()
@@ -98,6 +100,7 @@ class UserPreferences(object):
         cp.smart_set(self.editor, 'line_numbers', 'editor')
         cp.smart_set(self.editor, 'right_margin', 'editor')
         cp.smart_set(self.editor, 'text_wrapping', 'editor')
+        cp.smart_set(self.editor, 'white_chars', 'editor')
 
         directory = get_user_config_dir()
         if not exists(directory):
