@@ -12,6 +12,7 @@ class AppMenu(Menu):
         sec.append("Save Document", "win.save-document")
         sec.append("Save Document As...", "win.save-document-as")
         sec.append("Export Document As...", "win.export-document-as")
+        sec.append("Print Document", "win.print-document")
         self.append_section(None, sec)
         sec = Menu()
         sec.append("About Formiko", "app.about")

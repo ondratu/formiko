@@ -3,8 +3,9 @@ from gi import require_version
 
 require_version('WebKit2', '4.0')   # noqa
 
-from gi.repository.WebKit2 import WebView
-from gi.repository.GLib import idle_add, Bytes, get_home_dir
+from gi.repository.WebKit2 import WebView, PrintOperation
+from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
+    log_default_handler, LogLevelFlags
 from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
     Align
 
@@ -17,22 +18,22 @@ from docutils.writers.pep_html import Writer as WriterPep
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
-except:
+except ImportError:
     TinyWriter = None
 
 try:
     from htmlwriter import Writer as HtmlWriter
-except:
+except ImportError:
     HtmlWriter = None
 
 try:
     from docutils_html5 import Writer as Html5Writer
-except:
+except ImportError:
     Html5Writer = None
 
 try:
     from recommonmark.parser import CommonMarkParser
-except:
+except ImportError:
     CommonMarkParser = None
 
 from io import StringIO
@@ -158,8 +159,10 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
+
     def __init__(self, win, parser='rst', writer='html4', style=''):
         super(Renderer, self).__init__()
+
         scrolled = ScrolledWindow.new(None, None)
         scrolled.set_policy(PolicyType.AUTOMATIC, PolicyType.AUTOMATIC)
         self.sb = scrolled.get_vscrollbar()
@@ -274,7 +277,7 @@ class Renderer(Overlay):
         except DataError as e:
             return False, DATA_ERROR % ('Data', e), 'text/html'
 
-        except:
+        except BaseException:
             exc_str = format_exc()
             return False, EXCEPTION_ERROR % exc_str, 'text/html'
 
@@ -295,3 +298,13 @@ class Renderer(Overlay):
         self.pos = pos
         self.file_name = file_name
         idle_add(self.do_render)
+
+    def print_page(self):
+        po = PrintOperation.new(self.webview)
+        po.connect("failed", self.on_print_failed)
+        po.run_dialog(self.__win)
+
+    def on_print_failed(self, po, error):
+        # FIXME: if dialog is used, application will lock :-(
+        log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
+                            error.message)

@@ -70,6 +70,10 @@ class AppWindow(Gtk.ApplicationWindow):
         action.set_enabled(self.editor_type is not None)
         self.add_action(action)
 
+        action = Gio.SimpleAction.new("print-document", None)
+        action.connect("activate", self.on_print_document)
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("close-window", None)
         action.connect("activate", self.on_close_window)
         self.add_action(action)
@@ -163,6 +167,9 @@ class AppWindow(Gtk.ApplicationWindow):
                 else:   # python 3.x
                     output.write(data)
         dialog.destroy()
+
+    def on_print_document(self, action, *params):
+        self.renderer.print_page()
 
     def on_delete(self, *args):
         rv = self.ask_if_modified()

@@ -106,9 +106,8 @@ class Application(GtkApplication):
             win = AppWindow(editor, file_name)
             self.add_window(win)
             win.show_all()
-        except:
+        except BaseException:
             print_exc()
-            # self.quit()
 
     def set_accels(self):
         self.set_accels_for_action("app.new-window", ["<Control>n"])
@@ -120,4 +119,5 @@ class Application(GtkApplication):
                                    ["<Shift><Control>s"])
         self.set_accels_for_action("win.export-document-as",
                                    ["<Shift><Control>e"])
+        self.set_accels_for_action("win.print-document", ["<Control>p"])
         self.set_accels_for_action("win.close-window", ["<Control>w"])

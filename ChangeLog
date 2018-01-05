@@ -9,6 +9,7 @@ Version 1.3.dev1
   * min size of editor and preview when both widgets are visible
   * display white chars switch
   * highlighting current line switch
+  * printing document output
 
 Version 1.2.0 - 26.10.2017 19:40
 
