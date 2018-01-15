@@ -15,6 +15,7 @@ class AppMenu(Menu):
         sec.append("Print Document", "win.print-document")
         self.append_section(None, sec)
         sec = Menu()
+        sec.append("Shortcuts", "app.shortcuts")
         sec.append("About Formiko", "app.about")
         self.append_section(None, sec)
         sec = Menu()

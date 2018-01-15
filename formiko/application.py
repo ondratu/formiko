@@ -8,6 +8,7 @@ from traceback import print_exc
 from os.path import join
 
 from formiko.window import AppWindow
+from formiko.shortcuts import ShortcutsWindow
 from formiko.dialogs import AboutDialog, TraceBackDialog
 from formiko.menu import AppMenu
 
@@ -31,6 +32,10 @@ class Application(GtkApplication):
 
         action = SimpleAction.new("new-window", None)
         action.connect("activate", self.on_new_window)
+        self.add_action(action)
+
+        action = SimpleAction.new("shortcuts", None)
+        action.connect("activate", self.on_shortcuts)
         self.add_action(action)
 
         action = SimpleAction.new("about", None)
@@ -91,7 +96,14 @@ class Application(GtkApplication):
         self.quit()
 
     def on_new_window(self, action, *params):
-        self.new_window(self.get_active_window().editor_type or 'source')
+        self.new_window(getattr(self.get_active_window(),
+                                'editor_type', 'source'))
+
+    def on_shortcuts(self, action, param):
+        win = ShortcutsWindow(getattr(self.get_active_window(),
+                                      'editor_type', 'source'))
+        self.add_window(win)
+        win.show_all()
 
     def on_about(self, action, param):
         dialog = AboutDialog(None)
