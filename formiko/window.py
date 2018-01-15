@@ -370,11 +370,11 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.runing:
             if self.editor_type == 'vim':
                 thread = Thread(target=self.refresh_from_vim)
+                thread.start()
             elif self.editor_type == 'source':
-                thread = Thread(target=self.refresh_from_source)
+                GLib.idle_add(self.refresh_from_source)
             else:   # self.editor = None
-                thread = Thread(target=self.refresh_from_file)
-            thread.start()
+                GLib.idle_add(self.refresh_from_file)
 
     def not_running(self):
         if not self.runing:
@@ -422,7 +422,7 @@ class AppWindow(Gtk.ApplicationWindow):
             star = '*' if modified else ''
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
             if title != self.get_title():
-                GLib.idle_add(self.set_title, title)
+                self.set_title(title)
 
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:

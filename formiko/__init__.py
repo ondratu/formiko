@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-__version__ = "1.2.0"
-__copyright__ = "(c) 2017"
+__version__ = "1.2.1"
+__copyright__ = "(c) 2018"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"
 __url__ = "https://github.com/ondratu/formiko"
 __comment__ = \
