@@ -4,6 +4,7 @@ Changelog
 Version 1.2.1 - 15.1.2018 17:27
 
   * fix SIGSEGV - gui threads conflict
+  * fix window cache settings
 
 Version 1.2.0 - 26.10.2017 19:40
 
