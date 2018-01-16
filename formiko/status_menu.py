@@ -5,13 +5,13 @@ from gi.repository import GLib
 
 class StatusMenuButton(Gtk.MenuButton):
     css = Gtk.CssProvider()
-    css.load_from_data(bytes("""
+    css.load_from_data(b"""
             * {
                 border: 0;
                 padding: 1px 8px 2px 4px;
                 outline-width: 0;
             }
-        """, "utf-8"))
+        """)
 
     def __init__(self, label, popover):
         super(StatusMenuButton, self).__init__(popover=popover)
@@ -72,7 +72,7 @@ class LineColPopover(Gtk.Popover):
 
 class Statusbar(Gtk.Statusbar):
     css = Gtk.CssProvider()
-    css.load_from_data(bytes("* {border-top: 1px solid #91918c;}", "utf-8"))
+    css.load_from_data(b"* {border-top: 1px solid #91918c;}")
 
     def __init__(self, preferences):
         super(Statusbar, self).__init__()
