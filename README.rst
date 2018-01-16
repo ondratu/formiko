@@ -15,12 +15,14 @@ Features:
 * preview mode
 * periodic save file
 * json and html preview
+* spell check
 
 It support these parsers and writers:
 
 * Docutils reStructuredText parser - http://docutils.sourceforge.net
 * Common Mark parser - https://github.com/rtfd/recommonmark
-* Docutils HTML4, S5/HTML slide show and PEP HTML writer - http://docutils.sourceforge.net
+* Docutils HTML4, S5/HTML slide show and PEP HTML writer -
+  http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
 * Yet another HTML writer - https://github.com/masayuko/docutils-htmlwriter
 * HTML 5 writer - https://github.com/Kozea/docutils-html5-writer
@@ -44,10 +46,10 @@ Requirements:
 * Webkit2 4.x
 * GtkSourceView 3.x
 * gir files for all Gtk libraries
+* GtkSpell3
 
 recommended:
 ~~~~~~~~~~~~
-
 * docutils - reStrucured support
 * recommonmark - for Common Mark support (MarkDown)
 * Pygments - syntax color in html output code blocks
@@ -84,10 +86,12 @@ version name.
     apt install vim-gtk3
     pip3 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
 
+Formiko is in Debian repository from Buster. So you can install it standard way.
+
 NetBSD
 ~~~~~~
-On NetBSD is not GtkSpell, which is for next 1.3.x version. So Formiko works
-only to 1.2.x version.
+There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
+must use 1.2.x bug fix release.
 
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
 Formiko call vim and gvim directly. If you want to use vim version with
