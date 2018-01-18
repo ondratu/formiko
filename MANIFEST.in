@@ -6,5 +6,7 @@ include AUTHORS
 include ChangeLog
 include formiko.desktop
 include formiko-vim.desktop
+include formiko.rst
+include formiko-vim.rst
 graft icons
 global-exclude *~ *.swp

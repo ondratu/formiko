@@ -1,8 +1,17 @@
 #!/usr/bin/env python
 
 from setuptools import setup
+from docutils.core import publish_string
+from docutils.writers.manpage import Writer
 
 from io import open
+from gzip import open as zopen
+from distutils.command.build import build
+from distutils.command.clean import clean
+from distutils.command.install_data import install_data
+from distutils import log
+from os import path, makedirs, listdir
+from shutil import rmtree
 
 from formiko import __version__, __url__, __comment__
 
@@ -19,6 +28,76 @@ def icons_data():
         icons.append(("%s/%dx%d/apps" % (path, size, size),
                      ["icons/%dx%d/formiko.png" % (size, size)]))
     return icons
+
+
+def man_page(writer, src, dst):
+    with open(src, encoding="utf-8") as source:
+        rst = source.read()
+    with zopen(dst, 'wb') as destination:
+        destination.write(publish_string(source=rst, writer=writer))
+
+
+class XBuild(build):
+    def initialize_options(self):
+        build.initialize_options(self)
+        self.man_base = None
+
+    def finalize_options(self):
+        build.finalize_options(self)
+        if self.man_base is None:
+            self.man_base = path.join(self.build_base, 'man')
+
+    def run(self):
+        build.run(self)
+        log.info("building man pages")
+        if self.dry_run:
+            return
+
+        writer = Writer()
+        if not path.exists(self.man_base):
+            makedirs(self.man_base)
+        for page in ('formiko', 'formiko-vim'):
+            man_page(writer, page+'.rst', '%s/%s.1.gz' % (self.man_base, page))
+
+
+class XClean(clean):
+    def initialize_options(self):
+        clean.initialize_options(self)
+        self.man_base = None
+
+    def finalize_options(self):
+        clean.finalize_options(self)
+        if self.man_base is None:
+            self.man_base = path.join(self.build_base, 'man')
+
+    def run(self):
+        clean.run(self)
+        log.info("clean man pages")
+        if self.dry_run:
+            return
+
+        if path.exists(self.man_base):
+            rmtree(self.man_base)
+
+
+class XInstallData(install_data):
+    def initialize_options(self):
+        install_data.initialize_options(self)
+        self.man_base = None
+        self.build_base = None
+
+    def finalize_options(self):
+        install_data.finalize_options(self)
+        self.set_undefined_options('build', ('build_base', 'build_base'))
+        if self.man_base is None:
+            self.man_base = path.join(self.build_base, 'man')
+
+    def run(self):
+        self.data_files.append(
+            ('share/man/man1',
+             list("%s/%s" % (self.man_base, page)
+                  for page in listdir(self.man_base))))
+        install_data.run(self)
 
 
 setup(
@@ -62,5 +141,6 @@ setup(
             'formiko = formiko.main:main',
             'formiko-vim = formiko.main:main_vim'
         ]
-    }
+    },
+    cmdclass={'build': XBuild, 'clean': XClean, 'install_data': XInstallData}
 )

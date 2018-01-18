@@ -20,7 +20,7 @@ from formiko.status_menu import Statusbar
 from formiko.editor_actions import EditorActionGroup
 from formiko.widgets import IconButton
 
-NOT_SAVED_NAME = 'Not Saved Document'
+NOT_SAVED_NAME = 'Untitled Document'
 
 
 class View:
