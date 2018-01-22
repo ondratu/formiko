@@ -6,7 +6,7 @@ formiko-vim
 :date: 18 Jan 2018
 :subtitle: reStructuredText and MarkDown editor and live previewer
 :author: Ondřej Tůma (mcbig@zeropage.cz)
-:version: 1.3.0
+:version: {version}
 
 SYNOPSIS
 ~~~~~~~~

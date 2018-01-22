@@ -32,7 +32,7 @@ def icons_data():
 
 def man_page(writer, src, dst):
     with open(src, encoding="utf-8") as source:
-        rst = source.read()
+        rst = source.read().format(version=__version__)
     with zopen(dst, 'wb') as destination:
         destination.write(publish_string(source=rst, writer=writer))
 
@@ -57,6 +57,8 @@ class XBuild(build):
         if not path.exists(self.man_base):
             makedirs(self.man_base)
         for page in ('formiko', 'formiko-vim'):
+            log.info('manpage %s.rst -> %s/%s.1.gz'
+                     % (page, self.man_base, page))
             man_page(writer, page+'.rst', '%s/%s.1.gz' % (self.man_base, page))
 
 
