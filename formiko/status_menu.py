@@ -70,36 +70,35 @@ class LineColPopover(Gtk.Popover):
 # endclass
 
 
-class Statusbar(Gtk.Statusbar):
+class Statusbar(Gtk.Box):
     css = Gtk.CssProvider()
-    css.load_from_data(b"* {border-top: 1px solid #91918c;}")
+    css.load_from_data(b"* {border-top: 1px solid #91918c; padding: 1px;}")
 
     def __init__(self, preferences):
-        super(Statusbar, self).__init__()
-        self.set_margin_top(0)
-        self.set_margin_bottom(0)
-        self.set_margin_start(0)
-        self.set_margin_end(0)
+        super(Statusbar, self).__init__(orientation=Gtk.Orientation.HORIZONTAL)
         ctx = self.get_style_context()
         ctx.add_provider(Statusbar.css,
                          Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
-        self.editor_popover = self.create_editor_popover(preferences)
-        self.editor_btn = StatusMenuButton(
-            "Editor",
-            self.editor_popover)
-        self.pack_start(self.editor_btn, False, False, 1)
+        self.info_bar = self.create_info_bar()
+        self.pack_start(self.info_bar, False, False, 10)
+
+        btn = StatusMenuButton(
+            "Line 1, Col 1",
+            LineColPopover(preferences))
+        self.pack_end(btn, False, False, 1)
 
         self.tab_popover = self.create_tab_popover(preferences)
         self.width_btn = StatusMenuButton(
             "Tabulator width %d" % preferences.tab_width,
             self.tab_popover)
-        self.pack_start(self.width_btn, False, False, 1)
+        self.pack_end(self.width_btn, False, False, 1)
 
-        btn = StatusMenuButton(
-            "Line 1, Col 1",
-            LineColPopover(preferences))
-        self.pack_start(btn, False, False, 1)
+        self.editor_popover = self.create_editor_popover(preferences)
+        self.editor_btn = StatusMenuButton(
+            "Editor",
+            self.editor_popover)
+        self.pack_end(self.editor_btn, False, False, 1)
 
     def create_tab_popover(self, preferences):
         pop = Gtk.Popover()
@@ -182,3 +181,21 @@ class Statusbar(Gtk.Statusbar):
 
         box.show_all()
         return pop
+
+    def create_info_bar(self):
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        bar.words_count = Gtk.Label("0")
+        bar.pack_start(bar.words_count, True, True, 0)
+        bar.pack_start(Gtk.Label("words,"), True, True, 5)
+        bar.chars_count = Gtk.Label("0")
+        bar.pack_start(bar.chars_count, True, True, 0)
+        bar.pack_start(Gtk.Label("characters"), True, True, 5)
+
+        bar.show_all()
+        return bar
+
+    def set_words_count(self, count):
+        self.info_bar.words_count.set_label(str(count))
+
+    def set_chars_count(self, count):
+        self.info_bar.chars_count.set_label(str(count))

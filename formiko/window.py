@@ -7,6 +7,7 @@ from os import stat
 from os.path import splitext
 from sys import version_info
 from io import open
+from re import compile as re_compile, U as re_U
 
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
@@ -21,6 +22,8 @@ from formiko.editor_actions import EditorActionGroup
 from formiko.widgets import IconButton
 
 NOT_SAVED_NAME = 'Untitled Document'
+RE_WORD = re_compile(r'([\w]+)', re_U)
+RE_CHAR = re_compile(r'[\w \t\.,\?\(\)"\']', re_U)
 
 
 class View:
@@ -371,7 +374,8 @@ class AppWindow(Gtk.ApplicationWindow):
             self.maximize()
 
         if self.editor_type == 'source':
-            box.pack_end(Statusbar(self.preferences.editor), False, True, 0)
+            self.status_bar = Statusbar(self.preferences.editor)
+            box.pack_end(self.status_bar, False, True, 0)
 
     def check_in_thread(self):
         if self.runing:
@@ -434,7 +438,19 @@ class AppWindow(Gtk.ApplicationWindow):
             last_changes = self.editor.changes
             if last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                self.renderer.render(self.editor.text, self.editor.file_path,
+                text = self.editor.text
+
+                words_count = 0
+                for w in RE_WORD.finditer(text):
+                    words_count += 1
+                self.status_bar.set_words_count(words_count)
+
+                chars_count = 0
+                for c in RE_CHAR.finditer(text):
+                    chars_count += 1
+                self.status_bar.set_chars_count(chars_count)
+
+                self.renderer.render(text, self.editor.file_path,
                                      self.editor.position)
             GLib.timeout_add(100, self.check_in_thread)
         except BaseException:
