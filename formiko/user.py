@@ -3,12 +3,18 @@ from gi.repository.Gtk import Orientation
 
 try:
     from configparser import ConfigParser, NoSectionError, NoOptionError
-except:
+except ImportError:
     from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 
 from os import makedirs
 from os.path import exists
 from traceback import print_exc
+
+
+class View:
+    EDITOR = 1
+    PREVIEW = 2
+    BOTH = 3
 
 
 def smart_bool(value):
@@ -117,6 +123,7 @@ class UserCache(object):
     height = 600
     paned = 400
     is_maximized = False
+    view = View.BOTH
 
     def __init__(self):
         self.load()

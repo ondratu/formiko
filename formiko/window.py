@@ -15,7 +15,7 @@ from formiko.renderer import Renderer, EXTS
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
 from formiko.preferences import Preferences
-from formiko.user import UserCache, UserPreferences
+from formiko.user import UserCache, UserPreferences, View
 from formiko.icons import icon_list
 from formiko.status_menu import Statusbar
 from formiko.editor_actions import EditorActionGroup
@@ -24,12 +24,6 @@ from formiko.widgets import IconButton
 NOT_SAVED_NAME = 'Untitled Document'
 RE_WORD = re_compile(r'([\w]+)', re_U)
 RE_CHAR = re_compile(r'[\w \t\.,\?\(\)"\']', re_U)
-
-
-class View:
-    EDITOR = 1
-    PREVIEW = 2
-    BOTH = 3
 
 
 class AppWindow(Gtk.ApplicationWindow):
