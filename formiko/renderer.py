@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from gi import require_version
+from os.path import abspath, dirname
 
 require_version('WebKit2', '4.0')   # noqa
 
@@ -33,8 +34,33 @@ except ImportError:
 
 try:
     from recommonmark.parser import CommonMarkParser
+    from recommonmark.transform import AutoStructify, DummyStateMachine
+
+    class StringStructify(AutoStructify):
+        """Support AutoStructify for publish_string function."""
+        def apply(self):
+            """Apply the transformation by configuration."""
+            file_name = self.document.settings.file_name
+
+            self.url_resolver = self.config['url_resolver']
+            assert callable(self.url_resolver)
+
+            self.state_machine = DummyStateMachine()
+            self.current_level = 0
+            self.file_dir = abspath(dirname(file_name))
+            self.root_dir = self.file_dir
+            self.traverse(self.document)
+
+    class ExtendCommonMarkParser(CommonMarkParser):
+        """CommonMarkParser with working AutoStructify."""
+        settings_spec = RstParser.settings_spec
+
+        def get_transforms(self):
+            return CommonMarkParser.get_transforms(self) + [StringStructify]
+
+
 except ImportError:
-    CommonMarkParser = None
+    ExtendCommonMarkParser = None
 
 from io import StringIO
 from traceback import format_exc
@@ -52,6 +78,11 @@ class JSONPreview(object):
     pass
 
 
+class Env(object):
+    """Empty class for env overriding."""
+    srcdir = ''
+
+
 PARSERS = {
     'rst': {
         'key': 'rst',
@@ -61,7 +92,7 @@ PARSERS = {
     'md': {
         'key': 'md',
         'title': 'Common Mark parser',
-        'class': CommonMarkParser,
+        'class': ExtendCommonMarkParser,
         'url': 'https://github.com/rtfd/recommonmark'},
     'html': {
         'key': 'html',
@@ -251,7 +282,8 @@ class Renderer(Overlay):
                     settings = {
                         'warning_stream': StringIO(),
                         'embed_stylesheet': True,
-                        'tab_width': self.tab_width
+                        'tab_width': self.tab_width,
+                        'file_name': self.file_name
                     }
                     if self.style:
                         settings['stylesheet'] = self.style
