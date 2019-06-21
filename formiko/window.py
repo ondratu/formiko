@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from gi.repository import Gtk, GLib, Gio
-
 from threading import Thread
 from traceback import print_exc
 from os import stat
@@ -8,6 +6,8 @@ from os.path import splitext
 from sys import version_info
 from io import open
 from re import compile as re_compile, U as re_U
+
+from gi.repository import Gtk, GLib, Gio
 
 from formiko.vim import VimEditor
 from formiko.sourceview import SourceView
@@ -201,12 +201,21 @@ class AppWindow(Gtk.ApplicationWindow):
         orientation = param.get_uint16()
         if self.paned.get_orientation() != orientation:
             self.paned.set_orientation(orientation)
-            if orientation == Gtk.Orientation.HORIZONTAL:
-                self.paned.set_position(self.paned.get_allocated_width()/2)
-            else:
-                self.paned.set_position(self.paned.get_allocated_height()/2)
             self.preferences.preview = orientation
             self.preferences.save()
+            GLib.idle_add(
+                lambda: GLib.timeout_add(100, self.set_position) and False)
+
+    def set_position(self):
+        """Set position after change orientation.
+
+        This must be do after some timeout. It is HARD FIX of gtk error
+        https://gitlab.gnome.org/GNOME/gtk/issues/1959
+        """
+        if self.paned.get_orientation() == Gtk.Orientation.VERTICAL:
+            self.paned.set_position(self.paned.get_allocated_height()/2)
+        else:
+            self.paned.set_position(self.paned.get_allocated_width()/2)
 
     def on_change_parser(self, action, param):
         if action.get_state() != param:
