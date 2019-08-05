@@ -7,6 +7,7 @@ Version 1.4.0dev1
   * words and characters count live info
   * Recommonmark (MarkDown) support with colored code
   * change preview - set paned position fix
+  * GTK Warning fix (debian bug #933622)
 
 Version 1.3.0 - 16.1.2018 7:00
 

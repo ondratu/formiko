@@ -226,8 +226,7 @@ class Renderer(Overlay):
             if self.label.is_visible():
                 self.label.hide()
             return
-
-        self.label.set_markup(MARKUP % text)
+        self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
         self.label.show()
 
     def set_writer(self, writer):
