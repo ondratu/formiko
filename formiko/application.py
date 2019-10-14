@@ -133,3 +133,7 @@ class Application(GtkApplication):
                                    ["<Shift><Control>e"])
         self.set_accels_for_action("win.print-document", ["<Control>p"])
         self.set_accels_for_action("win.close-window", ["<Control>w"])
+        self.set_accels_for_action("win.find-in-document", ["<Control>f"])
+        self.set_accels_for_action("win.find-next-match", ["<Control>g"])
+        self.set_accels_for_action("win.find-previous-match",
+                                   ["<Shift><Control>g"])

@@ -339,3 +339,12 @@ class Renderer(Overlay):
         # FIXME: if dialog is used, application will lock :-(
         log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
                             error.message)
+
+    def do_next_match(self, text):
+        pass
+
+    def do_previous_match(self, text):
+        pass
+
+    def stop_search(self):
+        pass

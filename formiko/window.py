@@ -6,12 +6,13 @@ from os.path import splitext
 from sys import version_info
 from io import open
 from re import compile as re_compile, U as re_U
+from enum import Enum
 
 from gi.repository import Gtk, GLib, Gio
 
 from formiko.vim import VimEditor
-from formiko.sourceview import SourceView
-from formiko.renderer import Renderer, EXTS
+from formiko.sourceview import SourceView, View as GtkSourceView
+from formiko.renderer import Renderer, EXTS, WebView as GtkWebView
 from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
 from formiko.preferences import Preferences
@@ -26,11 +27,18 @@ RE_WORD = re_compile(r'([\w]+)', re_U)
 RE_CHAR = re_compile(r'[\w \t\.,\?\(\)"\']', re_U)
 
 
+class SearchWay(Enum):
+    NEXT = 0
+    PREVIOUS = 1
+
+
 class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, editor, file_name=''):
         assert editor in ('vim', 'source', None)
         self.runing = True
         self.editor_type = editor
+        self.focused = None
+        self.search_way = SearchWay.NEXT
         self.cache = UserCache()
         self.preferences = UserPreferences()
         super(AppWindow, self).__init__()
@@ -73,6 +81,18 @@ class AppWindow(Gtk.ApplicationWindow):
 
         action = Gio.SimpleAction.new("close-window", None)
         action.connect("activate", self.on_close_window)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("find-in-document", None)
+        action.connect("activate", self.on_find_in_document)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("find-next-match", None)
+        action.connect("activate", self.on_find_next_match)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("find-previous-match", None)
+        action.connect("activate", self.on_find_previous_match)
         self.add_action(action)
 
         pref = self.preferences
@@ -255,6 +275,79 @@ class AppWindow(Gtk.ApplicationWindow):
             self.renderer.set_style('')
         self.preferences.save()
 
+    def on_find_in_document(self, action, *param):
+        if self.editor_type != 'source' and not self.renderer.props.visible:
+            return      # works only with source view or renderer
+
+        if self.search.get_search_mode():
+            if self.search_way == SearchWay.NEXT:
+                self.on_find_next_match(action, *param)
+            else:
+                self.on_find_previous_match(action, *param)
+        else:
+            self.search_way = SearchWay.NEXT
+            self.focused = self.get_focus()
+            self.search.set_search_mode(True)
+            self.search_entry.grab_focus()
+
+    def on_search_mode_changed(self, search_bar, param):
+        if not self.search.get_search_mode():
+            if isinstance(self.focused, GtkSourceView):
+                self.editor.stop_search()
+            elif isinstance(self.focused, GtkWebView):
+                self.renderer.stop_search()
+            elif self.editor_type == "source" and self.editor.props.visible:
+                self.editor.stop_search()
+            elif self.renderer.props.visible:
+                self.renderer.stop_search()
+
+            self.focused.grab_focus()
+            self.focused = None
+
+    def on_search_mode_text(self, search_entry, param):
+        if self.search_way == SearchWay.NEXT:
+            res = self.on_find_next_match(None, param)
+        else:
+            res = self.on_find_previous_match(None, param)
+
+        ctx = self.search_entry.get_style_context()
+        if not res and self.search_entry.get_text():
+            Gtk.StyleContext.add_class(ctx, "error")
+        else:
+            Gtk.StyleContext.remove_class(ctx, "error")
+
+    def on_find_next_match(self, action, *params):
+        res = False
+        if self.search.get_search_mode():
+            self.search_entry.grab_focus()
+            text = self.search_entry.get_text()
+
+            if isinstance(self.focused, GtkSourceView):
+                res = self.editor.do_next_match(text)
+            elif isinstance(self.focused, GtkWebView):
+                res = self.renderer.do_next_match(text)
+            elif self.editor_type == "source" and self.editor.props.visible:
+                res = self.editor.do_next_match(text)
+            elif self.renderer.props.visible:
+                res = self.renderer.do_next_match(text)
+        return res
+
+    def on_find_previous_match(self, action, *params):
+        res = False
+        if self.search.get_search_mode():
+            self.search_entry.grab_focus()
+            text = self.search_entry.get_text()
+
+            if isinstance(self.focused, GtkSourceView):
+                res = self.editor.do_previous_match(text)
+            elif isinstance(self.focused, GtkWebView):
+                res = self.renderer.do_previous_match(text)
+            elif self.editor_type == "source" and self.editor.props.visible:
+                res = self.editor.do_previous_match(text)
+            elif self.renderer.props.visible:
+                res = self.renderer.do_previous_match(text)
+        return res
+
     def ask_if_modified(self):
         if self.editor_type:
             if self.editor.is_modified:
@@ -363,15 +456,18 @@ class AppWindow(Gtk.ApplicationWindow):
         box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(box)
 
+        overlay = Gtk.Overlay()
+        box.pack_start(overlay, True, True, 0)
+
         if self.editor_type:
             self.paned = Gtk.Paned(orientation=self.preferences.preview,
                                    position=self.cache.paned)
-            box.pack_start(self.paned, True, True, 0)
+            overlay.add_overlay(self.paned)
             self.fill_panned(file_name)
         else:
             self.file_name = file_name
             self.set_title(file_name)
-            box.pack_start(self.renderer, True, True, 0)
+            overlay.add_overlay(self.renderer)
 
         if self.cache.is_maximized:
             self.maximize()
@@ -379,6 +475,36 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.editor_type == 'source':
             self.status_bar = Statusbar(self.preferences.editor)
             box.pack_end(self.status_bar, False, True, 0)
+
+        self.search = self.search = Gtk.SearchBar()
+        self.search.set_show_close_button(False)
+        self.search.set_halign(Gtk.Align.CENTER)
+        self.search.set_valign(Gtk.Align.START)
+        self.search.connect("notify::search-mode-enabled",
+                            self.on_search_mode_changed)
+        overlay.add_overlay(self.search)
+
+        sbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)
+        Gtk.StyleContext.add_class(sbox.get_style_context(), "linked")
+        self.search.add(sbox)
+
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_width_chars(30)
+        sbox.pack_start(self.search_entry, True, True, 0)
+        self.search.connect_entry(self.search_entry)
+        self.search_entry.connect("notify::text",
+                                  self.on_search_mode_text)
+
+        prev_button = IconButton(
+                symbol="go-previous-symbolic",
+                tooltip="Previeous search",
+                action_name="win.find-previous-match")
+        sbox.pack_start(prev_button, False, False, 0)
+        next_button = IconButton(
+                symbol="go-next-symbolic",
+                tooltip="Next search",
+                action_name="win.find-next-match")
+        sbox.pack_start(next_button, False, False, 0)
 
     def check_in_thread(self):
         if self.runing:

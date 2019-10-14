@@ -19,6 +19,13 @@ class SourceGroup(ShortcutsGroup):
             accelerator="<Control>Home", title="Go to Begin of Document"))
         self.add(ShortcutsShortcut(
             accelerator="<Control>End", title="Go to End of Document"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Control>f",
+            title="Find in Document / Find another match in same way"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Control>g", title="Find next match"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Shift><Control>g", title="Find previous match"))
 
 
 class VimGroup(ShortcutsGroup):

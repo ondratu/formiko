@@ -114,3 +114,21 @@ class FileSaveDialog(FileChooserDialog):
         super(FileSaveDialog, self).__init__(
             "Save as file", parent, Gtk.FileChooserAction.SAVE
         )
+
+
+class FindDialog(Gtk.Dialog):
+    def __init__(self, parent, editor):
+        super(FindDialog, self).__init__(
+            "Find",
+            parent,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            use_header_bar=True)
+        box = self.get_content_area()
+        hbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        box.add(hbox)
+
+        self.entry = Gtk.Entry()
+        self.entry.connect("changed", self.on_changed)
+
+    def on_changed(self, entry):
+        print(entry.get_text())

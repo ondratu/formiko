@@ -5,7 +5,7 @@ require_version('GtkSpell', '3.0')      # noqa
 
 from gi.repository.Pango import FontDescription
 from gi.repository.GtkSource import LanguageManager, Buffer, View, \
-    DrawSpacesFlags
+    DrawSpacesFlags, SearchContext, SearchSettings
 from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant
 from gi.repository.GtkSpell import Checker
 
@@ -75,6 +75,11 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.set_highlight_current_line(editor_pref.current_line)
         self.set_text_wrapping(editor_pref.text_wrapping)
         self.set_white_chars(editor_pref.white_chars)
+
+        self.search_settings = SearchSettings(wrap_around=True)
+        self.search_context = SearchContext.new(
+            self.text_buffer, self.search_settings)
+        self.search_iter = None
 
     @property
     def changes(self):
@@ -217,3 +222,44 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         language = LANGS.get(ext, LANGS['.rst'])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
+
+    def do_next_match(self, text):
+        if self.search_settings.get_search_text() != text:
+            self.search_settings.set_search_text(text)
+            self.search_iter = self.text_buffer.get_iter_at_mark(
+                self.text_buffer.get_insert())
+        elif self.search_iter:
+            self.search_iter.forward_char()
+        else:
+            return False
+
+        found, self.search_iter, end = self.search_context.forward(
+            self.search_iter)
+
+        if not found:
+            self.search_iter = None
+            return False
+        self.source_view.scroll_to_iter(self.search_iter, 0, 1, 1, 1)
+        self.text_buffer.place_cursor(self.search_iter)
+        return True
+
+    def do_previous_match(self, text):
+        if self.search_settings.get_search_text() != text:
+            self.search_settings.set_search_text(text)
+            self.search_iter = self.text_buffer.get_iter_at_mark(
+                self.text_buffer.get_insert())
+        elif not self.search_iter:
+            return False
+
+        found, start, self.search_iter = self.search_context.backward(
+            self.search_iter)
+        if not found:
+            self.search_iter = None
+            return False
+        self.search_iter.backward_chars(len(text))
+        self.source_view.scroll_to_iter(self.search_iter, 0, 1, 1, 1)
+        self.text_buffer.place_cursor(self.search_iter)
+        return True
+
+    def stop_search(self):
+        self.search_settings.set_search_text(None)
