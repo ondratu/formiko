@@ -10,6 +10,7 @@ Version 1.4.0dev1
   * GTK Warning fix (debian bug #933622)
   * SearchBar and searching text in editor
   * searching text in preview
+  * creating backup file before write changes to new one
 
 Version 1.3.0 - 16.1.2018 7:00
 
