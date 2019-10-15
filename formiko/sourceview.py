@@ -13,7 +13,7 @@ from gi.repository import GObject
 from gi.repository import Gtk
 
 from os import rename
-from os.path import splitext, basename, isfile
+from os.path import splitext, basename, isfile, exists
 from io import open
 from traceback import format_exc
 from sys import version_info, stderr
@@ -176,7 +176,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def save_to_file(self, window=None):
         try:
-            rename(self.__file_name, "%s~" % self.__file_name)
+            if exists(self.__file_name):
+                rename(self.__file_name, "%s~" % self.__file_name)
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
                     src.write(self.text.decode('utf-8'))
