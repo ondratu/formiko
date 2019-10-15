@@ -12,10 +12,11 @@ from gi.repository.GtkSpell import Checker
 from gi.repository import GObject
 from gi.repository import Gtk
 
+from os import rename
 from os.path import splitext, basename, isfile
 from io import open
 from traceback import format_exc
-from sys import version_info
+from sys import version_info, stderr
 from threading import Thread
 
 from formiko.dialogs import FileSaveDialog, TraceBackDialog
@@ -175,6 +176,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def save_to_file(self, window=None):
         try:
+            rename(self.__file_name, "%s~" % self.__file_name)
             with open(self.__file_name, 'w', encoding="utf-8") as src:
                 if version_info.major == 2:
                     src.write(self.text.decode('utf-8'))
@@ -182,10 +184,13 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                     src.write(self.text)
             self.text_buffer.set_modified(False)
         except Exception:
+            error = format_exc()
             if window:
-                md = TraceBackDialog(window, format_exc())
+                md = TraceBackDialog(window, error)
                 md.run()
                 md.destroy()
+            stderr.write(error)
+            stderr.flush()
 
     def save(self, window):
         if not self.__file_name:
