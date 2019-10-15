@@ -319,7 +319,6 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_find_next_match(self, action, *params):
         res = False
         if self.search.get_search_mode():
-            self.search_entry.grab_focus()
             text = self.search_entry.get_text()
 
             if isinstance(self.focused, GtkSourceView):
@@ -335,7 +334,6 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_find_previous_match(self, action, *params):
         res = False
         if self.search.get_search_mode():
-            self.search_entry.grab_focus()
             text = self.search_entry.get_text()
 
             if isinstance(self.focused, GtkSourceView):
@@ -476,7 +474,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.status_bar = Statusbar(self.preferences.editor)
             box.pack_end(self.status_bar, False, True, 0)
 
-        self.search = self.search = Gtk.SearchBar()
+        self.search = Gtk.SearchBar()
         self.search.set_show_close_button(False)
         self.search.set_halign(Gtk.Align.CENTER)
         self.search.set_valign(Gtk.Align.START)
@@ -498,12 +496,15 @@ class AppWindow(Gtk.ApplicationWindow):
         prev_button = IconButton(
                 symbol="go-previous-symbolic",
                 tooltip="Previeous search",
-                action_name="win.find-previous-match")
+                action_name="win.find-previous-match",
+                focus_on_click=False)
+        # set_focus_on_click(False)
         sbox.pack_start(prev_button, False, False, 0)
         next_button = IconButton(
                 symbol="go-next-symbolic",
                 tooltip="Next search",
-                action_name="win.find-next-match")
+                action_name="win.find-next-match",
+                focus_on_click=False)
         sbox.pack_start(next_button, False, False, 0)
 
     def check_in_thread(self):

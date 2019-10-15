@@ -4,11 +4,11 @@ from os.path import abspath, dirname
 
 require_version('WebKit2', '4.0')   # noqa
 
-from gi.repository.WebKit2 import WebView, PrintOperation
+from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions
 from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
-    log_default_handler, LogLevelFlags
+    log_default_handler, LogLevelFlags, MAXUINT
 from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
-    Align
+    Align, main_iteration
 
 from docutils import DataError
 from docutils.core import publish_string
@@ -203,6 +203,11 @@ class Renderer(Overlay):
         self.webview.connect("mouse-target-changed", self.on_mouse)
         scrolled.add(self.webview)
 
+        controller = self.webview.get_find_controller()
+        self.search_done = None
+        controller.connect("found-text", self.on_found_text)
+        controller.connect("failed-to-find-text", self.on_faild_to_find_text)
+
         self.label = Label()
         self.label.set_halign(Align.START)
         self.label.set_valign(Align.END)
@@ -341,10 +346,36 @@ class Renderer(Overlay):
                             error.message)
 
     def do_next_match(self, text):
-        pass
+        controller = self.webview.get_find_controller()
+        if controller.get_search_text() != text:
+            self.search_done = None
+            controller.search(text, FindOptions.WRAP_AROUND, MAXUINT)
+            while self.search_done is None:
+                main_iteration()
+        elif self.search_done:
+            controller.search_next()
+
+        return self.search_done
 
     def do_previous_match(self, text):
-        pass
+        controller = self.webview.get_find_controller()
+        if controller.get_search_text() != text:
+            self.search_done = None
+            controller.search(
+                text, FindOptions.WRAP_AROUND | FindOptions.BACKWARDS, MAXUINT)
+            while self.search_done is None:
+                main_iteration()
+        elif self.search_done:
+            controller.search_previous()
+
+        return self.search_done
 
     def stop_search(self):
-        pass
+        controller = self.webview.get_find_controller()
+        controller.search_finish()
+
+    def on_found_text(self, controller, count):
+        self.search_done = True
+
+    def on_faild_to_find_text(self, controller):
+        self.search_done = False
