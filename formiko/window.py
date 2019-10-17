@@ -95,6 +95,12 @@ class AppWindow(Gtk.ApplicationWindow):
         action.connect("activate", self.on_find_previous_match)
         self.add_action(action)
 
+        self.refresh_preview_action = Gio.SimpleAction.new(
+            "refresh-preview", None)
+        self.refresh_preview_action.connect(
+            "activate", self.on_refresh_preview)
+        self.add_action(self.refresh_preview_action)
+
         pref = self.preferences
 
         self.show_editor = True
@@ -202,14 +208,17 @@ class AppWindow(Gtk.ApplicationWindow):
         if state == View.BOTH:
             self.editor.show()
             self.renderer.show()
+            self.refresh_preview_action.set_enabled(True)
             self.both_toggle_btn.set_active(True)
         elif state == View.EDITOR:
             self.editor.show()
             self.renderer.hide()
+            self.refresh_preview_action.set_enabled(False)
             self.editor_toggle_btn.set_active(True)
         else:
             self.editor.hide()
             self.renderer.show()
+            self.refresh_preview_action.set_enabled(True)
             self.preview_toggle_btn.set_active(True)
 
     def on_change_preview(self, action, param):
@@ -346,6 +355,9 @@ class AppWindow(Gtk.ApplicationWindow):
                 res = self.renderer.do_previous_match(text)
         return res
 
+    def on_refresh_preview(self, action, *params):
+        self.check_in_thread(True)
+
     def ask_if_modified(self):
         if self.editor_type:
             if self.editor.is_modified:
@@ -395,6 +407,10 @@ class AppWindow(Gtk.ApplicationWindow):
         btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         btn.set_tooltip_text("Preferences")
         headerbar.pack_end(btn)
+
+        headerbar.pack_end(IconButton(symbol="view-refresh-symbolic",
+                                      tooltip="Refresh preview",
+                                      action_name="win.refresh-preview"))
 
         if self.editor_type != 'preview':
             btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
@@ -507,21 +523,21 @@ class AppWindow(Gtk.ApplicationWindow):
                 focus_on_click=False)
         sbox.pack_start(next_button, False, False, 0)
 
-    def check_in_thread(self):
+    def check_in_thread(self, force=False):
         if self.runing:
             if self.editor_type == 'vim':
-                thread = Thread(target=self.refresh_from_vim)
+                thread = Thread(target=self.refresh_from_vim, args=(force,))
                 thread.start()
             elif self.editor_type == 'source':
-                GLib.idle_add(self.refresh_from_source)
+                GLib.idle_add(self.refresh_from_source, force)
             else:   # self.editor = None
-                GLib.idle_add(self.refresh_from_file)
+                GLib.idle_add(self.refresh_from_file, force)
 
     def not_running(self):
         if not self.runing:
             raise SystemExit(0)
 
-    def refresh_from_vim(self):
+    def refresh_from_vim(self, force):
         another_file = False
         try:
             star = '*' if self.editor.is_modified else ''
@@ -533,7 +549,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.not_running()
             last_changes = self.editor.get_vim_changes()
 
-            if last_changes > self.__last_changes or another_file:
+            if force or last_changes > self.__last_changes or another_file:
                 self.__last_changes = last_changes
                 self.not_running()
                 lines = self.editor.get_vim_lines()
@@ -555,7 +571,7 @@ class AppWindow(Gtk.ApplicationWindow):
         except BaseException:
             print_exc()
 
-    def refresh_from_source(self):
+    def refresh_from_source(self, force):
         try:
             modified = self.editor.is_modified
             self.lookup_action("save-document").set_enabled(modified)
@@ -566,7 +582,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.set_title(title)
 
             last_changes = self.editor.changes
-            if last_changes > self.__last_changes:
+            if force or last_changes > self.__last_changes:
                 self.__last_changes = last_changes
                 text = self.editor.text
 

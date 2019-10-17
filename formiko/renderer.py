@@ -211,7 +211,6 @@ class Renderer(Overlay):
         self.label = Label()
         self.label.set_halign(Align.START)
         self.label.set_valign(Align.END)
-
         self.add_overlay(self.label)
 
         self.set_writer(writer)
@@ -220,7 +219,7 @@ class Renderer(Overlay):
         self.tab_width = 8
         self.__win = win
 
-    def on_mouse(self, web_view, hit_test_result, modifiers):
+    def on_mouse(self, webview, hit_test_result, modifiers):
         if hit_test_result.context_is_link():
             text = "link: %s" % hit_test_result.get_link_uri()
         elif hit_test_result.context_is_image():
