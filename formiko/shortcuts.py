@@ -46,6 +46,14 @@ class VimGroup(ShortcutsGroup):
             accelerator="Escape+g+g+<Shift>v+<Shift>G", title="Select All"))
 
 
+class PreviewGroup(ShortcutsGroup):
+    def __init__(self):
+        super(PreviewGroup, self).__init__(title="Preview")
+
+        self.add(ShortcutsShortcut(
+            accelerator="<Control>r", title="Refresh preview"))
+
+
 class GeneralGroup(ShortcutsGroup):
     def __init__(self, editor_type):
         super(GeneralGroup, self).__init__(title="Genaral")
@@ -81,15 +89,14 @@ class ShortcutsWindow(ShortcutsWindow):
         super(ShortcutsWindow, self).__init__(modal=1)
         sec = ShortcutsSection(title="Formiko", visible=True)
 
-        general = GeneralGroup(editor_type)
-        sec.add(general)
+        sec.add(GeneralGroup(editor_type))
+
+        sec.add(PreviewGroup())
 
         if editor_type == "source":
-            source = SourceGroup()
-            sec.add(source)
+            sec.add(SourceGroup())
 
         elif editor_type == "vim":
-            vim = VimGroup()
-            sec.add(vim)
+            sec.add(VimGroup())
 
         self.add(sec)

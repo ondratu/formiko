@@ -137,3 +137,5 @@ class Application(GtkApplication):
         self.set_accels_for_action("win.find-next-match", ["<Control>g"])
         self.set_accels_for_action("win.find-previous-match",
                                    ["<Shift><Control>g"])
+        self.set_accels_for_action("win.refresh-preview",
+                                   ["<Control>r"])
