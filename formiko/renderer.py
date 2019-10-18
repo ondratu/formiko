@@ -171,6 +171,18 @@ DATA_ERROR = """
 </html>
 """
 
+NOT_IMPLEMENTED_ERROR = """
+<html>
+  <head></head>
+  <body>
+    <h1>Library Error</h1>
+    <p>Sorry about that. This seems to be not supported functionality in
+       dependent library Reader or Writer</p>
+    <pre style="color:red; text-width:weight;">%s</pre>
+  </body>
+</html>
+"""
+
 EXCEPTION_ERROR = """
 <html>
   <head></head>
@@ -356,6 +368,10 @@ class Renderer(Overlay):
             return False, html, 'text/html'
         except DataError as e:
             return False, DATA_ERROR % ('Data', e), 'text/html'
+
+        except NotImplementedError:
+            exc_str = format_exc()
+            return False, NOT_IMPLEMENTED_ERROR % exc_str, 'text/html'
 
         except BaseException:
             exc_str = format_exc()
