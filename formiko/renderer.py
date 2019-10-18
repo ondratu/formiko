@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from gi import require_version
-from os.path import abspath, dirname
+from os.path import abspath, dirname, splitext, exists
 
 require_version('WebKit2', '4.0')   # noqa
 
@@ -8,7 +8,7 @@ from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions
 from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
     log_default_handler, LogLevelFlags, MAXUINT
 from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
-    Align, main_iteration
+    Align, main_iteration, show_uri_on_window
 
 from docutils import DataError
 from docutils.core import publish_string
@@ -16,6 +16,9 @@ from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.s5_html import Writer as WriterS5
 from docutils.writers.pep_html import Writer as WriterPep
+
+from formiko.dialogs import FileNotFoundDialog
+from formiko.sourceview import LANGS
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
@@ -201,6 +204,8 @@ class Renderer(Overlay):
 
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
+        self.webview.connect("context-menu", self.on_context_menu)
+        self.webview.connect("button-release-event", self.on_button_release)
         scrolled.add(self.webview)
 
         controller = self.webview.get_find_controller()
@@ -212,6 +217,8 @@ class Renderer(Overlay):
         self.label.set_halign(Align.START)
         self.label.set_valign(Align.END)
         self.add_overlay(self.label)
+        self.link_uri = None
+        self.context_button = 3     # will be rewrite by real value
 
         self.set_writer(writer)
         self.set_parser(parser)
@@ -220,8 +227,10 @@ class Renderer(Overlay):
         self.__win = win
 
     def on_mouse(self, webview, hit_test_result, modifiers):
+        self.link_uri = None
         if hit_test_result.context_is_link():
-            text = "link: %s" % hit_test_result.get_link_uri()
+            self.link_uri = hit_test_result.get_link_uri()
+            text = "link: %s" % self.link_uri
         elif hit_test_result.context_is_image():
             text = "image: %s" % hit_test_result.get_image_uri()
         elif hit_test_result.context_is_media():
@@ -232,6 +241,42 @@ class Renderer(Overlay):
             return
         self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
         self.label.show()
+
+    def on_context_menu(self, webview, menu, event, hit_test_result):
+        self.context_button = event.button.button
+        return True     # disable context menu for now
+
+    def on_button_release(self, webview, event):
+        """Catch release-button only when try to follow link.
+
+        Context menu is catch by webview before this callback.
+        """
+        if event.button == self.context_button:
+            return True
+        if self.link_uri:
+            if self.link_uri.startswith("file://"):    # try to open source
+                self.find_and_opendocument(self.link_uri[7:])
+            else:
+                show_uri_on_window(None, self.link_uri, 0)
+        return True
+
+    def find_and_opendocument(self, filename):
+        ext = splitext(filename)[1]
+        if not ext:
+            for EXT in LANGS.keys():
+                tmp = filename + EXT
+                if exists(tmp):
+                    filename = tmp
+                    ext = EXT
+                    break
+        if ext in LANGS:
+            self.__win.open_document(filename)
+        elif exists(filename):
+            show_uri_on_window(None, "file://"+filename, 0)
+        else:
+            dialog = FileNotFoundDialog(self.__win, filename)
+            dialog.run()
+            dialog.destroy()
 
     def set_writer(self, writer):
         assert writer in WRITERS

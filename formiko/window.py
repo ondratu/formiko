@@ -132,6 +132,15 @@ class AppWindow(Gtk.ApplicationWindow):
             self.save_win_state()
             self.destroy()
 
+    def open_document(self, filename, preview_only=False):
+        if preview_only or self.editor_type is None:
+            self.get_application().new_window(None, filename)
+        elif self.editor_type == 'source' and \
+                self.get_title() == NOT_SAVED_NAME:
+            self.editor.read_from_file(filename)
+        else:
+            self.get_application().new_window(self.editor_type, filename)
+
     def on_open_document(self, actions, *params):
         dialog = FileOpenDialog(self)
         dialog.add_filter_plain()
@@ -141,12 +150,7 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter_all()
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
-            if self.editor_type == 'source' and \
-                    self.get_title() == NOT_SAVED_NAME:
-                self.editor.read_from_file(dialog.get_filename())
-            else:
-                self.get_application().new_window(self.editor_type,
-                                                  dialog.get_filename())
+            self.open_document(dialog.get_filename())
         dialog.destroy()
 
     def on_save_document(self, action, *params):

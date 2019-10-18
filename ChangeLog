@@ -12,6 +12,8 @@ Version 1.4.0dev1
   * searching text in preview
   * creating backup file before write changes to new one
   * refresh preview action / button
+  * opening links in system from preview, known file types open in new formiko
+    window
 
 Version 1.3.0 - 16.1.2018 7:00
 
