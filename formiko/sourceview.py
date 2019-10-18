@@ -173,6 +173,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                 self.text_buffer.set_text(src.read())
                 self.__last_changes += 1
         self.text_buffer.set_modified(False)
+        self.text_buffer.place_cursor(self.text_buffer.get_iter_at_offset(0))
 
     def save_to_file(self, window=None):
         try:
