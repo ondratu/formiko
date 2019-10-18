@@ -260,21 +260,21 @@ class Renderer(Overlay):
                 show_uri_on_window(None, self.link_uri, 0)
         return True
 
-    def find_and_opendocument(self, filename):
-        ext = splitext(filename)[1]
+    def find_and_opendocument(self, file_path):
+        ext = splitext(file_path)[1]
         if not ext:
             for EXT in LANGS.keys():
-                tmp = filename + EXT
+                tmp = file_path + EXT
                 if exists(tmp):
-                    filename = tmp
+                    file_path = tmp
                     ext = EXT
                     break
         if ext in LANGS:
-            self.__win.open_document(filename)
-        elif exists(filename):
-            show_uri_on_window(None, "file://"+filename, 0)
+            self.__win.open_document(file_path)
+        elif exists(file_path):
+            show_uri_on_window(None, "file://"+file_path, 0)
         else:
-            dialog = FileNotFoundDialog(self.__win, filename)
+            dialog = FileNotFoundDialog(self.__win, file_path)
             dialog.run()
             dialog.destroy()
 
