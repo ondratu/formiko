@@ -47,6 +47,16 @@ class TraceBackDialog(Gtk.Dialog):
         box.add(label)
 
 
+class FileNotFoundDialog(Gtk.MessageDialog):
+    def __init__(self, parent, filename):
+        super(FileNotFoundDialog, self).__init__(
+            parent,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            Gtk.MessageType.ERROR,
+            Gtk.ButtonsType.CANCEL,
+            "File `%s` not found" % filename)
+
+
 class FileChooserDialog(Gtk.FileChooserDialog):
     def __init__(self, title, parent, action):
         if action == Gtk.FileChooserAction.SAVE:

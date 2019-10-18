@@ -132,6 +132,17 @@ class AppWindow(Gtk.ApplicationWindow):
             self.save_win_state()
             self.destroy()
 
+    def open_document(self, file_path):
+        if self.editor_type == 'source' and \
+                self.get_title() == NOT_SAVED_NAME:
+            self.editor.read_from_file(file_path)
+        else:
+            for window in self.get_application().get_windows():
+                if file_path == window.file_path:
+                    window.present()
+                    return
+            self.get_application().new_window(self.editor_type, file_path)
+
     def on_open_document(self, actions, *params):
         dialog = FileOpenDialog(self)
         dialog.add_filter_plain()
@@ -141,12 +152,7 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter_all()
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
-            if self.editor_type == 'source' and \
-                    self.get_title() == NOT_SAVED_NAME:
-                self.editor.read_from_file(dialog.get_filename())
-            else:
-                self.get_application().new_window(self.editor_type,
-                                                  dialog.get_filename())
+            self.open_document(dialog.get_filename())
         dialog.destroy()
 
     def on_save_document(self, action, *params):
@@ -479,7 +485,7 @@ class AppWindow(Gtk.ApplicationWindow):
             overlay.add_overlay(self.paned)
             self.fill_panned(file_name)
         else:
-            self.file_name = file_name
+            self.__file_name = file_name
             self.set_title(file_name)
             overlay.add_overlay(self.renderer)
 
@@ -602,14 +608,18 @@ class AppWindow(Gtk.ApplicationWindow):
         except BaseException:
             print_exc()
 
-    def refresh_from_file(self):
+    def refresh_from_file(self, force):
         try:
-            last_changes = stat(self.file_name).st_ctime
-            if last_changes > self.__last_changes:
+            last_changes = stat(self.__file_name).st_ctime
+            if force or last_changes > self.__last_changes:
                 self.__last_changes = last_changes
-                with open(self.file_name) as source:
+                with open(self.__file_name) as source:
                     buff = source.read()
-                    self.renderer.render(buff, self.file_name)
+                    self.renderer.render(buff, self.__file_name)
         except BaseException:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)
+
+    @property
+    def file_path(self):
+        return self.editor.file_path if self.editor_type else self.__file_name
