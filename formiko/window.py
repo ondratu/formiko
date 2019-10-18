@@ -580,7 +580,9 @@ class AppWindow(Gtk.ApplicationWindow):
     def refresh_from_source(self, force):
         try:
             modified = self.editor.is_modified
-            self.lookup_action("save-document").set_enabled(modified)
+            action = self.lookup_action("save-document")
+            if action:  # sometimes when closing window action is None
+                action.set_enabled(modified)
 
             star = '*' if modified else ''
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
