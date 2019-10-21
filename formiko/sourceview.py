@@ -54,6 +54,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.text_buffer = Buffer.new_with_language(
             LANGS['.%s' % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
+        # TODO: will work when FileSaver and FileLoader will be used
+        # self.text_buffer.set_implicit_trailing_newline(False)
         self.source_view = View.new_with_buffer(self.text_buffer)
 
         self.spellchecker = Checker()
