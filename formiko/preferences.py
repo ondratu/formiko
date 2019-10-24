@@ -88,6 +88,14 @@ class Preferences(Gtk.Popover):
         if user_preferences.preview == Gtk.Orientation.HORIZONTAL:
             self.hori_btn.set_active(True)
         vbox.pack_start(self.hori_btn, True, True, 0)
+
+        self.auto_scroll_btn = Gtk.CheckButton(
+            label='Auto scroll',
+            action_name="win.auto-scroll-toggle",
+            action_target=Variant('b', True))
+        self.auto_scroll_btn.set_active(user_preferences.auto_scroll)
+        vbox.pack_start(self.auto_scroll_btn, True, True, 0)
+
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 0)
 

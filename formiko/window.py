@@ -111,6 +111,9 @@ class AppWindow(Gtk.ApplicationWindow):
         self.create_stateful_action(
             "change-preview", 'q', pref.preview, self.on_change_preview)
         self.create_stateful_action(
+            "auto-scroll-toggle", 'b', pref.auto_scroll,
+            self.on_auto_scroll_toggle)
+        self.create_stateful_action(
             "change-writer", 's', pref.writer, self.on_change_writer)
         self.create_stateful_action(
             "change-parser", 's', pref.parser, self.on_change_parser)
@@ -252,6 +255,11 @@ class AppWindow(Gtk.ApplicationWindow):
         else:
             self.paned.set_position(self.paned.get_allocated_width()/2)
 
+    def on_auto_scroll_toggle(self, action, param):
+        auto_scroll = not self.preferences.auto_scroll
+        self.preferences.auto_scroll = auto_scroll
+        self.preferences.save()
+
     def on_change_parser(self, action, param):
         if action.get_state() != param:
             action.set_state(param)
@@ -263,6 +271,10 @@ class AppWindow(Gtk.ApplicationWindow):
     def on_file_type(self, widget, ext):
         parser = EXTS.get(ext, self.preferences.parser)
         self.pref_menu.set_parser(parser)
+
+    def on_scroll_changed(self, widget, position):
+        if self.preferences.auto_scroll:
+            self.renderer.scroll_to_position(position)
 
     def on_change_writer(self, action, param):
         if action.get_state() != param:
@@ -458,16 +470,18 @@ class AppWindow(Gtk.ApplicationWindow):
     def fill_panned(self, file_name):
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, file_name)
-            self.editor.connect("file_type", self.on_file_type)
         else:
             self.editor = SourceView(self.preferences, "editor.spell-lang")
             self.insert_action_group("editor",
                                      EditorActionGroup(self.editor,
                                                        self.renderer,
                                                        self.preferences))
-            self.editor.connect("file_type", self.on_file_type)
             if file_name:
                 self.editor.read_from_file(file_name)
+
+        self.editor.connect("file-type", self.on_file_type)
+        self.editor.connect("scroll-changed", self.on_scroll_changed)
+
         self.paned.pack1(self.editor, True, False)
         self.paned.pack2(self.renderer, True, False)
 

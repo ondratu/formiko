@@ -201,6 +201,12 @@ SCROLL = """
 </script>
 """
 
+JS_SCROLL = """
+    window.scrollTo(
+        0,
+        (document.documentElement.scrollHeight-window.innerHeight)*%f);
+"""
+
 MARKUP = """<span background="#ddd"> %s </span>"""
 
 
@@ -212,6 +218,7 @@ class Renderer(Overlay):
         scrolled = ScrolledWindow.new(None, None)
         scrolled.set_policy(PolicyType.AUTOMATIC, PolicyType.AUTOMATIC)
         self.sb = scrolled.get_vscrollbar()
+        self.vadjustment = scrolled.get_vadjustment()
         self.add(scrolled)
 
         self.webview = WebView()
@@ -380,8 +387,11 @@ class Renderer(Overlay):
     def do_render(self):
         state, html, mime_type = self.render_output()
         if state:
-            a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
-            position = (float(a)/(a+b)) if a or b else 0
+            if self.pos > 1:     # vim
+                a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
+                position = (float(a)/(a+b)) if a or b else 0
+            else:
+                position = self.pos
 
             html += SCROLL % position
         if html and self.__win.runing:
@@ -439,3 +449,15 @@ class Renderer(Overlay):
 
     def on_faild_to_find_text(self, controller):
         self.search_done = False
+
+    def scroll_to_position(self, position):
+        if position is not None:
+            self.pos = position
+
+        if self.pos > 1:     # vim
+            a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
+            position = (float(a)/(a+b)) if a or b else 0
+        else:
+            position = self.pos
+
+        self.webview.run_javascript(JS_SCROLL % position, None, None)

@@ -57,6 +57,7 @@ class EditorPreferences(object):
 
 class UserPreferences(object):
     preview = Orientation.HORIZONTAL.numerator
+    auto_scroll = True
     parser = 'rst'
     writer = 'html4'
     style = ''
@@ -71,6 +72,8 @@ class UserPreferences(object):
         cp = SmartParser()
         cp.read("%s/formiko.ini" % directory)
         cp.smart_get(self, 'preview', int)
+        cp.smart_get(self, 'auto_scroll', smart_bool)
+
         cp.smart_get(self, 'parser')
         cp.smart_get(self, 'writer')
         cp.smart_get(self, 'style')
@@ -93,6 +96,8 @@ class UserPreferences(object):
         cp = SmartParser()
         cp.add_section('main')
         cp.set('main', 'preview', str(int(self.preview)))
+        cp.smart_set(self, 'auto_scroll')
+
         cp.smart_set(self, 'parser')
         cp.smart_set(self, 'writer')
         cp.smart_set(self, 'style')

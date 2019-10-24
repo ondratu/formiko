@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from gi.repository.Gtk import Socket
-from gi.repository.GObject import SIGNAL_RUN_FIRST
+from gi.repository.GObject import SIGNAL_RUN_FIRST, SIGNAL_RUN_LAST
 
 from subprocess import Popen, PIPE, check_output
 from logging import error
@@ -13,7 +13,8 @@ VIM_PATH = "/usr/bin"
 
 class VimEditor(Socket):
     __gsignals__ = {
-        'file_type': (SIGNAL_RUN_FIRST, None, (str,))
+        'file-type': (SIGNAL_RUN_FIRST, None, (str,)),
+        'scroll-changed': (SIGNAL_RUN_LAST, None, (float,))   # not implemented
     }
 
     def __init__(self, app_window, file_name=''):
@@ -29,7 +30,7 @@ class VimEditor(Socket):
     def vim_start_server(self):
         if self.__file_name:
             name, ext = splitext(self.__file_name)
-            self.emit("file_type", ext)
+            self.emit("file-type", ext)
             file_type = ""
         else:
             file_type = " filetype=rst"
@@ -99,7 +100,7 @@ class VimEditor(Socket):
         __file_name = self.vim_remote_expr("@%")
         if __file_name != self.__file_name:
             name, ext = splitext(__file_name)
-            self.emit("file_type", ext)
+            self.emit("file-type", ext)
         self.__file_name = __file_name
         return self.__file_name
 

@@ -38,7 +38,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __last_changes = 0
 
     __gsignals__ = {
-        'file_type': (GObject.SIGNAL_RUN_FIRST, None, (str,))
+        'file-type': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        'scroll-changed': (GObject.SIGNAL_RUN_LAST, None, (float,))
     }
 
     action_name = GObject.property(type=str)
@@ -58,8 +59,11 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         # self.text_buffer.set_implicit_trailing_newline(False)
         self.source_view = View.new_with_buffer(self.text_buffer)
 
+        adj = self.get_vadjustment()
+        adj.connect("value-changed", self.on_scroll_changed)
+
         self.spellchecker = Checker()
-        self.spellchecker.connect("language-changed", self.language_changed)
+        self.spellchecker.connect("language-changed", self.on_language_changed)
 
         self.source_view.override_font(
             FontDescription.from_string('Monospace'))
@@ -100,8 +104,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     @property
     def position(self):
-        cursor = self.text_buffer.get_insert()
-        return self.text_buffer.get_iter_at_mark(cursor).get_offset()
+        adj = self.source_view.get_vadjustment()
+        hight = self.get_allocated_height()
+        value = adj.get_value()
+        if value:
+            return adj.get_value()/(adj.get_upper()-hight)
+        return 0
 
     @property
     def file_name(self):
@@ -119,11 +127,14 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
 
-    def language_changed(self, spellchecker, language):
+    def on_language_changed(self, spellchecker, language):
         action, go = self.get_action_owner()
         if go:
             action_target = Variant("s", language)
             go.activate_action(action, action_target)
+
+    def on_scroll_changed(self, *params):
+        self.emit("scroll-changed", self.position)
 
     def set_period_save(self, save):
         self.period_save = bool(save)*PERIOD_SAVE_TIME
@@ -136,12 +147,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                 self.spellchecker.set_language(spell_lang)
             else:
                 # refresh from temporary off check spelling
-                self.language_changed(self.spellchecker,
-                                      self.spellchecker.get_language())
+                self.on_language_changed(self.spellchecker,
+                                         self.spellchecker.get_language())
             self.spellchecker.attach(self.source_view)
         else:
             self.spellchecker.detach()
-            self.language_changed(self.spellchecker, "")
+            self.on_language_changed(self.spellchecker, "")
 
     def set_spaces_instead_of_tabs(self, use_spaces):
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)

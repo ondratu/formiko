@@ -16,6 +16,7 @@ Features:
 * periodic save file
 * json and html preview
 * spell check
+* preview auto scroll
 
 It support these parsers and writers:
 
