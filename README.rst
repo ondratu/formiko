@@ -12,11 +12,11 @@ Features:
 * GtkSourceView based editor with syntax highlighting
 * possible use Vim editor
 * vertical or horizontal window splitting
-* preview mode
+* preview mode with auto scroll
 * periodic save file
 * json and html preview
 * spell check
-* preview auto scroll
+* linked file opening
 
 It support these parsers and writers:
 
