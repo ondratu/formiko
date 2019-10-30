@@ -6,9 +6,9 @@ require_version('WebKit2', '4.0')   # noqa
 
 from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions
 from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
-    log_default_handler, LogLevelFlags, MAXUINT
-from gi.repository.Gtk import ScrolledWindow, PolicyType, Overlay, Label, \
-    Align, main_iteration, show_uri_on_window
+    log_default_handler, LogLevelFlags, MAXUINT, Error
+from gi.repository.Gtk import Overlay, Label, Align, main_iteration, \
+    show_uri_on_window
 
 from docutils import DataError
 from docutils.core import publish_string
@@ -207,6 +207,10 @@ JS_SCROLL = """
         (document.documentElement.scrollHeight-window.innerHeight)*%f);
 """
 
+JS_POSITION = """
+window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)
+"""
+
 MARKUP = """<span background="#ddd"> %s </span>"""
 
 
@@ -215,17 +219,11 @@ class Renderer(Overlay):
     def __init__(self, win, parser='rst', writer='html4', style=''):
         super(Renderer, self).__init__()
 
-        scrolled = ScrolledWindow.new(None, None)
-        scrolled.set_policy(PolicyType.AUTOMATIC, PolicyType.AUTOMATIC)
-        self.sb = scrolled.get_vscrollbar()
-        self.vadjustment = scrolled.get_vadjustment()
-        self.add(scrolled)
-
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
         self.webview.connect("context-menu", self.on_context_menu)
         self.webview.connect("button-release-event", self.on_button_release)
-        scrolled.add(self.webview)
+        self.add(self.webview)
 
         controller = self.webview.get_find_controller()
         self.search_done = None
@@ -244,6 +242,23 @@ class Renderer(Overlay):
         self.style = style
         self.tab_width = 8
         self.__win = win
+
+    @property
+    def position(self):
+        self.__position = -1
+        self.webview.run_javascript(
+            JS_POSITION, None, self.on_position_callback, None)
+        while self.__position < 0:
+            # this call at this place do problem, when Gdk.threads_init
+            main_iteration()
+        return self.__position
+
+    def on_position_callback(self, webview, result, data):
+        try:
+            js_res = webview.run_javascript_finish(result)
+            self.__position = js_res.get_js_value().to_double()
+        except Error:
+            self.__position = 0
 
     def on_mouse(self, webview, hit_test_result, modifiers):
         self.link_uri = None
@@ -460,4 +475,4 @@ class Renderer(Overlay):
         else:
             position = self.pos
 
-        self.webview.run_javascript(JS_SCROLL % position, None, None)
+        self.webview.run_javascript(JS_SCROLL % position, None, None, None)

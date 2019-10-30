@@ -17,7 +17,6 @@ def handler_exit(*args):
 
 def main():
     signal(SIGINT, handler_exit)
-    Gdk.threads_init()
     app = Application()
     return app.run(argv)
 

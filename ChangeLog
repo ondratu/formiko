@@ -15,6 +15,7 @@ Version 1.4.0dev1
   * opening links in system from preview, known file types open in new formiko
     window
   * preview auto scroll
+  * fixing positing in preview only mode
 
 Version 1.3.0 - 16.1.2018 7:00
 

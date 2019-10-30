@@ -430,7 +430,7 @@ class AppWindow(Gtk.ApplicationWindow):
                                       tooltip="Refresh preview",
                                       action_name="win.refresh-preview"))
 
-        if self.editor_type != 'preview':
+        if self.editor_type:
             btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
             Gtk.StyleContext.add_class(btn_box.get_style_context(), "linked")
 
@@ -631,7 +631,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.__last_changes = last_changes
                 with open(self.__file_name) as source:
                     buff = source.read()
-                    self.renderer.render(buff, self.__file_name)
+                    self.renderer.render(buff, self.__file_name,
+                                         self.renderer.position)
         except BaseException:
             print_exc()
         GLib.timeout_add(500, self.check_in_thread)
