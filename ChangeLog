@@ -16,6 +16,7 @@ Version 1.4.0dev1
     window
   * preview auto scroll
   * fixing positing in preview only mode
+  * preview/editor/both with shortcuts and store in cache
 
 Version 1.3.0 - 16.1.2018 7:00
 

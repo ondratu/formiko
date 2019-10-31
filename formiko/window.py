@@ -103,11 +103,9 @@ class AppWindow(Gtk.ApplicationWindow):
 
         pref = self.preferences
 
-        self.show_editor = True
-        self.show_preview = True
-
         self.create_stateful_action(
-            "switch-view-toggle", 'q', View.BOTH, self.on_switch_view_toggle)
+            "switch-view-toggle", 'q', self.cache.view,
+            self.on_switch_view_toggle)
         self.create_stateful_action(
             "change-preview", 'q', pref.preview, self.on_change_preview)
         self.create_stateful_action(
@@ -214,6 +212,7 @@ class AppWindow(Gtk.ApplicationWindow):
             action.set_state(param)
 
         state = param.get_uint16()
+        self.cache.view = state
         if state == View.BOTH:
             self.editor.show()
             self.renderer.show()
@@ -435,21 +434,24 @@ class AppWindow(Gtk.ApplicationWindow):
             Gtk.StyleContext.add_class(btn_box.get_style_context(), "linked")
 
             self.editor_toggle_btn = Gtk.ToggleButton(
-                label="Editor",
+                label="_Editor",
+                use_underline=True,
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant('q', View.EDITOR))
             self.editor_toggle_btn.set_tooltip_text("Show Editor")
             btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
 
             self.preview_toggle_btn = Gtk.ToggleButton(
-                label="Preview",
+                label="_Preview",
+                use_underline=True,
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant('q', View.PREVIEW))
             self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
             btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
 
             self.both_toggle_btn = Gtk.ToggleButton(
-                label="Both",
+                label="_Both",
+                use_underline=True,
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant('q', View.BOTH))
             self.both_toggle_btn.set_tooltip_text(
@@ -484,6 +486,16 @@ class AppWindow(Gtk.ApplicationWindow):
 
         self.paned.pack1(self.editor, True, False)
         self.paned.pack2(self.renderer, True, False)
+
+        if self.cache.view == View.EDITOR:
+            self.renderer.show_all()
+            self.renderer.hide()
+            self.renderer.set_no_show_all(True)
+            self.refresh_preview_action.set_enabled(False)
+        elif self.cache.view == View.PREVIEW:
+            self.editor.show_all()
+            self.editor.hide()
+            self.editor.set_no_show_all(True)
 
     def layout(self, file_name):
         self.set_default_size(self.cache.width, self.cache.height)

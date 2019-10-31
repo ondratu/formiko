@@ -19,6 +19,12 @@ class SourceGroup(ShortcutsGroup):
             accelerator="<Control>Home", title="Go to Begin of Document"))
         self.add(ShortcutsShortcut(
             accelerator="<Control>End", title="Go to End of Document"))
+
+
+class FindGroup(ShortcutsGroup):
+    def __init__(self):
+        super(FindGroup, self).__init__(title="Find")
+
         self.add(ShortcutsShortcut(
             accelerator="<Control>f",
             title="Find in Document / Find another match in same way"))
@@ -52,6 +58,12 @@ class PreviewGroup(ShortcutsGroup):
 
         self.add(ShortcutsShortcut(
             accelerator="<Control>r", title="Refresh preview"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Alt>e", title="Show editor only"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Alt>p", title="Show preview only"))
+        self.add(ShortcutsShortcut(
+            accelerator="<Alt>b", title="Show both"))
 
 
 class GeneralGroup(ShortcutsGroup):
@@ -87,11 +99,11 @@ class ShortcutsWindow(ShortcutsWindow):
     def __init__(self, editor_type):
         # view_name and view does not work. Don't know why
         super(ShortcutsWindow, self).__init__(modal=1)
-        sec = ShortcutsSection(title="Formiko", visible=True)
+        sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)
 
         sec.add(GeneralGroup(editor_type))
-
         sec.add(PreviewGroup())
+        sec.add(FindGroup())
 
         if editor_type == "source":
             sec.add(SourceGroup())

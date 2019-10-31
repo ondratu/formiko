@@ -1,3 +1,7 @@
+from os import makedirs
+from os.path import exists
+from traceback import print_exc
+
 from gi.repository.GLib import get_user_config_dir, get_user_cache_dir
 from gi.repository.Gtk import Orientation
 
@@ -6,15 +10,16 @@ try:
 except ImportError:
     from ConfigParser import ConfigParser, NoSectionError, NoOptionError
 
-from os import makedirs
-from os.path import exists
-from traceback import print_exc
 
-
-class View:
+class View():
     EDITOR = 1
     PREVIEW = 2
     BOTH = 3
+
+    def __new__(cls, value):
+        value = int(value)
+        assert 0 < value < 4
+        return value
 
 
 def smart_bool(value):
@@ -141,6 +146,7 @@ class UserCache(object):
         cp.smart_get(self, 'height', int)
         cp.smart_get(self, 'paned', int)
         cp.smart_get(self, 'is_maximized', smart_bool)
+        cp.smart_get(self, 'view', View)
 
     def save(self):
         cp = SmartParser()
@@ -149,6 +155,7 @@ class UserCache(object):
         cp.set('main', 'height', str(self.height))
         cp.set('main', 'paned', str(self.paned))
         cp.set('main', 'is_maximized', str(self.is_maximized))
+        cp.set('main', 'view', str(self.view))
 
         directory = get_user_cache_dir()+"/formiko"
         if not exists(directory):
