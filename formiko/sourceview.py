@@ -6,20 +6,20 @@ require_version('GtkSpell', '3.0')      # noqa
 from gi.repository.Pango import FontDescription
 from gi.repository.GtkSource import LanguageManager, Buffer, View, \
     DrawSpacesFlags, SearchContext, SearchSettings
-from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant
+from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant, \
+    idle_add, timeout_add
 from gi.repository.GtkSpell import Checker
 
 from gi.repository import GObject
 from gi.repository import Gtk
 
-from os import rename
+from os import rename, stat, fstat
 from os.path import splitext, basename, isfile, exists
 from io import open
 from traceback import format_exc
 from sys import version_info, stderr
-from threading import Thread
 
-from formiko.dialogs import FileSaveDialog, TraceBackDialog
+from formiko.dialogs import FileSaveDialog, TraceBackDialog, FileChangedDialog
 from formiko.widgets import ActionHelper
 
 default_manager = LanguageManager.get_default()
@@ -36,6 +36,8 @@ PERIOD_SAVE_TIME = 300      # 5min
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __file_name = ''
     __last_changes = 0
+    __last_ctime = 0
+    __skip_period = 0
 
     __gsignals__ = {
         'file-type': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
@@ -45,7 +47,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     action_name = GObject.property(type=str)
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
-    def __init__(self, preferences, action_name=None):
+    def __init__(self, win, preferences, action_name=None):
         super(SourceView, self).__init__()
         if action_name:
             self.action_name = action_name
@@ -87,6 +89,9 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.search_context = SearchContext.new(
             self.text_buffer, self.search_settings)
         self.search_iter = None
+
+        self.__win = win
+        timeout_add(200, self.check_in_thread)
 
     @property
     def changes(self):
@@ -170,14 +175,36 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             self.source_view.set_draw_spaces(0)
 
+    def check_in_thread(self):
+        """This function is called from GLib.timeout_add"""
+        if not self.__file_name:
+            return
+        try:
+            last_ctime = stat(self.__file_name).st_ctime
+            if last_ctime > self.__last_ctime:
+                self.__skip_period = True
+                dialog = FileChangedDialog(self.__win, self.__file_name)
+                if dialog.run() == Gtk.ResponseType.YES:
+                    cursor = self.text_buffer.get_insert()
+                    offset = self.text_buffer.get_iter_at_mark(
+                        cursor).get_offset()
+
+                    self.read_from_file(self.__file_name, offset)
+
+                dialog.destroy()
+                self.__skip_period = False
+        except OSError:
+            pass        # file switching when modify by another software
+        timeout_add(200, self.check_in_thread)
+
     def period_save_thread(self):
         if self.period_save:
-            if self.__file_name and self.is_modified:
-                thread = Thread(target=self.save_to_file)
-                thread.start()
+            if self.__file_name and self.is_modified \
+                    and not self.__skip_period:
+                idle_add(self.save_to_file)
             timeout_add_seconds(self.period_save, self.period_save_thread)
 
-    def read_from_file(self, file_name):
+    def read_from_file(self, file_name, offset=0):
         self.__file_name = file_name
         self.emit("file_type", self.file_ext)
 
@@ -185,10 +212,18 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             with open(file_name, 'r', encoding="utf-8") as src:
                 self.text_buffer.set_text(src.read())
                 self.__last_changes += 1
-        self.text_buffer.set_modified(False)
-        self.text_buffer.place_cursor(self.text_buffer.get_iter_at_offset(0))
+                self.__last_ctime = fstat(src.fileno()).st_ctime
 
-    def save_to_file(self, window=None):
+        self.text_buffer.set_modified(False)
+        if offset > -1:
+            cursor = self.text_buffer.get_iter_at_offset(offset)
+            self.text_buffer.place_cursor(cursor)
+            idle_add(self.scroll_to_cursor, cursor)
+
+    def scroll_to_cursor(self, cursor):
+        self.source_view.scroll_to_iter(cursor, 0, 1, 1, 1)
+
+    def save_to_file(self):
         try:
             if exists(self.__file_name):
                 rename(self.__file_name, "%s~" % self.__file_name)
@@ -197,33 +232,34 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                     src.write(self.text.decode('utf-8'))
                 else:   # python version 3.x
                     src.write(self.text)
+                self.__last_ctime = fstat(src.fileno()).st_ctime
             self.text_buffer.set_modified(False)
         except Exception:
             error = format_exc()
-            if window:
-                md = TraceBackDialog(window, error)
+            if self.__win:
+                md = TraceBackDialog(self.__win, error)
                 md.run()
                 md.destroy()
             stderr.write(error)
             stderr.flush()
 
-    def save(self, window):
+    def save(self):
         if not self.__file_name:
-            self.__file_name = self.get_new_file_name(window)
+            self.__file_name = self.get_new_file_name()
             self.emit("file_type", self.file_ext)
         if self.__file_name:
-            self.save_to_file(window)
+            self.save_to_file()
 
     def save_as(self, window):
-        new_file_name = self.get_new_file_name(window)
+        new_file_name = self.get_new_file_name()
         if new_file_name:
             self.__file_name = new_file_name
             self.emit("file_type", self.file_ext)
-            self.save_to_file(window)
+            self.save_to_file()
 
-    def get_new_file_name(self, window):
+    def get_new_file_name(self):
         ret_val = ''
-        dialog = FileSaveDialog(window)
+        dialog = FileSaveDialog(self.__win)
         # TODO: set default filtry by select parser
         dialog.add_filter_rst()
         dialog.add_filter_md()

@@ -29,8 +29,8 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.WARNING,
             Gtk.ButtonsType.OK_CANCEL,
-            "File %s not saved.\n"
-            "Are you sure to quite without save ?" % file_name)
+            "File `%s` not saved.\n"
+            "Are you sure to quite without save?" % file_name)
 
 
 class TraceBackDialog(Gtk.Dialog):
@@ -55,6 +55,17 @@ class FileNotFoundDialog(Gtk.MessageDialog):
             Gtk.MessageType.ERROR,
             Gtk.ButtonsType.CANCEL,
             "File `%s` not found" % filename)
+
+
+class FileChangedDialog(Gtk.MessageDialog):
+    def __init__(self, parent, file_name):
+        super(FileChangedDialog, self).__init__(
+            parent,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            Gtk.MessageType.INFO,
+            Gtk.ButtonsType.YES_NO,
+            "File `%s` was changed.\n"
+            "Do you want to load from storage?" % file_name)
 
 
 class FileChooserDialog(Gtk.FileChooserDialog):
@@ -124,21 +135,3 @@ class FileSaveDialog(FileChooserDialog):
         super(FileSaveDialog, self).__init__(
             "Save as file", parent, Gtk.FileChooserAction.SAVE
         )
-
-
-class FindDialog(Gtk.Dialog):
-    def __init__(self, parent, editor):
-        super(FindDialog, self).__init__(
-            "Find",
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            use_header_bar=True)
-        box = self.get_content_area()
-        hbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        box.add(hbox)
-
-        self.entry = Gtk.Entry()
-        self.entry.connect("changed", self.on_changed)
-
-    def on_changed(self, entry):
-        print(entry.get_text())

@@ -158,11 +158,11 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_save_document(self, action, *params):
         if self.editor_type == 'source':
-            self.editor.save(self)
+            self.editor.save()
 
     def on_save_document_as(self, action, *params):
         if self.editor_type == 'source':
-            self.editor.save_as(self)
+            self.editor.save_as()
 
     def on_export_document_as(self, action, *params):
         file_name = self.editor.file_name or None
@@ -473,7 +473,9 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, file_name)
         else:
-            self.editor = SourceView(self.preferences, "editor.spell-lang")
+            self.editor = SourceView(self,
+                                     self.preferences,
+                                     "editor.spell-lang")
             self.insert_action_group("editor",
                                      EditorActionGroup(self.editor,
                                                        self.renderer,
