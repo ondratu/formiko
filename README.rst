@@ -48,10 +48,10 @@ Requirements:
 * GtkSourceView 3.x
 * gir files for all Gtk libraries
 * GtkSpell3
+* docutils - reStrucured support
 
 recommended:
 ~~~~~~~~~~~~
-* docutils - reStrucured support
 * recommonmark - for Common Mark support (MarkDown)
 * Pygments - syntax color in html output code blocks
 
@@ -60,7 +60,6 @@ optionally:
 **Python**:
 
 * docutils-tinyhtmlwriter
-* docutils-htmlwriter
 * docutils-html5-writer
 
 **System**:

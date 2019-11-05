@@ -26,11 +26,6 @@ except ImportError:
     TinyWriter = None
 
 try:
-    from htmlwriter import Writer as HtmlWriter
-except ImportError:
-    HtmlWriter = None
-
-try:
     from docutils_html5 import Writer as Html5Writer
 except ImportError:
     Html5Writer = None
@@ -136,11 +131,6 @@ WRITERS = {
         'title': 'Tiny HTML writer',
         'class': TinyWriter,
         'url': 'https://github.com/ondratu/docutils-tinyhtmlwriter'},
-    'html': {
-        'key': 'html',
-        'title': 'Yet another HTML writer',
-        'class': HtmlWriter,
-        'url': 'https://github.com/masayuko/docutils-htmlwriter'},
     'html5': {
         'key': 'html5',
         'title': 'HTML 5 writer',
