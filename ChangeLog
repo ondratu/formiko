@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Version 1.4.0.dev1
+Version 1.4.0
 
   * man pages
   * words and characters count live info
@@ -19,7 +19,7 @@ Version 1.4.0.dev1
   * preview/editor/both with shortcuts and store in cache
   * edited file change time check
 
-Version 1.3.0 - 16.1.2018 7:00
+Version 1.3.0
 
   * spell check support
   * display white chars switch
@@ -27,14 +27,14 @@ Version 1.3.0 - 16.1.2018 7:00
   * printing document output
   * shortcuts dialog
 
-Version 1.2.1 - 16.1.2018 6:53
+Version 1.2.1
 
   * fix SIGSEGV - gui threads conflict
   * fix window cache settings
   * min size of editor and preview when both widgets are visible
   * python2 fix
 
-Version 1.2.0 - 26.10.2017 19:40
+Version 1.2.0
 
   * vim with working application menu
   * realy disabled accels for vim
@@ -46,7 +46,7 @@ Version 1.2.0 - 26.10.2017 19:40
   * right margin is switchable
   * text wrapping is switchable
 
-Version 1.1.0 - 03.08.2017 7:00
+Version 1.1.0
 
   * GTK Version check
   * add accels only for SourceView editor
@@ -64,18 +64,18 @@ Version 1.1.0 - 03.08.2017 7:00
      - 80 chars length line visualization
      - periodic saving file
 
-Version 1.0.2 - 19.07.2016 17:39
+Version 1.0.2
 
   * Formiko Vim entry point
 
-Version 1.0.1 - 14.07.2016 09:08
+Version 1.0.1
 
   * New 1.0.1 release
   * Adding ChangeLog file
   * fix vim editing on empty line at and of file
   * fix file path when application server is running
 
-Version 1.0.0 - 12.07.2016 08:24
+Version 1.0.0
   * stable version 1.0.0
   * right source distribution
   * desktop integration
