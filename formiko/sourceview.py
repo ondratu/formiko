@@ -250,7 +250,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         if self.__file_name:
             self.save_to_file()
 
-    def save_as(self, window):
+    def save_as(self):
         new_file_name = self.get_new_file_name()
         if new_file_name:
             self.__file_name = new_file_name
