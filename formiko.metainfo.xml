@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+    <id>cz.zeropage.Formiko</id>
+    <name>Formiko</name>
+    <summary>reStructuredText and MarkDown editor and live previewer</summary>
+    <keywords>
+        <keyword>Documentation</keyword>
+        <keyword>Markup</keyword>
+        <keyword>Editor</keyword>
+        <keywords>Text</keywords>
+        <keywords>MarkDown</keywords>
+        <keywords>reStructuredText</keywords>
+    </keywords>
+    <categories>
+        <category>Office</category>
+        <category>WordProcessor</category>
+        <category>GNOME</category>
+        <category>GTK</category>
+    </categories>
+    <mimetypes>
+        <mimetype>text/plain</mimetype>
+        <mimetype>text/html</mimetype>
+        <mimetype>text/x-mardown</mimetype>
+        <mimetype>text/x-rst</mimetype>
+        <mimetype>application/json</mimetype>
+        <mimetype>text/json</mimetype>
+    </mimetypes>
+    <content_rating type="oars-1.0"/>
+    <releases>
+        <release version="1.4.1" type="stable" date="2019-12-02">
+            <url>https://github.com/ondratu/formiko/releases/tag/1.4.1</url>
+        </release>
+        <release version="1.4.0" type="stable" date="2019-11-06">
+            <url>https://github.com/ondratu/formiko/releases/tag/1.4.0</url>
+        </release>
+    </releases>
+    <url type="homepage">https://github.com/ondratu/formiko</url>
+    <url type="bugtracker">https://github.com/ondratu/formiko/issues</url>
+    <launchable type="desktop-id">cz.zeropage.Formiko.desktop</launchable>
+    <metadata_license>MIT</metadata_license>
+    <project_license>BSD-3-Clause</project_license>
+    <description>
+        <p>Formiko is reStructuredText and MarkDown editor and live previewer.
+        It is written in Python with Gtk3, GtkSourceView and Webkit2. Use
+        Docutils and recommonmark Common Mark parser.</p>
+
+        Features:
+        <ul>
+            <li>GtkSourceView based editor with syntax highlighting</li>
+            <li>possible use Vim editor</li>
+            <li>vertical or horizontal window splitting</li>
+            <li>preview mode with auto scroll</li>
+            <li>periodic save file</li>
+            <li>json and html preview</li>
+            <li>spell check</li>
+            <li>linked file opening</li>
+        </ul>
+    </description>
+    <developer_name>Ondřej Tůma</developer_name>
+</component>

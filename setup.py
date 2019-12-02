@@ -114,6 +114,7 @@ setup(
                                        'AUTHORS']),
                 ("share/applications", ["formiko.desktop",
                                         "formiko-vim.desktop"]),
+                ("share/metainfo", ['formiko.metainfo.xml']),
                 ('share/formiko/icons', ['icons/formiko.svg'])] + icons_data(),
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
