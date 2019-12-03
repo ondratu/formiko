@@ -3,6 +3,7 @@
     <id>cz.zeropage.Formiko</id>
     <name>Formiko</name>
     <summary>reStructuredText and MarkDown editor and live previewer</summary>
+    <!-- Copyright 2018 Ondřej Tůma -->
     <keywords>
         <keyword>Documentation</keyword>
         <keyword>Markup</keyword>
@@ -47,14 +48,20 @@
         Features:
         <ul>
             <li>GtkSourceView based editor with syntax highlighting</li>
-            <li>possible use Vim editor</li>
-            <li>vertical or horizontal window splitting</li>
-            <li>preview mode with auto scroll</li>
-            <li>periodic save file</li>
-            <li>json and html preview</li>
-            <li>spell check</li>
-            <li>linked file opening</li>
+            <li>Possible use Vim editor</li>
+            <li>Vertical or horizontal window splitting</li>
+            <li>Preview mode with auto scroll</li>
+            <li>Periodic save file</li>
+            <li>Json and html preview</li>
+            <li>Spell check</li>
+            <li>Linked file opening</li>
         </ul>
     </description>
+    <screenshots>
+        <screenshot type="default" width="1024" height="647">
+            <image>https://raw.githubusercontent.com/ondratu/formiko/master/screenshot_1024.png</image>
+        </screenshot>
+        </screenshots>
     <developer_name>Ondřej Tůma</developer_name>
+    <update_contact>mcbig@zeropage.cz</update_contact>
 </component>
