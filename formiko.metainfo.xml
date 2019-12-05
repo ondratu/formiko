@@ -28,8 +28,8 @@
     </mimetypes>
     <content_rating type="oars-1.0"/>
     <releases>
-        <release version="1.4.1" type="stable" date="2019-12-02">
-            <url>https://github.com/ondratu/formiko/releases/tag/1.4.1</url>
+        <release version="1.4.2" type="stable" date="2019-12-02">
+            <url>https://github.com/ondratu/formiko/releases/tag/1.4.2</url>
         </release>
         <release version="1.4.0" type="stable" date="2019-11-06">
             <url>https://github.com/ondratu/formiko/releases/tag/1.4.0</url>
