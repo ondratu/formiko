@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version 1.4.3
+
+  * cz.zeropage.Formiko application ID fix
+
 Version 1.4.2
 
   * save_as window fix

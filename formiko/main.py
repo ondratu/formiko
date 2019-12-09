@@ -24,7 +24,7 @@ def main():
 def main_vim():
     signal(SIGINT, handler_exit)
     Gdk.threads_init()
-    app = Application(application_id="cz.zeropage.formiko.vim")
+    app = Application(application_id="cz.zeropage.Formiko.vim")
     return app.run(argv)
 
 

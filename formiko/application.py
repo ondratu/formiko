@@ -15,7 +15,7 @@ from formiko.menu import AppMenu
 
 class Application(GtkApplication):
 
-    def __init__(self, application_id="cz.zeropage.formiko"):
+    def __init__(self, application_id="cz.zeropage.Formiko"):
         super(Application, self).__init__(
             application_id=application_id,
             flags=ApplicationFlags.HANDLES_COMMAND_LINE)
@@ -71,7 +71,7 @@ class Application(GtkApplication):
         else:
             editor = 'source'
 
-        if self.get_application_id() == "cz.zeropage.formiko.vim":
+        if self.get_application_id() == "cz.zeropage.Formiko.vim":
             editor = 'vim'
 
         if editor == 'vim':
