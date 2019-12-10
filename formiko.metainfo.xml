@@ -28,6 +28,9 @@
     </mimetypes>
     <content_rating type="oars-1.0"/>
     <releases>
+        <release version="1.4.3" type="stable" date="2019-12-10">
+            <url>https://github.com/ondratu/formiko/releases/tag/1.4.3</url>
+        </release>
         <release version="1.4.2" type="stable" date="2019-12-02">
             <url>https://github.com/ondratu/formiko/releases/tag/1.4.2</url>
         </release>
