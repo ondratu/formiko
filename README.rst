@@ -5,7 +5,8 @@ Formiko
 
 Formiko is reStructuredText and MarkDown editor and live previewer. It is
 written in Python with Gtk3, GtkSourceView and Webkit2. Use Docutils and
-recommonmark Common Mark parser.
+recommonmark Common Mark parser. If you want to donate development, you can do
+by `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
 
 Features:
 ---------
@@ -69,11 +70,27 @@ optionally:
 Installation
 ------------
 
-Debian
-~~~~~~
-Debian use sometimes versions in package names. Here are in Stretch version.
-If you use different version, your gtksource or webkit2 could have another
-version name.
+Flatpak
+~~~~~~~
+Formiko exist in Flathub repository as cz.zeropage.Formiko. If you are new with
+Flatpak, see `setup guide <https://flatpak.org/setup/>`_.
+
+.. code:: sh
+
+  # add Flathub repository as root
+  flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+  # install Formiko as user
+  flatpak install flathub cz.zeropage.Formiko
+
+  # run Formiko
+  flatpak run cz.zeropage.Formiko
+
+Debian based
+~~~~~~~~~~~~
+Debian based distributions use sometimes versions in package names. Here are
+example for Debian Stretch version. If you use different version, your
+gtksource or webkit2 could have another version name.
 
 .. code:: sh
 
@@ -86,7 +103,8 @@ version name.
     apt install vim-gtk3
     pip3 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
 
-Formiko is in Debian repository from Buster. So you can install it standard way.
+**Formiko is in Debian and Ubuntu repository**. So you can install it standard
+way.
 
 NetBSD
 ~~~~~~
