@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-from gi import require_version
+from io import StringIO
+from traceback import format_exc
+from sys import version_info
+from json import loads, dumps
 from os.path import abspath, dirname, splitext, exists
 
+from gi import require_version
 require_version('WebKit2', '4.0')   # noqa
 
 from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions
@@ -60,10 +64,19 @@ try:
 except ImportError:
     ExtendCommonMarkParser = None
 
-from io import StringIO
-from traceback import format_exc
-from sys import version_info
-from json import loads, dumps
+
+try:
+    from m2r import convert as m2r_convert
+
+    class Mark2Resturctured(RstParser):
+        """Converting from MarkDown to reStructuredText before parse"""
+
+        def parse(self, inputstring, document):
+            return super(Mark2Resturctured, self).parse(
+                m2r_convert(inputstring), document)
+
+except ImportError:
+    Mark2Resturctured = None
 
 
 class HtmlPreview(object):
@@ -87,8 +100,13 @@ PARSERS = {
         'title': 'Docutils reStructuredText parser',
         'class': RstParser,
         'url': 'http://docutils.sourceforge.net'},
-    'md': {
-        'key': 'md',
+    'm2r': {
+        'key': 'm2r',
+        'title': 'MarkDown to reStructuredText',
+        'class': Mark2Resturctured,
+        'url': 'https://github.com/miyakogi/m2r'},
+    'cm': {
+        'key': 'cm',
         'title': 'Common Mark parser',
         'class': ExtendCommonMarkParser,
         'url': 'https://github.com/rtfd/recommonmark'},
@@ -104,11 +122,17 @@ PARSERS = {
 
 EXTS = {
     '.rst': 'rst',
-    '.md': 'md',
     '.html': 'html',
     '.htm': 'html',
     '.json': 'json'
 }
+
+
+if Mark2Resturctured:
+    EXTS[".md"] = "m2r"
+elif ExtendCommonMarkParser:
+    EXTS[".md"] = "cm"
+
 
 WRITERS = {
     'html4': {

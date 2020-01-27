@@ -26,6 +26,8 @@ default_manager = LanguageManager.get_default()
 LANGS = {
     '.rst': default_manager.get_language('rst'),
     '.md': default_manager.get_language('markdown'),
+    '.cm': default_manager.get_language('markdown'),    # parser compatibility
+    '.m2r': default_manager.get_language('markdown'),   # parser compatibility
     '.html': default_manager.get_language('html'),
     '.htm': default_manager.get_language('html'),
     '.json': default_manager.get_language('json')

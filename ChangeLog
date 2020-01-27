@@ -1,9 +1,10 @@
 Changelog
 =========
 
-Version 1.4.4
+Version 1.5.0
 
   * Fix local url with href anchor
+  * M2R convertor support for another MarkDown parsing way
 
 Version 1.4.3
 
