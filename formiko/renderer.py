@@ -279,7 +279,7 @@ class Renderer(Overlay):
             return True
         if self.link_uri:
             if self.link_uri.startswith("file://"):    # try to open source
-                self.find_and_opendocument(self.link_uri[7:])
+                self.find_and_opendocument(self.link_uri[7:].split('#')[0])
             else:
                 show_uri_on_window(None, self.link_uri, 0)
         return True
