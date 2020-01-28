@@ -9,6 +9,9 @@ from gzip import open as zopen
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.install_data import install_data
+from distutils.core import Command
+from distutils.version import StrictVersion
+from distutils.errors import DistutilsError
 from distutils import log
 from os import path, makedirs, listdir
 from shutil import rmtree
@@ -100,6 +103,44 @@ class XInstallData(install_data):
              list("%s/%s" % (self.man_base, page)
                   for page in listdir(self.man_base))))
         install_data.run(self)
+        return False
+
+
+class XCheckVersion(Command):
+    description = "check if all all versions in all files are same"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        pkg_version = StrictVersion(__version__)
+        log.info("package version is %s", pkg_version)
+        ch_version = StrictVersion(self.read_changelog())
+        log.info("ChangeLog version is %s", ch_version)
+        meta_version = StrictVersion(self.read_metainfo())
+        log.info("metainfo version is %s", meta_version)
+        if not pkg_version == ch_version == meta_version:
+            raise DistutilsError("Versions are not same!")
+
+    def read_changelog(self):
+        """Read last version From ChangeLog."""
+        with open("ChangeLog", encoding="utf-8") as chl:
+            for line in chl:
+                if line.startswith("Version"):
+                    return line[8:].strip()
+
+    def read_metainfo(self):
+        """Read last version from formiko.metainfo.xml."""
+        with open("formiko.metainfo.xml", encoding="utf-8") as meta:
+            for line in meta:
+                if "<release " in line:
+                    vals = dict((x.split('=') for x in
+                                filter(lambda x: '=' in x, line.split(' '))))
+                    return vals.get("version", "").strip('"')
 
 
 setup(
@@ -145,5 +186,6 @@ setup(
             'formiko-vim = formiko.main:main_vim'
         ]
     },
-    cmdclass={'build': XBuild, 'clean': XClean, 'install_data': XInstallData}
+    cmdclass={'build': XBuild, 'clean': XClean, 'install_data': XInstallData,
+              'check_version': XCheckVersion}
 )
