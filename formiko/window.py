@@ -177,7 +177,8 @@ class AppWindow(Gtk.ApplicationWindow):
         if file_name is None:
             dialog.set_current_folder(GLib.get_home_dir())
         else:
-            dialog.set_current_name(file_name[:file_name.rfind('.')])
+            name, ext = splitext(file_name)
+            dialog.set_current_name(name)
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
             extensions = getattr(dialog.get_filter(), 'extensions', ())
