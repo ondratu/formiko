@@ -2,13 +2,17 @@ from os import makedirs
 from os.path import exists
 from traceback import print_exc
 
-from gi.repository.GLib import get_user_config_dir, get_user_cache_dir
+from gi.repository.GLib import get_user_config_dir, get_user_cache_dir, \
+        log_default_handler, LogLevelFlags
 from gi.repository.Gtk import Orientation
 
 try:
     from configparser import ConfigParser, NoSectionError, NoOptionError
 except ImportError:
     from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+
+
+from formiko.renderer import PARSERS
 
 
 class View():
@@ -80,6 +84,11 @@ class UserPreferences(object):
         cp.smart_get(self, 'auto_scroll', smart_bool)
 
         cp.smart_get(self, 'parser')
+        if self.parser not in PARSERS:
+            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
+                                "Unknow parser `%s' in config, set default."
+                                % self.parser)
+            self.parser = 'rst'
         cp.smart_get(self, 'writer')
         cp.smart_get(self, 'style')
         cp.smart_get(self, 'custom_style', smart_bool)
