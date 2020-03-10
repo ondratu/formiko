@@ -39,7 +39,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __file_name = ''
     __last_changes = 0
     __last_ctime = 0
-    __skip_period = 0
+    __pause_period = False
 
     __gsignals__ = {
         'file-type': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
@@ -178,13 +178,15 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.source_view.set_draw_spaces(0)
 
     def check_in_thread(self):
-        """This function is called from GLib.timeout_add"""
+        """Check source file time.
+
+        This function is called from GLib.timeout_add"""
         if not self.__file_name:
             return
         try:
             last_ctime = stat(self.__file_name).st_ctime
             if last_ctime > self.__last_ctime:
-                self.__skip_period = True
+                self.__pause_period = True
                 dialog = FileChangedDialog(self.__win, self.__file_name)
                 if dialog.run() == Gtk.ResponseType.YES:
                     cursor = self.text_buffer.get_insert()
@@ -194,7 +196,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                     self.read_from_file(self.__file_name, offset)
 
                 dialog.destroy()
-                self.__skip_period = False
+                self.__pause_period = False
         except OSError:
             pass        # file switching when modify by another software
         timeout_add(200, self.check_in_thread)
@@ -202,7 +204,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def period_save_thread(self):
         if self.period_save:
             if self.__file_name and self.is_modified \
-                    and not self.__skip_period:
+                    and not self.__pause_period:
                 idle_add(self.save_to_file)
             timeout_add_seconds(self.period_save, self.period_save_thread)
 
