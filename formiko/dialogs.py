@@ -24,13 +24,14 @@ class AboutDialog(Gtk.AboutDialog):
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
+        name = "`%s`" % file_name if file_name else ""
         super(QuitDialogWithoutSave, self).__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.WARNING,
             Gtk.ButtonsType.OK_CANCEL,
-            "File `%s` not saved.\n"
-            "Are you sure to quite without save?" % file_name)
+            "File %s not saved.\n"
+            "Are you sure to quite without save?" % name)
 
 
 class TraceBackDialog(Gtk.Dialog):
