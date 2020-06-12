@@ -30,7 +30,7 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.WARNING,
             Gtk.ButtonsType.OK_CANCEL,
-            "File %s not saved.\n"
+            "Document %s not saved.\n"
             "Are you sure to quite without save?" % name)
 
 
@@ -55,7 +55,7 @@ class FileNotFoundDialog(Gtk.MessageDialog):
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.ERROR,
             Gtk.ButtonsType.CANCEL,
-            "File `%s` not found" % filename)
+            "Document `%s` not found" % filename)
 
 
 class FileChangedDialog(Gtk.MessageDialog):
@@ -65,7 +65,7 @@ class FileChangedDialog(Gtk.MessageDialog):
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.INFO,
             Gtk.ButtonsType.YES_NO,
-            "File `%s` was changed.\n"
+            "Document `%s` was changed.\n"
             "Do you want to load from storage?" % file_name)
 
 
@@ -106,20 +106,20 @@ class FileChooserDialog(Gtk.FileChooserDialog):
     def add_filter_html(self):
         filter_html = Gtk.FileFilter()
         filter_html.extensions = ('.html', '.htm')
-        filter_html.set_name("Hypertext files")
+        filter_html.set_name("Hypertext")
         filter_html.add_mime_type("text/html")
         self.add_filter(filter_html)
 
     def add_filter_json(self):
         filter_json = Gtk.FileFilter()
         filter_json.extensions = ('.json',)
-        filter_json.set_name("JSON files")
+        filter_json.set_name("JSON Files")
         filter_json.add_mime_type("application/json")
         self.add_filter(filter_json)
 
     def add_filter_all(self):
         filter_all = Gtk.FileFilter()
-        filter_all.set_name("all files")
+        filter_all.set_name("All File Types")
         filter_all.add_pattern("*")
         self.add_filter(filter_all)
 
@@ -127,12 +127,12 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 class FileOpenDialog(FileChooserDialog):
     def __init__(self, parent):
         super(FileOpenDialog, self).__init__(
-            "Open file", parent, Gtk.FileChooserAction.OPEN
+            "Open Document", parent, Gtk.FileChooserAction.OPEN
         )
 
 
 class FileSaveDialog(FileChooserDialog):
     def __init__(self, parent):
         super(FileSaveDialog, self).__init__(
-            "Save as file", parent, Gtk.FileChooserAction.SAVE
+            "Save As Document", parent, Gtk.FileChooserAction.SAVE
         )
