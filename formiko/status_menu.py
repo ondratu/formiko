@@ -130,7 +130,7 @@ class Statusbar(Gtk.Box):
             group=tab_spaces_2)
         tab_spaces_4.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 4:
-            tab_spaces_2.set_active(True)
+            tab_spaces_4.set_active(True)
         box.pack_start(tab_spaces_4, True, True, 0)
 
         tab_spaces_8 = Gtk.RadioButton(
@@ -140,7 +140,7 @@ class Statusbar(Gtk.Box):
             group=tab_spaces_2)
         tab_spaces_8.connect("toggled", self.on_tab_spaces)
         if preferences.tab_width == 8:
-            tab_spaces_2.set_active(True)
+            tab_spaces_8.set_active(True)
         box.pack_start(tab_spaces_8, True, True, 0)
 
         box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
