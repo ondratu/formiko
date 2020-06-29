@@ -179,6 +179,9 @@ setup(
         "Topic :: Text Processing :: Markup :: HTML",
         "Topic :: Utilities"],
     requires=['docutils (>= 0.12)', 'python_gi', 'webkit2', 'gtksourceview'],
+    extra_requires=['m2r', 'recommonmark', 'Pygments',
+                    'docutils-tinyhtmlwriter', 'docutils-htmlwriter',
+                    'docutils-html5-writer'],
     install_requires=['docutils >= 0.12'],
     entry_points={
         'gui_scripts': [
