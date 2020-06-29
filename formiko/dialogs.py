@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from gi.repository.Pango import FontDescription
 from gi.repository import Gtk
+from gi.repository.GLib import get_user_special_dir, UserDirectory
 
 from formiko import __version__, __author__, __copyright__, __comment__
 from formiko.icons import icon_list, icon_128
@@ -129,6 +130,15 @@ class FileOpenDialog(FileChooserDialog):
         super(FileOpenDialog, self).__init__(
             "Open Document", parent, Gtk.FileChooserAction.OPEN
         )
+
+
+class TemplateDialog(FileChooserDialog):
+    def __init__(self, parent):
+        super(TemplateDialog, self).__init__(
+            "Open file", parent, Gtk.FileChooserAction.OPEN
+        )
+        self.set_current_folder(
+            get_user_special_dir(UserDirectory.DIRECTORY_TEMPLATES))
 
 
 class FileSaveDialog(FileChooserDialog):
