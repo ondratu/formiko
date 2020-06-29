@@ -194,6 +194,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                         cursor).get_offset()
 
                     self.read_from_file(self.__file_name, offset)
+                else:
+                    self.__last_ctime = last_ctime
 
                 dialog.destroy()
                 self.__pause_period = False
