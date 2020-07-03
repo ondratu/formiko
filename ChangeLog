@@ -3,11 +3,18 @@ Changelog
 
 Version 1.5.0
 
-  * Fix local url with href anchor
+  * fix local url with href anchor
   * M2R convertor support for another MarkDown parsing way
   * check_version command for version check in all files
     in repository
-  * Bad parser in config fix
+  * bad parser in config fix
+  * desktop icon fix
+  * period check/save fix
+  * quit dialog fix
+  * dialogs use `Document` word
+  * tab width fix
+  * search error fix (issue #7)
+  * searching refactoring
 
 Version 1.4.3
 
