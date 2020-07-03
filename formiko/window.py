@@ -312,30 +312,46 @@ class AppWindow(Gtk.ApplicationWindow):
             else:
                 self.on_find_previous_match(action, *param)
         else:
+            self.editor.stop_search()
+            self.renderer.stop_search()
+
             self.search_way = SearchWay.NEXT
             self.focused = self.get_focus()
             self.search.set_search_mode(True)
             self.search_entry.grab_focus()
+            if self.search_text:
+                self.search_entry.set_text(self.search_text)
+                self.search_entry.select_region(0, -1)
+
+    def on_search_focus_out(self, search_entry, param):
+        # on_search_focus_out is called by on_search_mode_changed
+        # so text will be reset
+        self.search_text = self.search_entry.get_text()
+        # stop searching when click to editor
+        if self.search.get_search_mode():
+            self.search.set_search_mode(False)
 
     def on_search_mode_changed(self, search_bar, param):
         if not self.search.get_search_mode():
-            if isinstance(self.focused, GtkSourceView):
-                self.editor.stop_search()
-            elif isinstance(self.focused, GtkWebView):
-                self.renderer.stop_search()
-            elif self.editor_type == "source" and self.editor.props.visible:
-                self.editor.stop_search()
-            elif self.renderer.props.visible:
-                self.renderer.stop_search()
+            if not self.search_text:
+                if isinstance(self.focused, GtkSourceView):
+                    self.editor.stop_search()
+                elif isinstance(self.focused, GtkWebView):
+                    self.renderer.stop_search()
+                elif self.editor_type == "source" and \
+                        self.editor.props.visible:
+                    self.editor.stop_search()
+                elif self.renderer.props.visible:
+                    self.renderer.stop_search()
 
             self.focused.grab_focus()
             self.focused = None
 
-    def on_search_mode_text(self, search_entry, param):
+    def on_search_changed(self, search_entry):
         if self.search_way == SearchWay.NEXT:
-            res = self.on_find_next_match(None, param)
+            res = self.on_find_next_match(None, None)
         else:
-            res = self.on_find_previous_match(None, param)
+            res = self.on_find_previous_match(None, None)
 
         ctx = self.search_entry.get_style_context()
         if not res and self.search_entry.get_text():
@@ -525,6 +541,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.status_bar = Statusbar(self.preferences.editor)
             box.pack_end(self.status_bar, False, True, 0)
 
+        self.search_text = ""
         self.search = Gtk.SearchBar()
         self.search.set_show_close_button(False)
         self.search.set_halign(Gtk.Align.CENTER)
@@ -541,9 +558,10 @@ class AppWindow(Gtk.ApplicationWindow):
         self.search_entry.set_width_chars(30)
         sbox.pack_start(self.search_entry, True, True, 0)
         self.search.connect_entry(self.search_entry)
-        self.search_entry.connect("notify::text",
-                                  self.on_search_mode_text)
-
+        self.search_entry.connect("search-changed",
+                                  self.on_search_changed)
+        self.search_entry.connect("focus-out-event",
+                                  self.on_search_focus_out)
         prev_button = IconButton(
                 symbol="go-previous-symbolic",
                 tooltip="Previeous search",
