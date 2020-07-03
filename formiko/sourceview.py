@@ -90,7 +90,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.search_settings = SearchSettings(wrap_around=True)
         self.search_context = SearchContext.new(
             self.text_buffer, self.search_settings)
-        self.search_iter = None
+        self.search_mark = None
 
         self.__win = win
         timeout_add(200, self.check_in_thread)
@@ -105,9 +105,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     @property
     def text(self):
-        return self.text_buffer.get_text(self.text_buffer.get_start_iter(),
-                                         self.text_buffer.get_end_iter(),
-                                         True)
+        return self.text_buffer.props.text
 
     @property
     def position(self):
@@ -288,39 +286,40 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def do_next_match(self, text):
         if self.search_settings.get_search_text() != text:
             self.search_settings.set_search_text(text)
-            self.search_iter = self.text_buffer.get_iter_at_mark(
-                self.text_buffer.get_insert())
-        elif self.search_iter:
-            self.search_iter.forward_char()
+            self.search_mark = self.text_buffer.get_insert()
+            search_iter = self.text_buffer.get_iter_at_mark(self.search_mark)
+        elif self.search_mark:
+            search_iter = self.text_buffer.get_iter_at_mark(self.search_mark)
+            search_iter.forward_char()
         else:
             return False
 
-        found, self.search_iter, end = self.search_context.forward(
-            self.search_iter)
+        found, search_iter, end = self.search_context.forward(search_iter)
 
         if not found:
-            self.search_iter = None
+            self.search_mark = None
             return False
-        self.source_view.scroll_to_iter(self.search_iter, 0, 1, 1, 1)
-        self.text_buffer.place_cursor(self.search_iter)
+        self.source_view.scroll_to_iter(search_iter, 0, 1, 1, 1)
+        self.text_buffer.place_cursor(search_iter)
         return True
 
     def do_previous_match(self, text):
         if self.search_settings.get_search_text() != text:
             self.search_settings.set_search_text(text)
-            self.search_iter = self.text_buffer.get_iter_at_mark(
-                self.text_buffer.get_insert())
-        elif not self.search_iter:
+            self.search_mark = self.text_buffer.get_insert()
+            search_iter = self.text_buffer.get_iter_at_mark(self.search_mark)
+        elif self.search_mark:
+            search_iter = self.text_buffer.get_iter_at_mark(self.search_mark)
+        else:
             return False
 
-        found, start, self.search_iter = self.search_context.backward(
-            self.search_iter)
+        found, start, search_iter = self.search_context.backward(search_iter)
         if not found:
-            self.search_iter = None
+            self.search_mark = None
             return False
-        self.search_iter.backward_chars(len(text))
-        self.source_view.scroll_to_iter(self.search_iter, 0, 1, 1, 1)
-        self.text_buffer.place_cursor(self.search_iter)
+        search_iter.backward_chars(len(text))
+        self.source_view.scroll_to_iter(search_iter, 0, 1, 1, 1)
+        self.text_buffer.place_cursor(search_iter)
         return True
 
     def stop_search(self):
