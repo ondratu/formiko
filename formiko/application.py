@@ -62,11 +62,11 @@ class Application(GtkApplication):
 
         if options.contains("vim"):
             log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
-                                "Use formiko-vim instead", 0)
+                                "Use formiko-vim instead", None)
             editor = 'vim'
         elif options.contains("source-view"):
-            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
-                                "Use formiko instead", 0)
+            log_default_handler(None, LogLevelFlags.LEVEL_WARNING,
+                                "Use formiko instead", None)
             editor = 'source'
         else:
             editor = 'source'
@@ -76,9 +76,13 @@ class Application(GtkApplication):
 
         if editor == 'vim':
             display = Display.get_default()
+            log_default_handler(None, LogLevelFlags.LEVEL_DEBUG,
+                                "Backend is %s" % display.__class__.__name__,
+                                None)
             if display.__class__.__name__ != "X11Display":
-                log_default_handler("Application", LogLevelFlags.LEVEL_ERROR,
-                                    "Vim is supported only on X11 backend")
+                log_default_handler(None, LogLevelFlags.LEVEL_ERROR,
+                                    "Vim is supported only on X11 backend",
+                                    None)
 
         if editor == 'source':  # vim have disabled accels for conflict itself
             self.set_accels()
