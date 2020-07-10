@@ -111,20 +111,27 @@ way.
 
 NetBSD
 ~~~~~~
-There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
-must use 1.2.x bug fix release.
+Last pkgsrc tree have all packages, but you at this time (2020-07-09) you need
+to build gtkspell3 packages manually:
+
+* `webkit-gtk` from `www/webkit-gtk` - binary package does exist for NetBSD 9
+* `gtkspell3` from `textproc/gtkspell3` - binary package does not have gir files
+  at this moment
 
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
 Formiko call vim and gvim directly. If you want to use vim version with
-pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
+pkgsrc, you must set environment variable ``VIM_PATH``.
 
 .. code:: sh
 
-    # python3.6 is in dependecies as like gtk3
-    pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview3 \
-                  librsvg webkit-gtk py36-pygments
-    pip3.6 install formiko
+    # python3.7 is in dependencies
+    pkgin install py37-pip py37-gobject3 py37-docutils gtksourceview3 \
+                  librsvg webkit-gtk py37-pygments gtkspell3 \
+                  adwaita-icon-theme
+    pip3.7 install formiko
 
     # optionaly
     pkgin install vim-gtk3
-    pip3.6 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
+    pip3.8 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
+
+.

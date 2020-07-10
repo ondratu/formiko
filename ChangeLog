@@ -17,6 +17,7 @@ Version 1.5.0
   * searching refactoring
   * don't crash application when vim window failed or formiko icon not found
   * VIM_PATH as environment variable
+  * updated NetBSD instructions
 
 Version 1.4.3
 
