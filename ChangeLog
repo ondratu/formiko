@@ -16,6 +16,7 @@ Version 1.5.0
   * search error fix (issue #7)
   * searching refactoring
   * don't crash application when vim window failed or formiko icon not found
+  * VIM_PATH as environment variable
 
 Version 1.4.3
 

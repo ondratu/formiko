@@ -5,10 +5,11 @@ from gi.repository.GObject import SIGNAL_RUN_FIRST, SIGNAL_RUN_LAST
 from subprocess import Popen, PIPE, check_output
 from logging import error
 from os.path import splitext
+from os import environ
 from uuid import uuid4
 from time import sleep
 
-VIM_PATH = "/usr/bin"
+VIM_PATH = environ.get("VIM_PATH", "/usr/bin")
 
 
 class VimEditor(Socket):
