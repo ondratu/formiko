@@ -15,6 +15,7 @@ Version 1.5.0
   * tab width fix
   * search error fix (issue #7)
   * searching refactoring
+  * don't crash application when vim window failed or formiko icon not found
 
 Version 1.4.3
 

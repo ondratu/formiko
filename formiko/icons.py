@@ -31,7 +31,7 @@ else:
     from gi.repository.Gtk import IconTheme
     from gi.repository.GLib import log_default_handler, LogLevelFlags
 
-    log_default_handler("Application", LogLevelFlags.LEVEL_ERROR,
+    log_default_handler(None, LogLevelFlags.LEVEL_FATAL,
                         "Formiko icon not found", 0)
     icon_theme = IconTheme.get_default()
     icon_16 = icon_theme.load_icon("text-editor-symbolic", 16, 0)
