@@ -181,15 +181,7 @@ class AppWindow(Gtk.ApplicationWindow):
             dialog.set_current_name(name)
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
-            extensions = getattr(dialog.get_filter(), 'extensions', ())
-            file_name = dialog.get_filename()
-            ex_ok = False
-            for extension in extensions:
-                if file_name.lower().endswith(extension):
-                    ex_ok = True
-                    break
-            if not ex_ok and extensions:
-                file_name += extensions[0]
+            file_name = dialog.get_filename_with_ext()
 
             with open(file_name, "w+", encoding="utf-8") as output:
                 data = self.renderer.render_output()[1].strip()
@@ -266,6 +258,7 @@ class AppWindow(Gtk.ApplicationWindow):
             parser = param.get_string()
             self.renderer.set_parser(parser)
             self.preferences.parser = parser
+            self.editor.change_mime_type(parser)
         self.preferences.save()
 
     def on_file_type(self, widget, ext):
@@ -497,11 +490,12 @@ class AppWindow(Gtk.ApplicationWindow):
                                      EditorActionGroup(self.editor,
                                                        self.renderer,
                                                        self.preferences))
-            if file_name:
-                self.editor.read_from_file(file_name)
 
         self.editor.connect("file-type", self.on_file_type)
         self.editor.connect("scroll-changed", self.on_scroll_changed)
+
+        if file_name:
+            self.editor.read_from_file(file_name)
 
         self.paned.pack1(self.editor, True, False)
         self.paned.pack2(self.renderer, True, False)

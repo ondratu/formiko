@@ -16,6 +16,7 @@ Version 1.5.0
   * search error fix (issue #7)
   * searching refactoring
   * don't crash application when vim window failed or formiko icon not found
+  * right working with formating and extensions by mime type
 
 Version 1.4.3
 

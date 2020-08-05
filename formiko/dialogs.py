@@ -1,9 +1,23 @@
 # -*- coding: utf-8 -*-
 from gi.repository.Pango import FontDescription
+from gi.repository.GtkSource import LanguageManager
 from gi.repository import Gtk
+
+from os.path import splitext
 
 from formiko import __version__, __author__, __copyright__, __comment__
 from formiko.icons import icon_list, icon_128
+
+default_manager = LanguageManager.get_default()
+LANGS = {
+    '.rst': default_manager.get_language('rst'),
+    '.md': default_manager.get_language('markdown'),
+    '.cm': default_manager.get_language('markdown'),    # parser compatibility
+    '.m2r': default_manager.get_language('markdown'),   # parser compatibility
+    '.html': default_manager.get_language('html'),
+    '.htm': default_manager.get_language('html'),
+    '.json': default_manager.get_language('json'),
+}
 
 
 class AboutDialog(Gtk.AboutDialog):
@@ -82,46 +96,61 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
              label, Gtk.ResponseType.ACCEPT))
 
-    def add_filter_rst(self):
-        filter_rst = Gtk.FileFilter()
-        filter_rst.set_name("reSructuredText")
-        filter_rst.add_pattern("*.rst")
-        filter_rst.add_pattern("*.RST")
-        self.add_filter(filter_rst)
+    def get_filename_with_ext(self):
+        file_name = self.get_filename()
+        name, ext = splitext(file_name)
+        if ext:
+            return file_name
 
-    def add_filter_md(self):
-        filter_md = Gtk.FileFilter()
-        filter_md.set_name("MarkDown")
-        filter_md.add_pattern("*.md")
-        filter_md.add_pattern("*.MD")
-        filter_md.add_pattern("*.markdown")
-        self.add_filter(filter_md)
+        filter_ = self.get_filter()
+        for extension in getattr(filter_, 'extensions', ()):
+            if file_name.lower().endswith(extension):
+                return file_name
+        return file_name + filter_.default
 
-    def add_filter_plain(self):
-        filter_txt = Gtk.FileFilter()
-        filter_txt.set_name("Plain text")
-        filter_txt.add_mime_type("text/plain")
-        self.add_filter(filter_txt)
+    def add_filter_lang(self, lang, default, current=False):
+        filter_ = Gtk.FileFilter()
+        filter_.set_name(lang.get_name())
+        for pattern in lang.get_globs():
+            filter_.add_pattern(pattern)
+        for mime_type in lang.get_mime_types():
+            filter_.add_mime_type(mime_type)
+        filter_.extensions = tuple(it[1:] for it in lang.get_globs())
+        filter_.default = default
+        self.add_filter(filter_)
+        if current:
+            self.set_filter(filter_)
 
-    def add_filter_html(self):
-        filter_html = Gtk.FileFilter()
-        filter_html.extensions = ('.html', '.htm')
-        filter_html.set_name("Hypertext")
-        filter_html.add_mime_type("text/html")
-        self.add_filter(filter_html)
+    def add_filter_rst(self, current=False):
+        self.add_filter_lang(LANGS[".rst"], ".rst", current)
 
-    def add_filter_json(self):
-        filter_json = Gtk.FileFilter()
-        filter_json.extensions = ('.json',)
-        filter_json.set_name("JSON Files")
-        filter_json.add_mime_type("application/json")
-        self.add_filter(filter_json)
+    def add_filter_md(self, current=False):
+        self.add_filter_lang(LANGS[".md"], ".md", current)
 
-    def add_filter_all(self):
-        filter_all = Gtk.FileFilter()
-        filter_all.set_name("All File Types")
-        filter_all.add_pattern("*")
-        self.add_filter(filter_all)
+    def add_filter_plain(self, current=False):
+        filter_ = Gtk.FileFilter()
+        filter_.set_name("Plain text")
+        filter_.add_pattern("*.txt")
+        filter_.add_mime_type("text/plain")
+        filter_.default = ".txt"
+        self.add_filter(filter_)
+        if current:
+            self.set_filter(filter_)
+
+    def add_filter_html(self, current=False):
+        self.add_filter_lang(LANGS[".html"], ".html", current)
+
+    def add_filter_json(self, current=False):
+        self.add_filter_lang(LANGS[".json"], ".json", current)
+
+    def add_filter_all(self, current=False):
+        filter_ = Gtk.FileFilter()
+        filter_.set_name("All File Types")
+        filter_.add_pattern("*")
+        filter_.default = ""
+        self.add_filter(filter_)
+        if current:
+            self.set_filter(filter_)
 
 
 class FileOpenDialog(FileChooserDialog):

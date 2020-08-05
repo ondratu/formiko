@@ -4,34 +4,25 @@ require_version('Pango', '1.0')         # noqa
 require_version('GtkSpell', '3.0')      # noqa
 
 from gi.repository.Pango import FontDescription
-from gi.repository.GtkSource import LanguageManager, Buffer, View, \
+from gi.repository.GtkSource import Buffer, View, \
     DrawSpacesFlags, SearchContext, SearchSettings
-from gi.repository.GLib import get_home_dir, timeout_add_seconds, Variant, \
-    idle_add, timeout_add
+from gi.repository.GLib import get_user_special_dir, UserDirectory, \
+    timeout_add_seconds, Variant, idle_add, timeout_add
 from gi.repository.GtkSpell import Checker
 
 from gi.repository import GObject
 from gi.repository import Gtk
 
 from os import rename, stat, fstat
-from os.path import splitext, basename, isfile, exists
+from os.path import splitext, basename, isfile, exists, dirname
 from io import open
 from traceback import format_exc
 from sys import version_info, stderr
 
-from formiko.dialogs import FileSaveDialog, TraceBackDialog, FileChangedDialog
+from formiko.dialogs import LANGS, FileSaveDialog, TraceBackDialog, \
+    FileChangedDialog
 from formiko.widgets import ActionHelper
 
-default_manager = LanguageManager.get_default()
-LANGS = {
-    '.rst': default_manager.get_language('rst'),
-    '.md': default_manager.get_language('markdown'),
-    '.cm': default_manager.get_language('markdown'),    # parser compatibility
-    '.m2r': default_manager.get_language('markdown'),   # parser compatibility
-    '.html': default_manager.get_language('html'),
-    '.htm': default_manager.get_language('html'),
-    '.json': default_manager.get_language('json')
-}
 PERIOD_SAVE_TIME = 300      # 5min
 
 
@@ -131,6 +122,11 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def inc_changes(self, text_buffer):
         self.__last_changes += 1
+
+    def change_mime_type(self, parser):
+        language = LANGS.get(".%s" % parser, LANGS['.rst'])
+        if self.text_buffer.get_language() != language:
+            self.text_buffer.set_language(language)
 
     def on_language_changed(self, spellchecker, language):
         action, go = self.get_action_owner()
@@ -262,26 +258,34 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.save_to_file()
 
     def get_new_file_name(self):
-        ret_val = ''
+        lang = self.text_buffer.get_language()
         dialog = FileSaveDialog(self.__win)
-        # TODO: set default filtry by select parser
-        dialog.add_filter_rst()
-        dialog.add_filter_md()
-        dialog.add_filter_html()
+        dialog.add_filter_rst(lang.get_id() == "rst")
+        dialog.add_filter_md(lang.get_id() == "markdown")
+        dialog.add_filter_html(lang.get_id() == "html")
+        dialog.add_filter_json(lang.get_id() == "json")
+        dialog.add_filter_plain(lang.get_id() == "text")
         dialog.set_do_overwrite_confirmation(True)
 
         if not self.__file_name:
-            dialog.set_current_folder(get_home_dir())
+            dialog.set_current_folder(
+                get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS))
+            dialog.set_current_name("Untitled document")
+        else:
+            dialog.set_current_folder(dirname(self.file_path))
+            dialog.set_current_name(self.file_name)
 
+        file_name = ''
         if dialog.run() == Gtk.ResponseType.ACCEPT:
-            ret_val = dialog.get_filename()
+            file_name = dialog.get_filename_with_ext()
         dialog.destroy()
-        return ret_val
+        return file_name
 
     def do_file_type(self, ext):
-        language = LANGS.get(ext, LANGS['.rst'])
-        if self.text_buffer.get_language() != language:
-            self.text_buffer.set_language(language)
+        if ext:
+            language = LANGS.get(ext, LANGS['.rst'])
+            if self.text_buffer.get_language() != language:
+                self.text_buffer.set_language(language)
 
     def do_next_match(self, text):
         if self.search_settings.get_search_text() != text:
