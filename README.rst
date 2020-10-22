@@ -128,3 +128,29 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
     # optionaly
     pkgin install vim-gtk3
     pip3.6 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
+
+FreeBSD
+~~~~~~~
+When you have installed gnome3 jet, you need install only these other packages:
+
+.. code:: sh
+
+    # packages which are not installed by gnome3
+    pkg install py37-pygments py37-docutils py37-pip
+    pip-3.7 install formiko
+
+**Otherwise:**
+
+These you must install all these packages:
+
+.. code:: sh
+
+    pkg install py37-gobject3 py37-docutils py37-pygments py37-pip \
+        gtksourceview3 webkit2-gtk3 gtkspell3 gobject-introspection \
+        librsvg2 adwaita-icon-theme
+
+**Optionaly**
+
+.. code:: sh
+
+    pip-3.7 install docutils-tinyhtmlwriter docutils-html5-writer m2r
