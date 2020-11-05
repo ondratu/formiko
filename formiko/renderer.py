@@ -58,6 +58,12 @@ try:
         settings_spec = RstParser.settings_spec
 
         def get_transforms(self):
+            """
+            Returns the list of transforms for this request.
+
+            Args:
+                self: (todo): write your description
+            """
             return CommonMarkParser.get_transforms(self) + [StringStructify]
 
 
@@ -72,6 +78,14 @@ try:
         """Converting from MarkDown to reStructuredText before parse"""
 
         def parse(self, inputstring, document):
+            """
+            Parse the given string.
+
+            Args:
+                self: (str): write your description
+                inputstring: (str): write your description
+                document: (str): write your description
+            """
             return super(Mark2Resturctured, self).parse(
                 m2r_convert(inputstring), document)
 
@@ -231,6 +245,16 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 class Renderer(Overlay):
 
     def __init__(self, win, parser='rst', writer='html4', style=''):
+        """
+        Initialize the interface.
+
+        Args:
+            self: (todo): write your description
+            win: (int): write your description
+            parser: (todo): write your description
+            writer: (todo): write your description
+            style: (str): write your description
+        """
         super(Renderer, self).__init__()
 
         self.webview = WebView()
@@ -259,6 +283,12 @@ class Renderer(Overlay):
 
     @property
     def position(self):
+        """
+        Return the position of the main window.
+
+        Args:
+            self: (todo): write your description
+        """
         self.__position = -1
         self.webview.run_javascript(
             JS_POSITION, None, self.on_position_callback, None)
@@ -268,6 +298,15 @@ class Renderer(Overlay):
         return self.__position
 
     def on_position_callback(self, webview, result, data):
+        """
+        Called when the view is loaded
+
+        Args:
+            self: (todo): write your description
+            webview: (todo): write your description
+            result: (todo): write your description
+            data: (array): write your description
+        """
         try:
             js_res = webview.run_javascript_finish(result)
             self.__position = js_res.get_js_value().to_double()
@@ -275,6 +314,15 @@ class Renderer(Overlay):
             self.__position = 0
 
     def on_mouse(self, webview, hit_test_result, modifiers):
+        """
+        Called when a link is pressed.
+
+        Args:
+            self: (todo): write your description
+            webview: (int): write your description
+            hit_test_result: (todo): write your description
+            modifiers: (todo): write your description
+        """
         self.link_uri = None
         if hit_test_result.context_is_link():
             self.link_uri = hit_test_result.get_link_uri()
@@ -291,6 +339,16 @@ class Renderer(Overlay):
         self.label.show()
 
     def on_context_menu(self, webview, menu, event, hit_test_result):
+        """
+        Called when a context menu is clicked.
+
+        Args:
+            self: (todo): write your description
+            webview: (todo): write your description
+            menu: (todo): write your description
+            event: (todo): write your description
+            hit_test_result: (todo): write your description
+        """
         self.context_button = event.button.button
         return True     # disable context menu for now
 
@@ -309,6 +367,13 @@ class Renderer(Overlay):
         return True
 
     def find_and_opendocument(self, file_path):
+        """
+        Finds and closes a dialog tomodocument dialog
+
+        Args:
+            self: (todo): write your description
+            file_path: (str): write your description
+        """
         ext = splitext(file_path)[1]
         if not ext:
             for EXT in LANGS.keys():
@@ -327,6 +392,13 @@ class Renderer(Overlay):
             dialog.destroy()
 
     def set_writer(self, writer):
+        """
+        Set writer writer.
+
+        Args:
+            self: (todo): write your description
+            writer: (bool): write your description
+        """
         assert writer in WRITERS
         self.__writer = WRITERS[writer]
         klass = self.__writer['class']
@@ -334,9 +406,22 @@ class Renderer(Overlay):
         idle_add(self.do_render)
 
     def get_writer(self):
+        """
+        Returns writer writer.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.__writer['key']
 
     def set_parser(self, parser):
+        """
+        Sets the parser for the parser.
+
+        Args:
+            self: (todo): write your description
+            parser: (todo): write your description
+        """
         assert parser in PARSERS
         self.__parser = PARSERS[parser]
         klass = self.__parser['class']
@@ -344,19 +429,51 @@ class Renderer(Overlay):
         idle_add(self.do_render)
 
     def get_parser(self):
+        """
+        Returns the parser object for this parser.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.__parser['key']
 
     def set_style(self, style):
+        """
+        Sets the style.
+
+        Args:
+            self: (todo): write your description
+            style: (str): write your description
+        """
         self.style = style
         idle_add(self.do_render)
 
     def get_style(self):
+        """
+        Return the style of this node.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.style
 
     def set_tab_width(self, width):
+        """
+        Sets the width
+
+        Args:
+            self: (todo): write your description
+            width: (int): write your description
+        """
         self.tab_width = width
 
     def render_output(self):
+        """
+        Renders the html.
+
+        Args:
+            self: (todo): write your description
+        """
         if getattr(self, 'src', None) is None:
             return False, "", "text/plain"
         try:
@@ -414,6 +531,12 @@ class Renderer(Overlay):
             return False, EXCEPTION_ERROR % exc_str, 'text/html'
 
     def do_render(self):
+        """
+        Render the page.
+
+        Args:
+            self: (todo): write your description
+        """
         state, html, mime_type = self.render_output()
         if state:
             if self.pos > 1:     # vim
@@ -429,22 +552,52 @@ class Renderer(Overlay):
                                     mime_type, "UTF-8", "file://"+file_name)
 
     def render(self, src, file_name, pos=0):
+        """
+        Render the document.
+
+        Args:
+            self: (todo): write your description
+            src: (todo): write your description
+            file_name: (str): write your description
+            pos: (dict): write your description
+        """
         self.src = src
         self.pos = pos
         self.file_name = file_name
         idle_add(self.do_render)
 
     def print_page(self):
+        """
+        Print the current page
+
+        Args:
+            self: (todo): write your description
+        """
         po = PrintOperation.new(self.webview)
         po.connect("failed", self.on_print_failed)
         po.run_dialog(self.__win)
 
     def on_print_failed(self, po, error):
+        """
+        Print a message handler. error.
+
+        Args:
+            self: (todo): write your description
+            po: (todo): write your description
+            error: (todo): write your description
+        """
         # FIXME: if dialog is used, application will lock :-(
         log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
                             error.message)
 
     def do_next_match(self, text):
+        """
+        Search for the next match.
+
+        Args:
+            self: (todo): write your description
+            text: (str): write your description
+        """
         controller = self.webview.get_find_controller()
         if controller.get_search_text() != text:
             self.search_done = None
@@ -457,6 +610,13 @@ class Renderer(Overlay):
         return self.search_done
 
     def do_previous_match(self, text):
+        """
+        Search for the previous completion.
+
+        Args:
+            self: (todo): write your description
+            text: (str): write your description
+        """
         controller = self.webview.get_find_controller()
         if controller.get_search_text() != text:
             self.search_done = None
@@ -470,16 +630,44 @@ class Renderer(Overlay):
         return self.search_done
 
     def stop_search(self):
+        """
+        Stop the search
+
+        Args:
+            self: (todo): write your description
+        """
         controller = self.webview.get_find_controller()
         controller.search_finish()
 
     def on_found_text(self, controller, count):
+        """
+        Called when a search is received.
+
+        Args:
+            self: (todo): write your description
+            controller: (todo): write your description
+            count: (int): write your description
+        """
         self.search_done = True
 
     def on_faild_to_find_text(self, controller):
+        """
+        !
+
+        Args:
+            self: (todo): write your description
+            controller: (todo): write your description
+        """
         self.search_done = False
 
     def scroll_to_position(self, position):
+        """
+        Scroll window to - position.
+
+        Args:
+            self: (todo): write your description
+            position: (todo): write your description
+        """
         if position is not None:
             self.pos = position
 

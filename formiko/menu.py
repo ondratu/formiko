@@ -3,6 +3,12 @@ from gi.repository.Gio import Menu
 
 class AppMenu(Menu):
     def __init__(self):
+        """
+        Initialize menu.
+
+        Args:
+            self: (todo): write your description
+        """
         super(AppMenu, self).__init__()
         sec = Menu()
         sec.append("New Document", "app.new-window")

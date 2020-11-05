@@ -21,12 +21,25 @@ class View():
     BOTH = 3
 
     def __new__(cls, value):
+        """
+        Create a new int.
+
+        Args:
+            cls: (todo): write your description
+            value: (int): write your description
+        """
         value = int(value)
         assert 0 < value < 4
         return value
 
 
 def smart_bool(value):
+    """
+    Converts a boolean value to a boolean.
+
+    Args:
+        value: (str): write your description
+    """
     if value.lower() in ("1", "true", "yes", "on", "enable"):
         return True
     elif value.lower() in ("0", "false", "no", "off", "disable"):
@@ -36,6 +49,17 @@ def smart_bool(value):
 
 class SmartParser(ConfigParser):
     def smart_get(self, obj, key, conv=str, sec='main'):
+        """
+        Get an smart get a value
+
+        Args:
+            self: (dict): write your description
+            obj: (todo): write your description
+            key: (str): write your description
+            conv: (todo): write your description
+            str: (str): write your description
+            sec: (todo): write your description
+        """
         try:
             val = self.get(sec, key)
             setattr(obj, key, conv(val))
@@ -47,6 +71,15 @@ class SmartParser(ConfigParser):
             print_exc()
 
     def smart_set(self, obj, key, sec='main'):
+        """
+        Sets the value of an object.
+
+        Args:
+            self: (todo): write your description
+            obj: (todo): write your description
+            key: (str): write your description
+            sec: (todo): write your description
+        """
         self.set(sec, key, str(getattr(obj, key)))
 
 
@@ -74,9 +107,21 @@ class UserPreferences(object):
     editor = EditorPreferences()
 
     def __init__(self):
+        """
+        Initialize the load balancer
+
+        Args:
+            self: (todo): write your description
+        """
         self.load()
 
     def load(self):
+        """
+        Load user config file.
+
+        Args:
+            self: (todo): write your description
+        """
         directory = get_user_config_dir()
         cp = SmartParser()
         cp.read("%s/formiko.ini" % directory)
@@ -107,6 +152,12 @@ class UserPreferences(object):
         cp.smart_get(self.editor, 'white_chars', smart_bool, 'editor')
 
     def save(self):
+        """
+        Save the current configuration
+
+        Args:
+            self: (todo): write your description
+        """
         cp = SmartParser()
         cp.add_section('main')
         cp.set('main', 'preview', str(int(self.preview)))
@@ -145,9 +196,21 @@ class UserCache(object):
     view = View.BOTH
 
     def __init__(self):
+        """
+        Initialize the load balancer
+
+        Args:
+            self: (todo): write your description
+        """
         self.load()
 
     def load(self):
+        """
+        Loads the user s3 archive
+
+        Args:
+            self: (todo): write your description
+        """
         directory = get_user_cache_dir()
         cp = SmartParser()
         cp.read("%s/formiko/window.ini" % directory)
@@ -158,6 +221,12 @@ class UserCache(object):
         cp.smart_get(self, 'view', View)
 
     def save(self):
+        """
+        Save the current configuration.
+
+        Args:
+            self: (todo): write your description
+        """
         cp = SmartParser()
         cp.add_section('main')
         cp.set('main', 'width', str(self.width))

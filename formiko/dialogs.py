@@ -22,6 +22,13 @@ LANGS = {
 
 class AboutDialog(Gtk.AboutDialog):
     def __init__(self, transient_for):
+        """
+        Initialize all comments.
+
+        Args:
+            self: (todo): write your description
+            transient_for: (str): write your description
+        """
         super(AboutDialog, self).__init__(transient_for=transient_for,
                                           modal=False)
         self.set_icon_list(icon_list)
@@ -38,6 +45,14 @@ class AboutDialog(Gtk.AboutDialog):
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
+        """
+        Initialize gtk file
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+            file_name: (str): write your description
+        """
         name = "`%s`" % file_name if file_name else ""
         super(QuitDialogWithoutSave, self).__init__(
             parent,
@@ -50,6 +65,14 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
 
 class TraceBackDialog(Gtk.Dialog):
     def __init__(self, parent, traceback):
+        """
+        Initialize box box.
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+            traceback: (todo): write your description
+        """
         super(TraceBackDialog, self).__init__(
             "Traceback error",
             parent,
@@ -64,6 +87,14 @@ class TraceBackDialog(Gtk.Dialog):
 
 class FileNotFoundDialog(Gtk.MessageDialog):
     def __init__(self, parent, filename):
+        """
+        Initializes gtk file
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+            filename: (str): write your description
+        """
         super(FileNotFoundDialog, self).__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -74,6 +105,14 @@ class FileNotFoundDialog(Gtk.MessageDialog):
 
 class FileChangedDialog(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
+        """
+        Initialize gtk file.
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+            file_name: (str): write your description
+        """
         super(FileChangedDialog, self).__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
@@ -85,6 +124,15 @@ class FileChangedDialog(Gtk.MessageDialog):
 
 class FileChooserDialog(Gtk.FileChooserDialog):
     def __init__(self, title, parent, action):
+        """
+        Initialize gtk file
+
+        Args:
+            self: (todo): write your description
+            title: (str): write your description
+            parent: (todo): write your description
+            action: (todo): write your description
+        """
         if action == Gtk.FileChooserAction.SAVE:
             label = Gtk.STOCK_SAVE
         else:
@@ -97,6 +145,12 @@ class FileChooserDialog(Gtk.FileChooserDialog):
              label, Gtk.ResponseType.ACCEPT))
 
     def get_filename_with_ext(self):
+        """
+        Return the filename of the file extension.
+
+        Args:
+            self: (todo): write your description
+        """
         file_name = self.get_filename()
         name, ext = splitext(file_name)
         if ext:
@@ -109,6 +163,15 @@ class FileChooserDialog(Gtk.FileChooserDialog):
         return file_name + filter_.default
 
     def add_filter_lang(self, lang, default, current=False):
+        """
+        Add a filter filter.
+
+        Args:
+            self: (todo): write your description
+            lang: (todo): write your description
+            default: (todo): write your description
+            current: (todo): write your description
+        """
         filter_ = Gtk.FileFilter()
         filter_.set_name(lang.get_name())
         for pattern in lang.get_globs():
@@ -122,12 +185,33 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             self.set_filter(filter_)
 
     def add_filter_rst(self, current=False):
+        """
+        Add rst filter filter.
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         self.add_filter_lang(LANGS[".rst"], ".rst", current)
 
     def add_filter_md(self, current=False):
+        """
+        Add filter filter filter
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         self.add_filter_lang(LANGS[".md"], ".md", current)
 
     def add_filter_plain(self, current=False):
+        """
+        Add a filter filter
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         filter_ = Gtk.FileFilter()
         filter_.set_name("Plain text")
         filter_.add_pattern("*.txt")
@@ -138,12 +222,33 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             self.set_filter(filter_)
 
     def add_filter_html(self, current=False):
+        """
+        Add an html filter.
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         self.add_filter_lang(LANGS[".html"], ".html", current)
 
     def add_filter_json(self, current=False):
+        """
+        Add filter filter filter.
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         self.add_filter_lang(LANGS[".json"], ".json", current)
 
     def add_filter_all(self, current=False):
+        """
+        Add a filter filter. gtk.
+
+        Args:
+            self: (todo): write your description
+            current: (todo): write your description
+        """
         filter_ = Gtk.FileFilter()
         filter_.set_name("All File Types")
         filter_.add_pattern("*")
@@ -155,6 +260,13 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
 class FileOpenDialog(FileChooserDialog):
     def __init__(self, parent):
+        """
+        Initialize gtk file
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+        """
         super(FileOpenDialog, self).__init__(
             "Open Document", parent, Gtk.FileChooserAction.OPEN
         )
@@ -162,6 +274,13 @@ class FileOpenDialog(FileChooserDialog):
 
 class FileSaveDialog(FileChooserDialog):
     def __init__(self, parent):
+        """
+        Initialize gtk file
+
+        Args:
+            self: (todo): write your description
+            parent: (todo): write your description
+        """
         super(FileSaveDialog, self).__init__(
             "Save As Document", parent, Gtk.FileChooserAction.SAVE
         )

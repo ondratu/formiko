@@ -41,6 +41,15 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, win, preferences, action_name=None):
+        """
+        Do some setup.
+
+        Args:
+            self: (todo): write your description
+            win: (int): write your description
+            preferences: (list): write your description
+            action_name: (str): write your description
+        """
         super(SourceView, self).__init__()
         if action_name:
             self.action_name = action_name
@@ -88,18 +97,42 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     @property
     def changes(self):
+        """
+        Returns the last changes
+
+        Args:
+            self: (todo): write your description
+        """
         return self.__last_changes
 
     @property
     def is_modified(self):
+        """
+        Return true if the text was modified
+
+        Args:
+            self: (todo): write your description
+        """
         return self.text_buffer.get_modified()
 
     @property
     def text(self):
+        """
+        The text text content of the buffer.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.text_buffer.props.text
 
     @property
     def position(self):
+        """
+        Return the position of - placement.
+
+        Args:
+            self: (todo): write your description
+        """
         adj = self.source_view.get_vadjustment()
         hight = self.get_allocated_height()
         value = adj.get_value()
@@ -109,40 +142,102 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     @property
     def file_name(self):
+        """
+        Returns the name of the file.
+
+        Args:
+            self: (todo): write your description
+        """
         return basename(self.__file_name)
 
     @property
     def file_path(self):
+        """
+        Returns the full path of the file.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.__file_name
 
     @property
     def file_ext(self):
+        """
+        Return the file extension.
+
+        Args:
+            self: (todo): write your description
+        """
         name, ext = splitext(self.__file_name)
         return ext
 
     def inc_changes(self, text_buffer):
+        """
+        Inc_changes the text buffer.
+
+        Args:
+            self: (todo): write your description
+            text_buffer: (str): write your description
+        """
         self.__last_changes += 1
 
     def change_mime_type(self, parser):
+        """
+        Change the mime type.
+
+        Args:
+            self: (todo): write your description
+            parser: (todo): write your description
+        """
         language = LANGS.get(".%s" % parser, LANGS['.rst'])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
 
     def on_language_changed(self, spellchecker, language):
+        """
+        Called when a language has changed.
+
+        Args:
+            self: (todo): write your description
+            spellchecker: (todo): write your description
+            language: (str): write your description
+        """
         action, go = self.get_action_owner()
         if go:
             action_target = Variant("s", language)
             go.activate_action(action, action_target)
 
     def on_scroll_changed(self, *params):
+        """
+        Called when the signal changed.
+
+        Args:
+            self: (todo): write your description
+            params: (dict): write your description
+        """
         self.emit("scroll-changed", self.position)
 
     def set_period_save(self, save):
+        """
+        Set the period period.
+
+        Args:
+            self: (todo): write your description
+            save: (str): write your description
+        """
         self.period_save = bool(save)*PERIOD_SAVE_TIME
         if save:
             self.period_save_thread()
 
     def set_check_spelling(self, check_spelling, spell_lang):
+        """
+        Sets the checker.
+
+        Args:
+            self: (todo): write your description
+            check_spelling: (bool): write your description
+            spell_lang: (str): write your description
+        """
         if check_spelling:
             if spell_lang in Checker.get_language_list():
                 self.spellchecker.set_language(spell_lang)
@@ -156,16 +251,37 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.on_language_changed(self.spellchecker, "")
 
     def set_spaces_instead_of_tabs(self, use_spaces):
+        """
+        Sets the source tabs of the given source.
+
+        Args:
+            self: (todo): write your description
+            use_spaces: (bool): write your description
+        """
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)
         self.source_view.set_smart_backspace(use_spaces)
 
     def set_text_wrapping(self, text_wrapping):
+        """
+        Set the gtk text_wrapper.
+
+        Args:
+            self: (todo): write your description
+            text_wrapping: (todo): write your description
+        """
         if text_wrapping:
             self.source_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
         else:
             self.source_view.set_wrap_mode(Gtk.WrapMode.NONE)
 
     def set_white_chars(self, white_chars):
+        """
+        Sets the chars.
+
+        Args:
+            self: (todo): write your description
+            white_chars: (todo): write your description
+        """
         if white_chars:
             self.source_view.set_draw_spaces(DrawSpacesFlags.ALL)
         else:
@@ -198,6 +314,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         timeout_add(200, self.check_in_thread)
 
     def period_save_thread(self):
+        """
+        Save the current thread
+
+        Args:
+            self: (todo): write your description
+        """
         if self.period_save:
             if self.__file_name and self.is_modified \
                     and not self.__pause_period:
@@ -205,6 +327,14 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             timeout_add_seconds(self.period_save, self.period_save_thread)
 
     def read_from_file(self, file_name, offset=0):
+        """
+        Read the file.
+
+        Args:
+            self: (todo): write your description
+            file_name: (str): write your description
+            offset: (str): write your description
+        """
         self.__file_name = file_name
         self.emit("file_type", self.file_ext)
 
@@ -221,9 +351,22 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             idle_add(self.scroll_to_cursor, cursor)
 
     def scroll_to_cursor(self, cursor):
+        """
+        Scroll the cursor to the cursor.
+
+        Args:
+            self: (todo): write your description
+            cursor: (todo): write your description
+        """
         self.source_view.scroll_to_iter(cursor, 0, 1, 1, 1)
 
     def save_to_file(self):
+        """
+        Save text todo file
+
+        Args:
+            self: (todo): write your description
+        """
         try:
             if exists(self.__file_name):
                 rename(self.__file_name, "%s~" % self.__file_name)
@@ -244,6 +387,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             stderr.flush()
 
     def save(self):
+        """
+        Saves the file.
+
+        Args:
+            self: (todo): write your description
+        """
         if not self.__file_name:
             self.__file_name = self.get_new_file_name()
             self.emit("file_type", self.file_ext)
@@ -251,6 +400,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.save_to_file()
 
     def save_as(self):
+        """
+        Save the file todo as a file.
+
+        Args:
+            self: (todo): write your description
+        """
         new_file_name = self.get_new_file_name()
         if new_file_name:
             self.__file_name = new_file_name
@@ -258,6 +413,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.save_to_file()
 
     def get_new_file_name(self):
+        """
+        Get the name
+
+        Args:
+            self: (str): write your description
+        """
         lang = self.text_buffer.get_language()
         dialog = FileSaveDialog(self.__win)
         dialog.add_filter_rst(lang.get_id() == "rst")
@@ -282,12 +443,26 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         return file_name
 
     def do_file_type(self, ext):
+        """
+        File type of file.
+
+        Args:
+            self: (todo): write your description
+            ext: (str): write your description
+        """
         if ext:
             language = LANGS.get(ext, LANGS['.rst'])
             if self.text_buffer.get_language() != language:
                 self.text_buffer.set_language(language)
 
     def do_next_match(self, text):
+        """
+        Do the next match.
+
+        Args:
+            self: (todo): write your description
+            text: (str): write your description
+        """
         if self.search_settings.get_search_text() != text:
             self.search_settings.set_search_text(text)
             self.search_mark = self.text_buffer.get_insert()
@@ -308,6 +483,13 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         return True
 
     def do_previous_match(self, text):
+        """
+        Return true if the previous text.
+
+        Args:
+            self: (todo): write your description
+            text: (str): write your description
+        """
         if self.search_settings.get_search_text() != text:
             self.search_settings.set_search_text(text)
             self.search_mark = self.text_buffer.get_insert()
@@ -327,4 +509,10 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         return True
 
     def stop_search(self):
+        """
+        Stop search text search
+
+        Args:
+            self: (todo): write your description
+        """
         self.search_settings.set_search_text(None)
