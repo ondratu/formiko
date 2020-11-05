@@ -12,16 +12,31 @@ from formiko.application import Application
 
 
 def handler_exit(*args):
+    """
+    Handler for exit.
+
+    Args:
+    """
     exit(1)
 
 
 def main():
+    """
+    Main entry point.
+
+    Args:
+    """
     signal(SIGINT, handler_exit)
     app = Application()
     return app.run(argv)
 
 
 def main_vim():
+    """
+    Run the application.
+
+    Args:
+    """
     signal(SIGINT, handler_exit)
     Gdk.threads_init()
     app = Application(application_id="cz.zeropage.Formiko.vim")

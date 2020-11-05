@@ -20,11 +20,21 @@ from formiko import __version__, __url__, __comment__
 
 
 def doc():
+    """
+    Return the docstring of the readme.
+
+    Args:
+    """
     with open("README.rst", "r", encoding="utf-8") as readme:
         return readme.read().strip()
 
 
 def icons_data():
+    """
+    Return a list of img data
+
+    Args:
+    """
     path = 'share/icons/hicolor'
     icons = [("%s/scalable/apps" % path, ["icons/formiko.svg"])]
     for size in (16, 22, 24, 32, 48, 64, 128, 256, 512):
@@ -34,6 +44,14 @@ def icons_data():
 
 
 def man_page(writer, src, dst):
+    """
+    Manage source file.
+
+    Args:
+        writer: (bool): write your description
+        src: (todo): write your description
+        dst: (list): write your description
+    """
     with open(src, encoding="utf-8") as source:
         rst = source.read().format(version=__version__)
     with zopen(dst, 'wb') as destination:
@@ -42,15 +60,33 @@ def man_page(writer, src, dst):
 
 class XBuild(build):
     def initialize_options(self):
+        """
+        Initialize the options.
+
+        Args:
+            self: (todo): write your description
+        """
         build.initialize_options(self)
         self.man_base = None
 
     def finalize_options(self):
+        """
+        Finalize the options.
+
+        Args:
+            self: (todo): write your description
+        """
         build.finalize_options(self)
         if self.man_base is None:
             self.man_base = path.join(self.build_base, 'man')
 
     def run(self):
+        """
+        Run the build.
+
+        Args:
+            self: (todo): write your description
+        """
         build.run(self)
         log.info("building man pages")
         if self.dry_run:
@@ -67,15 +103,33 @@ class XBuild(build):
 
 class XClean(clean):
     def initialize_options(self):
+        """
+        Initialize options.
+
+        Args:
+            self: (todo): write your description
+        """
         clean.initialize_options(self)
         self.man_base = None
 
     def finalize_options(self):
+        """
+        Finalize the options.
+
+        Args:
+            self: (todo): write your description
+        """
         clean.finalize_options(self)
         if self.man_base is None:
             self.man_base = path.join(self.build_base, 'man')
 
     def run(self):
+        """
+        Run the git environment exists.
+
+        Args:
+            self: (todo): write your description
+        """
         clean.run(self)
         log.info("clean man pages")
         if self.dry_run:
@@ -87,17 +141,35 @@ class XClean(clean):
 
 class XInstallData(install_data):
     def initialize_options(self):
+        """
+        Initializes the options.
+
+        Args:
+            self: (todo): write your description
+        """
         install_data.initialize_options(self)
         self.man_base = None
         self.build_base = None
 
     def finalize_options(self):
+        """
+        Finalize the options.
+
+        Args:
+            self: (todo): write your description
+        """
         install_data.finalize_options(self)
         self.set_undefined_options('build', ('build_base', 'build_base'))
         if self.man_base is None:
             self.man_base = path.join(self.build_base, 'man')
 
     def run(self):
+        """
+        Main entrypoint files.
+
+        Args:
+            self: (todo): write your description
+        """
         self.data_files.append(
             ('share/man/man1',
              list("%s/%s" % (self.man_base, page)
@@ -111,12 +183,30 @@ class XCheckVersion(Command):
     user_options = []
 
     def initialize_options(self):
+        """
+        Initializes the options.
+
+        Args:
+            self: (todo): write your description
+        """
         pass
 
     def finalize_options(self):
+        """
+        Finalize options. options. options.
+
+        Args:
+            self: (todo): write your description
+        """
         pass
 
     def run(self):
+        """
+        Run a package version
+
+        Args:
+            self: (todo): write your description
+        """
         pkg_version = StrictVersion(__version__)
         log.info("package version is %s", pkg_version)
         ch_version = StrictVersion(self.read_changelog())

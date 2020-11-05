@@ -5,6 +5,12 @@ from gi.repository.Gtk import ShortcutsWindow, ShortcutsSection, \
 
 class SourceGroup(ShortcutsGroup):
     def __init__(self):
+        """
+        Initialize the source.
+
+        Args:
+            self: (todo): write your description
+        """
         super(SourceGroup, self).__init__(title="Editor")
 
         self.add(ShortcutsShortcut(
@@ -23,6 +29,12 @@ class SourceGroup(ShortcutsGroup):
 
 class FindGroup(ShortcutsGroup):
     def __init__(self):
+        """
+        Initialize the original widget.
+
+        Args:
+            self: (todo): write your description
+        """
         super(FindGroup, self).__init__(title="Find")
 
         self.add(ShortcutsShortcut(
@@ -36,6 +48,12 @@ class FindGroup(ShortcutsGroup):
 
 class VimGroup(ShortcutsGroup):
     def __init__(self):
+        """
+        Initialize the instrument.
+
+        Args:
+            self: (todo): write your description
+        """
         super(VimGroup, self).__init__(title="Vim")
 
         self.add(ShortcutsShortcut(
@@ -54,6 +72,12 @@ class VimGroup(ShortcutsGroup):
 
 class PreviewGroup(ShortcutsGroup):
     def __init__(self):
+        """
+        Initialize the widget.
+
+        Args:
+            self: (todo): write your description
+        """
         super(PreviewGroup, self).__init__(title="Preview")
 
         self.add(ShortcutsShortcut(
@@ -68,6 +92,13 @@ class PreviewGroup(ShortcutsGroup):
 
 class GeneralGroup(ShortcutsGroup):
     def __init__(self, editor_type):
+        """
+        Initialize widget.
+
+        Args:
+            self: (todo): write your description
+            editor_type: (todo): write your description
+        """
         super(GeneralGroup, self).__init__(title="Genaral")
 
         self.add(ShortcutsShortcut(
@@ -97,6 +128,13 @@ class GeneralGroup(ShortcutsGroup):
 
 class ShortcutsWindow(ShortcutsWindow):
     def __init__(self, editor_type):
+        """
+        Create a new widget.
+
+        Args:
+            self: (todo): write your description
+            editor_type: (todo): write your description
+        """
         # view_name and view does not work. Don't know why
         super(ShortcutsWindow, self).__init__(modal=1)
         sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)

@@ -14,6 +14,14 @@ class StatusMenuButton(Gtk.MenuButton):
         """)
 
     def __init__(self, label, popover):
+        """
+        Initializes a gtk gtk gtk gtk.
+
+        Args:
+            self: (todo): write your description
+            label: (str): write your description
+            popover: (todo): write your description
+        """
         super(StatusMenuButton, self).__init__(popover=popover)
         self.set_relief(Gtk.ReliefStyle.NONE)
         ctx = self.get_style_context()
@@ -30,12 +38,26 @@ class StatusMenuButton(Gtk.MenuButton):
                        True, True, 0)
 
     def set_label(self, label):
+        """
+        Set the label for the given label.
+
+        Args:
+            self: (todo): write your description
+            label: (str): write your description
+        """
         self.label.set_label(label)
 # endclass
 
 
 class LineColPopover(Gtk.Popover):
     def __init__(self, preferences):
+        """
+        Initialize the layout.
+
+        Args:
+            self: (todo): write your description
+            preferences: (list): write your description
+        """
         super(LineColPopover, self).__init__()
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
@@ -61,6 +83,15 @@ class LineColPopover(Gtk.Popover):
         self.box.show_all()
 
     def add_check_button(self, label, action, value):
+        """
+        Function to enable button
+
+        Args:
+            self: (todo): write your description
+            label: (str): write your description
+            action: (str): write your description
+            value: (todo): write your description
+        """
         btn = Gtk.CheckButton(
             label=label,
             action_name=action,
@@ -75,6 +106,13 @@ class Statusbar(Gtk.Box):
     css.load_from_data(b"* {border-top: 1px solid #91918c; padding: 1px;}")
 
     def __init__(self, preferences):
+        """
+        Initialize widgets
+
+        Args:
+            self: (todo): write your description
+            preferences: (list): write your description
+        """
         super(Statusbar, self).__init__(orientation=Gtk.Orientation.HORIZONTAL)
         ctx = self.get_style_context()
         ctx.add_provider(Statusbar.css,
@@ -101,6 +139,13 @@ class Statusbar(Gtk.Box):
         self.pack_end(self.editor_btn, False, False, 1)
 
     def create_tab_popover(self, preferences):
+        """
+        Create gtk tabs.
+
+        Args:
+            self: (todo): write your description
+            preferences: (todo): write your description
+        """
         pop = Gtk.Popover()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
         pop.add(box)
@@ -153,11 +198,25 @@ class Statusbar(Gtk.Box):
         return pop
 
     def on_tab_spaces(self, widget):
+        """
+        Set the value of the selected tab.
+
+        Args:
+            self: (todo): write your description
+            widget: (todo): write your description
+        """
         if widget.get_active():
             self.width_btn.set_label("Tabulator width %s" %
                                      widget.get_action_target_value())
 
     def create_editor_popover(self, preferences):
+        """
+        Creates a new preferences.
+
+        Args:
+            self: (todo): write your description
+            preferences: (todo): write your description
+        """
         pop = Gtk.Popover()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
         pop.add(box)
@@ -180,6 +239,12 @@ class Statusbar(Gtk.Box):
         return pop
 
     def create_info_bar(self):
+        """
+        Create a gtk bar object.
+
+        Args:
+            self: (todo): write your description
+        """
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         bar.words_count = Gtk.Label("0")
         bar.pack_start(bar.words_count, True, True, 0)
@@ -192,7 +257,21 @@ class Statusbar(Gtk.Box):
         return bar
 
     def set_words_count(self, count):
+        """
+        Set the number of words.
+
+        Args:
+            self: (todo): write your description
+            count: (todo): write your description
+        """
         self.info_bar.words_count.set_label(str(count))
 
     def set_chars_count(self, count):
+        """
+        Set the number of times in the number of times.
+
+        Args:
+            self: (todo): write your description
+            count: (str): write your description
+        """
         self.info_bar.chars_count.set_label(str(count))

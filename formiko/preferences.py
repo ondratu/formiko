@@ -17,6 +17,14 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, action_name=None, filename="", **kwargs):
+        """
+        Initializes a dialog.
+
+        Args:
+            self: (todo): write your description
+            action_name: (str): write your description
+            filename: (str): write your description
+        """
         Gtk.FileChooserButton.__init__(self, title="Select custom stylesheet",
                                        **kwargs)
         self.add_filter_style()
@@ -27,12 +35,25 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
             self.action_name = action_name
 
     def do_realize(self):
+        """
+        Real action
+
+        Args:
+            self: (todo): write your description
+        """
         Gtk.FileChooserButton.do_realize(self)
         action, go = self.get_action_owner()
         if go:
             self.set_filename(go.get_action_state(action).get_string())
 
     def set_action_name(self, action_name):
+        """
+        Set the name of an action.
+
+        Args:
+            self: (todo): write your description
+            action_name: (str): write your description
+        """
         self.action_name = action_name
         if self.get_realized():
             action, go = self.get_action_owner()
@@ -40,27 +61,64 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
                 self.set_filename(go.get_action_state(action).get_string())
 
     def get_action_name(self):
+        """
+        Returns the name of the action
+
+        Args:
+            self: (todo): write your description
+        """
         return self.action_name
 
     def set_action_target_value(self, target_value):
+        """
+        Sets the value of the target_value.
+
+        Args:
+            self: (todo): write your description
+            target_value: (todo): write your description
+        """
         self.action_target = target_value
 
     def get_action_target_value(self):
+        """
+        Returns the value of the given action
+
+        Args:
+            self: (todo): write your description
+        """
         return self.action_target
 
     def add_filter_style(self):
+        """
+        Add a gtk.
+
+        Args:
+            self: (todo): write your description
+        """
         filter_txt = Gtk.FileFilter()
         filter_txt.set_name("Stylesheet file")
         filter_txt.add_mime_type("text/css")
         self.add_filter(filter_txt)
 
     def add_filter_all(self):
+        """
+        Adds all gtk file.
+
+        Args:
+            self: (todo): write your description
+        """
         filter_all = Gtk.FileFilter()
         filter_all.set_name("all files")
         filter_all.add_pattern("*")
         self.add_filter(filter_all)
 
     def do_file_set(self):
+        """
+        Set file mode.
+
+        Args:
+            self: (todo): write your description
+        """
         self.action_target = Variant("s", self.get_filename() or '')
         action, go = self.get_action_owner()
         if go:
@@ -69,6 +127,13 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
 
 class Preferences(Gtk.Popover):
     def __init__(self, user_preferences):
+        """
+        Initialize the gtk layout.
+
+        Args:
+            self: (todo): write your description
+            user_preferences: (str): write your description
+        """
         super(Preferences, self).__init__(border_width=20)
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(vbox)
@@ -155,10 +220,24 @@ class Preferences(Gtk.Popover):
     # end def
 
     def set_parser(self, parser):
+        """
+        Sets the parser to the parser.
+
+        Args:
+            self: (todo): write your description
+            parser: (todo): write your description
+        """
         for it in self.parser_group:
             if it.parser == parser:
                 it.set_active(True)
                 break
 
     def on_custom_style_toggle(self, widget):
+        """
+        Toggle the current font.
+
+        Args:
+            self: (todo): write your description
+            widget: (todo): write your description
+        """
         self.style_btn.set_sensitive(widget.get_active())

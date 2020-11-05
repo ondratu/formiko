@@ -34,6 +34,14 @@ class SearchWay(Enum):
 
 class AppWindow(Gtk.ApplicationWindow):
     def __init__(self, editor, file_name=''):
+        """
+        Init widget.
+
+        Args:
+            self: (todo): write your description
+            editor: (todo): write your description
+            file_name: (str): write your description
+        """
         assert editor in ('vim', 'source', None)
         self.runing = True
         self.editor_type = editor
@@ -56,6 +64,12 @@ class AppWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(200, self.check_in_thread)
 
     def actions(self):
+        """
+        Set actions.
+
+        Args:
+            self: (todo): write your description
+        """
         action = Gio.SimpleAction.new("open-document", None)
         action.connect("activate", self.on_open_document)
         self.add_action(action)
@@ -122,6 +136,16 @@ class AppWindow(Gtk.ApplicationWindow):
             "change-style", 's', pref.style, self.on_change_style)
 
     def create_stateful_action(self, name, _type, default_value, method):
+        """
+        Create a new gio.
+
+        Args:
+            self: (todo): write your description
+            name: (str): write your description
+            _type: (str): write your description
+            default_value: (todo): write your description
+            method: (str): write your description
+        """
         action = Gio.SimpleAction.new_stateful(
             name, GLib.VariantType.new(_type),
             GLib.Variant(_type, default_value))
@@ -129,11 +153,26 @@ class AppWindow(Gtk.ApplicationWindow):
         self.add_action(action)
 
     def on_close_window(self, action, *params):
+        """
+        Destroy window
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         if self.ask_if_modified():
             self.save_win_state()
             self.destroy()
 
     def open_document(self, file_path):
+        """
+        Open a new document and return the document.
+
+        Args:
+            self: (todo): write your description
+            file_path: (str): write your description
+        """
         if self.editor_type == 'source' and \
                 self.get_title() == NOT_SAVED_NAME:
             self.editor.read_from_file(file_path)
@@ -145,6 +184,14 @@ class AppWindow(Gtk.ApplicationWindow):
             self.get_application().new_window(self.editor_type, file_path)
 
     def on_open_document(self, actions, *params):
+        """
+        Open a gtk file dialog
+
+        Args:
+            self: (todo): write your description
+            actions: (todo): write your description
+            params: (dict): write your description
+        """
         dialog = FileOpenDialog(self)
         dialog.add_filter_plain()
         dialog.add_filter_rst()
@@ -157,14 +204,38 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.destroy()
 
     def on_save_document(self, action, *params):
+        """
+        Save a new document.
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         if self.editor_type == 'source':
             self.editor.save()
 
     def on_save_document_as(self, action, *params):
+        """
+        Save document todo.
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         if self.editor_type == 'source':
             self.editor.save_as()
 
     def on_export_document_as(self, action, *params):
+        """
+        Create a file
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         file_name = self.editor.file_name or None
         dialog = FileSaveDialog(self)
         if self.renderer.get_parser() == 'json':
@@ -192,15 +263,37 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.destroy()
 
     def on_print_document(self, action, *params):
+        """
+        Print the specified document
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         self.renderer.print_page()
 
     def on_delete(self, *args):
+        """
+        Delete the state of the button.
+
+        Args:
+            self: (todo): write your description
+        """
         rv = self.ask_if_modified()
         if rv:
             self.save_win_state()
         return not rv
 
     def on_switch_view_toggle(self, action, param):
+        """
+        Toggle or disables / disables or more parameters
+
+        Args:
+            self: (todo): write your description
+            action: (todo): write your description
+            param: (todo): write your description
+        """
         if action.get_state() != param:
             action.set_state(param)
 
@@ -223,6 +316,14 @@ class AppWindow(Gtk.ApplicationWindow):
             self.preview_toggle_btn.set_active(True)
 
     def on_change_preview(self, action, param):
+        """
+        Called when the preview changes
+
+        Args:
+            self: (todo): write your description
+            action: (todo): write your description
+            param: (todo): write your description
+        """
         if action.get_state() != param:
             action.set_state(param)
 
@@ -248,11 +349,27 @@ class AppWindow(Gtk.ApplicationWindow):
             self.paned.set_position(self.paned.get_allocated_width()/2)
 
     def on_auto_scroll_toggle(self, action, param):
+        """
+        Toggle auto auto auto auto auto auto auto auto auto auto auto auto auto - ask.
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         auto_scroll = not self.preferences.auto_scroll
         self.preferences.auto_scroll = auto_scroll
         self.preferences.save()
 
     def on_change_parser(self, action, param):
+        """
+        Save a new parser
+
+        Args:
+            self: (todo): write your description
+            action: (todo): write your description
+            param: (todo): write your description
+        """
         if action.get_state() != param:
             action.set_state(param)
             parser = param.get_string()
@@ -262,14 +379,38 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.save()
 
     def on_file_type(self, widget, ext):
+        """
+        Set the parser type.
+
+        Args:
+            self: (todo): write your description
+            widget: (todo): write your description
+            ext: (str): write your description
+        """
         parser = EXTS.get(ext, self.preferences.parser)
         self.pref_menu.set_parser(parser)
 
     def on_scroll_changed(self, widget, position):
+        """
+        Called when the scroll widget has changed.
+
+        Args:
+            self: (todo): write your description
+            widget: (todo): write your description
+            position: (todo): write your description
+        """
         if self.preferences.auto_scroll:
             self.renderer.scroll_to_position(position)
 
     def on_change_writer(self, action, param):
+        """
+        Called when a file is changed
+
+        Args:
+            self: (todo): write your description
+            action: (todo): write your description
+            param: (todo): write your description
+        """
         if action.get_state() != param:
             action.set_state(param)
             writer = param.get_string()
@@ -278,6 +419,14 @@ class AppWindow(Gtk.ApplicationWindow):
             self.preferences.save()
 
     def on_custom_style_toggle(self, action, param):
+        """
+        Toggle the given action
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         custom_style = not self.preferences.custom_style
         self.preferences.custom_style = custom_style
         if custom_style and self.preferences.style:
@@ -287,6 +436,14 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.save()
 
     def on_change_style(self, action, param):
+        """
+        When a new parameter
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         style = param.get_string()
         self.preferences.style = style
         if self.preferences.custom_style and style:
@@ -296,6 +453,14 @@ class AppWindow(Gtk.ApplicationWindow):
         self.preferences.save()
 
     def on_find_in_document(self, action, *param):
+        """
+        Search for search is selected
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         if self.editor_type != 'source' and not self.renderer.props.visible:
             return      # works only with source view or renderer
 
@@ -317,6 +482,14 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.search_entry.select_region(0, -1)
 
     def on_search_focus_out(self, search_entry, param):
+        """
+        Search focus focus focus_out
+
+        Args:
+            self: (todo): write your description
+            search_entry: (str): write your description
+            param: (todo): write your description
+        """
         # on_search_focus_out is called by on_search_mode_changed
         # so text will be reset
         self.search_text = self.search_entry.get_text()
@@ -325,6 +498,14 @@ class AppWindow(Gtk.ApplicationWindow):
             self.search.set_search_mode(False)
 
     def on_search_mode_changed(self, search_bar, param):
+        """
+        Called when a search_bar has changed
+
+        Args:
+            self: (todo): write your description
+            search_bar: (todo): write your description
+            param: (todo): write your description
+        """
         if not self.search.get_search_mode():
             if not self.search_text:
                 if isinstance(self.focused, GtkSourceView):
@@ -341,6 +522,13 @@ class AppWindow(Gtk.ApplicationWindow):
             self.focused = None
 
     def on_search_changed(self, search_entry):
+        """
+        Called when a search entry has changed
+
+        Args:
+            self: (todo): write your description
+            search_entry: (todo): write your description
+        """
         if self.search_way == SearchWay.NEXT:
             res = self.on_find_next_match(None, None)
         else:
@@ -353,6 +541,14 @@ class AppWindow(Gtk.ApplicationWindow):
             Gtk.StyleContext.remove_class(ctx, "error")
 
     def on_find_next_match(self, action, *params):
+        """
+        Find the next match
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         res = False
         if self.search.get_search_mode():
             text = self.search_entry.get_text()
@@ -368,6 +564,14 @@ class AppWindow(Gtk.ApplicationWindow):
         return res
 
     def on_find_previous_match(self, action, *params):
+        """
+        Search for selected action
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         res = False
         if self.search.get_search_mode():
             text = self.search_entry.get_text()
@@ -383,9 +587,23 @@ class AppWindow(Gtk.ApplicationWindow):
         return res
 
     def on_refresh_preview(self, action, *params):
+        """
+        Refresh a preview is displayed
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         self.check_in_thread(True)
 
     def ask_if_modified(self):
+        """
+        Ask user to choose a file.
+
+        Args:
+            self: (todo): write your description
+        """
         if self.editor_type:
             if self.editor.is_modified:
                 dialog = QuitDialogWithoutSave(self,
@@ -401,10 +619,22 @@ class AppWindow(Gtk.ApplicationWindow):
         return True                     # do quit
 
     def destroy_from_vim(self, *args):
+        """
+        Destroy the device from the device.
+
+        Args:
+            self: (todo): write your description
+        """
         self.runing = False
         self.destroy()
 
     def save_win_state(self):
+        """
+        Save the window state
+
+        Args:
+            self: (todo): write your description
+        """
         self.cache.width, self.cache.height = self.get_size()
         if getattr(self, 'paned', False):
             self.cache.paned = self.paned.get_position()
@@ -412,6 +642,12 @@ class AppWindow(Gtk.ApplicationWindow):
         self.cache.save()
 
     def create_headerbar(self):
+        """
+        Create the gtk.
+
+        Args:
+            self: (todo): write your description
+        """
         headerbar = Gtk.HeaderBar()
         headerbar.set_show_close_button(True)
 
@@ -472,6 +708,12 @@ class AppWindow(Gtk.ApplicationWindow):
         return headerbar
 
     def create_renderer(self):
+        """
+        Create renderer
+
+        Args:
+            self: (todo): write your description
+        """
         self.renderer = Renderer(self,
                                  parser=self.preferences.parser,
                                  writer=self.preferences.writer)
@@ -480,6 +722,13 @@ class AppWindow(Gtk.ApplicationWindow):
         self.renderer.set_tab_width(self.preferences.editor.tab_width)
 
     def fill_panned(self, file_name):
+        """
+        Fill file
+
+        Args:
+            self: (todo): write your description
+            file_name: (str): write your description
+        """
         if self.editor_type == 'vim':
             self.editor = VimEditor(self, file_name)
         else:
@@ -511,6 +760,13 @@ class AppWindow(Gtk.ApplicationWindow):
             self.editor.set_no_show_all(True)
 
     def layout(self, file_name):
+        """
+        Function creates a new gtk widget
+
+        Args:
+            self: (todo): write your description
+            file_name: (str): write your description
+        """
         self.set_default_size(self.cache.width, self.cache.height)
         box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(box)
@@ -571,6 +827,13 @@ class AppWindow(Gtk.ApplicationWindow):
         sbox.pack_start(next_button, False, False, 0)
 
     def check_in_thread(self, force=False):
+        """
+        Check if the editor is in a separate thread.
+
+        Args:
+            self: (todo): write your description
+            force: (bool): write your description
+        """
         if self.runing:
             if self.editor_type == 'vim':
                 thread = Thread(target=self.refresh_from_vim, args=(force,))
@@ -581,10 +844,23 @@ class AppWindow(Gtk.ApplicationWindow):
                 GLib.idle_add(self.refresh_from_file, force)
 
     def not_running(self):
+        """
+        Checks if the running.
+
+        Args:
+            self: (todo): write your description
+        """
         if not self.runing:
             raise SystemExit(0)
 
     def refresh_from_vim(self, force):
+        """
+        Refresh the file
+
+        Args:
+            self: (todo): write your description
+            force: (bool): write your description
+        """
         another_file = False
         try:
             star = '*' if self.editor.is_modified else ''
@@ -619,6 +895,13 @@ class AppWindow(Gtk.ApplicationWindow):
             print_exc()
 
     def refresh_from_source(self, force):
+        """
+        Refresh file content
+
+        Args:
+            self: (todo): write your description
+            force: (bool): write your description
+        """
         try:
             modified = self.editor.is_modified
             action = self.lookup_action("save-document")
@@ -652,6 +935,13 @@ class AppWindow(Gtk.ApplicationWindow):
             print_exc()
 
     def refresh_from_file(self, force):
+        """
+        Refresh changes
+
+        Args:
+            self: (todo): write your description
+            force: (bool): write your description
+        """
         try:
             last_changes = stat(self.__file_name).st_ctime
             if force or last_changes > self.__last_changes:
@@ -666,4 +956,10 @@ class AppWindow(Gtk.ApplicationWindow):
 
     @property
     def file_path(self):
+        """
+        Returns the path of the editor.
+
+        Args:
+            self: (todo): write your description
+        """
         return self.editor.file_path if self.editor_type else self.__file_name

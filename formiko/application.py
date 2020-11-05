@@ -16,6 +16,13 @@ from formiko.menu import AppMenu
 class Application(GtkApplication):
 
     def __init__(self, application_id="cz.zeropage.Formiko"):
+        """
+        Initialize the application.
+
+        Args:
+            self: (todo): write your description
+            application_id: (str): write your description
+        """
         super(Application, self).__init__(
             application_id=application_id,
             flags=ApplicationFlags.HANDLES_COMMAND_LINE)
@@ -28,6 +35,12 @@ class Application(GtkApplication):
                              "Use SourceView as editor (default)", None)
 
     def do_startup(self):
+        """
+        Start the application.
+
+        Args:
+            self: (todo): write your description
+        """
         GtkApplication.do_startup(self)
 
         action = SimpleAction.new("new-window", None)
@@ -53,9 +66,22 @@ class Application(GtkApplication):
         self.set_app_menu(AppMenu())
 
     def do_activate(self):
+        """
+        Activate the current window.
+
+        Args:
+            self: (todo): write your description
+        """
         self.new_window()
 
     def do_command_line(self, command_line):
+        """
+        ::
+
+        Args:
+            self: (todo): write your description
+            command_line: (todo): write your description
+        """
         options = command_line.get_options_dict()
         arguments = command_line.get_arguments()[1:]
         last = arguments[-1:][0] if arguments else ''
@@ -98,27 +124,75 @@ class Application(GtkApplication):
         return 0
 
     def on_quit(self, action, *params):
+        """
+        Called when a command is received.
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         self.quit()
 
     def on_new_window(self, action, *params):
+        """
+        New window
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            params: (dict): write your description
+        """
         self.new_window(getattr(self.get_active_window(),
                                 'editor_type', 'source'))
 
     def on_shortcuts(self, action, param):
+        """
+        Add window shortcuts.
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         win = ShortcutsWindow(getattr(self.get_active_window(),
                                       'editor_type', 'source'))
         self.add_window(win)
         win.show_all()
 
     def on_about(self, action, param):
+        """
+        Called when a new dialog is clicked
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         dialog = AboutDialog(None)
         dialog.present()
 
     def on_traceback(self, action, param):
+        """
+        Trace traceback
+
+        Args:
+            self: (todo): write your description
+            action: (str): write your description
+            param: (todo): write your description
+        """
         dialog = TraceBackDialog(self.get_active_window(), param.get_string())
         dialog.present()
 
     def new_window(self, editor, file_name=''):
+        """
+        Create a new window.
+
+        Args:
+            self: (todo): write your description
+            editor: (todo): write your description
+            file_name: (str): write your description
+        """
         try:
             win = AppWindow(editor, file_name)
             self.add_window(win)
@@ -127,6 +201,12 @@ class Application(GtkApplication):
             print_exc()
 
     def set_accels(self):
+        """
+        Set the accels.
+
+        Args:
+            self: (todo): write your description
+        """
         self.set_accels_for_action("app.new-window", ["<Control>n"])
         self.set_accels_for_action("app.quit", ["<Control>q"])
 
