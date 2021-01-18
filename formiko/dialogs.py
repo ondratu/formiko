@@ -45,7 +45,7 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
             Gtk.MessageType.WARNING,
             Gtk.ButtonsType.OK_CANCEL,
             "Document %s not saved.\n"
-            "Are you sure to quite without save?" % name)
+            "Are you sure you want to quit without saving?" % name)
 
 
 class TraceBackDialog(Gtk.Dialog):
