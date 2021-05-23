@@ -237,6 +237,9 @@ class Renderer(Overlay):
 
         self.add(self.webview)
 
+        web_settings = self.webview.get_settings()
+        web_settings.set_enable_javascript_markup(False)  # XSS Fix
+
         controller = self.webview.get_find_controller()
         self.search_done = None
         controller.connect("found-text", self.on_found_text)
@@ -445,14 +448,6 @@ class Renderer(Overlay):
     def do_render(self):
         """Render the source, and show rendered output."""
         state, html, mime_type = self.render_output()
-        if state:
-            if self.pos > 1:  # vim
-                a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
-                position = (float(a) / (a + b)) if a or b else 0
-            else:
-                position = self.pos
-
-            html += SCROLL % position
         if html and self.__win.runing:
             file_name = self.file_name or get_home_dir()
             self.webview.load_bytes(
@@ -461,6 +456,8 @@ class Renderer(Overlay):
                 "UTF-8",
                 "file://" + file_name,
             )
+        if state:
+            self.scroll_to_position(self.pos)
 
     def render(self, src, file_name, pos=0):
         """Add render task to ui queue."""
@@ -542,7 +539,7 @@ class Renderer(Overlay):
             self.pos = position
 
         if self.pos > 1:  # vim
-            a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
+            a, b = len(self.src[: self.pos]), len(self.src[self.pos:])
             position = (float(a) / (a + b)) if a or b else 0
         else:
             position = self.pos
