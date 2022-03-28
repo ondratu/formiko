@@ -99,6 +99,7 @@ PARSERS = {
         'key': 'rst',
         'title': 'Docutils reStructuredText parser',
         'class': RstParser,
+        'package': 'docutils',
         'url': 'http://docutils.sourceforge.net'},
     'm2r': {
         'key': 'm2r',
@@ -139,26 +140,31 @@ WRITERS = {
         'key': 'html4',
         'title': 'Docutils HTML4 writer',
         'class': Writer4css1,
+        'package': 'docutils',
         'url': 'http://docutils.sourceforge.net'},
     's5': {
         'key': 's5',
         'title': 'Docutils S5/HTML slide show writer',
         'class': WriterS5,
+        'package': 'docutils',
         'url': 'http://docutils.sourceforge.net'},
     'pep': {
         'key': 'pep',
         'title': 'Docutils PEP HTML writer',
         'class': WriterPep,
+        'package': 'docutils',
         'url': 'http://docutils.sourceforge.net'},
     'tiny': {
         'key': 'tiny',
         'title': 'Tiny HTML writer',
         'class': TinyWriter,
+        'package': 'docutils-tinyhtmlwriter',
         'url': 'https://github.com/ondratu/docutils-tinyhtmlwriter'},
     'html5': {
         'key': 'html5',
         'title': 'HTML 5 writer',
         'class': Html5Writer,
+        'package': 'docutils-html5-writer',
         'url': 'https://github.com/Kozea/docutils-html5-writer'},
 }
 

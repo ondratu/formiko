@@ -10,6 +10,19 @@ from formiko.widgets import ActionHelper
 PREFIX = commonprefix((argv[0], __file__))
 
 
+def set_tooltip(item: Gtk.RadioButton, enabled: bool, val: dict):
+    """Set right tooltip for parser or writer radio button."""
+    tooltip = ""
+    if not enabled:
+        tooltip = "Please intall %s." % val.get('package', val['title'])
+
+    if 'url' in val:
+        tooltip += " More info at %s" % val['url']
+
+    if tooltip:
+        item.set_tooltip_text(tooltip)
+
+
 class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
                                   ActionHelper):
 
@@ -100,7 +113,7 @@ class Preferences(Gtk.Popover):
                         True, True, 0)
 
         group = None
-        for key, val in sorted(PARSERS.items()):
+        for key, val in PARSERS.items():
             enabled = val['class'] is not None
             item = Gtk.RadioButton(
                 label=val['title'],
@@ -111,6 +124,7 @@ class Preferences(Gtk.Popover):
             if user_preferences.parser == key:
                 item.set_active(True)
             item.parser = key
+            set_tooltip(item, enabled, val)
             if group is None:
                 group = item
             vbox.pack_start(item, True, True, 0)
@@ -119,7 +133,7 @@ class Preferences(Gtk.Popover):
         vbox.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                         True, True, 0)
         group = None
-        for key, val in sorted(WRITERS.items()):
+        for key, val in WRITERS.items():
             enabled = val['class'] is not None
             item = Gtk.RadioButton(
                 label=val['title'],
@@ -130,6 +144,7 @@ class Preferences(Gtk.Popover):
             if user_preferences.writer == key:
                 item.set_active(True)
             item.writer = key
+            set_tooltip(item, enabled, val)
             if group is None:
                 group = item
             vbox.pack_start(item, True, True, 0)
