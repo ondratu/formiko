@@ -2,6 +2,8 @@ from gi.repository import Gtk
 from gi.repository import Gio
 from gi.repository import GLib
 
+from formiko.widgets import ActionableSpinButton
+
 
 class StatusMenuButton(Gtk.MenuButton):
     css = Gtk.CssProvider()
@@ -42,32 +44,61 @@ class LineColPopover(Gtk.Popover):
                            border_width=10)
         self.add(self.box)
 
-        self.add_check_button(
-            'Display line numbers', "editor.line-numbers-toggle",
-            preferences.line_numbers)
-        self.add_check_button(
-            'Display right margin', "editor.right-margin-toggle",
-            preferences.right_margin)
-        self.add_check_button(
-            'Highlight current line', "editor.current-line-toggle",
-            preferences.current_line)
-        self.add_check_button(
-            'Text wrapping', "editor.text-wrapping-toggle",
-            preferences.text_wrapping)
-        self.add_check_button(
-            'Draw white chars', "editor.white-chars-toggle",
-            preferences.white_chars)
+        self.box.pack_start(
+            self.check_button(
+                'Display line numbers', "editor.line-numbers-toggle",
+                preferences.line_numbers),
+            True, True, 0)
+        self.box.pack_start(
+            self.check_button(
+                'Highlight current line', "editor.current-line-toggle",
+                preferences.current_line),
+            True, True, 0)
+        self.box.pack_start(
+            self.margin(preferences),
+            True, True, 0)
+        self.box.pack_start(
+            self.check_button(
+                'Text wrapping', "editor.text-wrapping-toggle",
+                preferences.text_wrapping),
+            True, True, 0)
+        self.box.pack_start(
+            self.check_button(
+                'Draw white chars', "editor.white-chars-toggle",
+                preferences.white_chars),
+            True, True, 0)
 
         self.box.show_all()
 
-    def add_check_button(self, label, action, value):
+    def check_button(self, label, action, value):
         btn = Gtk.CheckButton(
             label=label,
             action_name=action,
             action_target=GLib.Variant('b', True))
         btn.set_active(value)
-        self.box.pack_start(btn, True, True, 0)
-# endclass
+        return btn
+
+    def margin(self, preferences):
+        vbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+
+        toggle = self.check_button(
+            'Display right margin', "editor.right-margin-toggle",
+            preferences.right_margin)
+        vbox.pack_start(toggle, True, True, 0)
+
+        spin = ActionableSpinButton(
+                'editor.right-margin-value',
+                sensitive=preferences.right_margin,
+                value=preferences.right_margin_value)
+        spin.set_range(1.0, 256.0)
+        spin.set_increments(1.0, 8.0)
+        vbox.pack_start(spin, True, True, 0)
+        toggle.connect("toggled", self.on_margin_toggle, spin)
+
+        return vbox
+
+    def on_margin_toggle(self, widget, spin):
+        spin.set_sensitive(widget.get_active())
 
 
 class Statusbar(Gtk.Box):

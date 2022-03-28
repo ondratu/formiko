@@ -1,3 +1,5 @@
+"""Actions for sourceview editor"""
+
 from gi.repository.Gio import SimpleActionGroup, SimpleAction
 from gi.repository.GLib import VariantType, Variant
 
@@ -35,6 +37,9 @@ class EditorActionGroup(SimpleActionGroup):
         self.create_stateful_action(
             "right-margin-toggle", 'b', self.editor_pref.right_margin,
             self.on_right_margin)
+        self.create_stateful_action(
+            "right-margin-value", 'd', self.editor_pref.right_margin_value,
+            self.on_right_margin_value)
         self.create_stateful_action(
             "current-line-toggle", 'b', self.editor_pref.current_line,
             self.on_current_line)
@@ -98,6 +103,12 @@ class EditorActionGroup(SimpleActionGroup):
         right_margin = not self.editor_pref.right_margin
         self.editor_pref.right_margin = right_margin
         self.editor.source_view.set_show_right_margin(right_margin)
+        self.preferences.save()
+
+    def on_right_margin_value(self, action, param):
+        margin_value = int(param.get_double())
+        self.editor_pref.right_margin_value = margin_value
+        self.editor.source_view.set_right_margin_position(margin_value)
         self.preferences.save()
 
     def on_current_line(self, action, param):
