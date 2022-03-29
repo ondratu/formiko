@@ -1,18 +1,10 @@
-# -*- coding: utf-8 -*-
+"""Webkit based renderer."""
+
 from io import StringIO
 from traceback import format_exc
 from sys import version_info
 from json import loads, dumps
 from os.path import abspath, dirname, splitext, exists
-
-from gi import require_version
-require_version('WebKit2', '4.0')   # noqa
-
-from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions
-from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
-    log_default_handler, LogLevelFlags, MAXUINT, Error
-from gi.repository.Gtk import Overlay, Label, Align, main_iteration, \
-    show_uri_on_window
 
 from docutils import DataError
 from docutils.core import publish_string
@@ -21,8 +13,18 @@ from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.s5_html import Writer as WriterS5
 from docutils.writers.pep_html import Writer as WriterPep
 
-from formiko.dialogs import FileNotFoundDialog
-from formiko.sourceview import LANGS
+from gi import require_version
+require_version('WebKit2', '4.0')   # noqa
+
+from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions, \
+    LoadEvent # noqa
+from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
+    log_default_handler, LogLevelFlags, MAXUINT, Error # noqa
+from gi.repository.Gtk import Overlay, Label, Align, main_iteration, \
+    show_uri_on_window, TextView, Settings, StateFlags # noqa
+
+from formiko.dialogs import FileNotFoundDialog # noqa
+from formiko.sourceview import LANGS # noqa
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
@@ -235,14 +237,22 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
-
     def __init__(self, win, parser='rst', writer='html4', style=''):
         super(Renderer, self).__init__()
+
+        self.textview = TextView()
+        self.fgcolor = '#000'
 
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
         self.webview.connect("context-menu", self.on_context_menu)
         self.webview.connect("button-release-event", self.on_button_release)
+        self.webview.connect("load-changed", self.on_load_changed)
+
+        settings = Settings.get_default()
+        settings.connect("notify::gtk-theme-name", self.on_theme_changed)
+        self.on_theme_changed()
+
         self.add(self.webview)
 
         controller = self.webview.get_find_controller()
@@ -262,6 +272,18 @@ class Renderer(Overlay):
         self.style = style
         self.tab_width = 8
         self.__win = win
+
+    def on_theme_changed(self, obj=None, pspec=None):
+        """Change webkit background and default foreground color."""
+        text_style = self.textview.get_style_context()
+        background = text_style.get_background_color(StateFlags.NORMAL)
+        foreground = text_style.get_color(StateFlags.NORMAL)
+        self.webview.set_background_color(background)
+        self.fgcolor = "#%x%x%x" % (
+                int(foreground.red*255),
+                int(foreground.green*255),
+                int(foreground.blue*255))
+        self.on_load_changed(self.webview, LoadEvent.FINISHED)
 
     @property
     def position(self):
@@ -449,6 +471,12 @@ class Renderer(Overlay):
         # FIXME: if dialog is used, application will lock :-(
         log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
                             error.message)
+
+    def on_load_changed(self, webview, load_event):
+        """Set foreground color when object while object is loading."""
+        self.webview.run_javascript(
+            "document.fgColor='%s'" % self.fgcolor,
+            None, None, None)
 
     def do_next_match(self, text):
         controller = self.webview.get_find_controller()
