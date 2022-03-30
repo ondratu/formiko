@@ -383,6 +383,7 @@ class Renderer(Overlay):
 
     def set_tab_width(self, width):
         self.tab_width = width
+        idle_add(self.do_render)
 
     def render_output(self):
         if getattr(self, 'src', None) is None:
@@ -397,7 +398,8 @@ class Renderer(Overlay):
                     json = loads(self.src)
                     return (False, dumps(json, sort_keys=True,
                                          ensure_ascii=False,
-                                         indent=4, separators=(',', ': ')),
+                                         indent=self.tab_width,
+                                         separators=(',', ': ')),
                             'application/json')
                 except ValueError as e:
                     return False, DATA_ERROR % ('JSON', str(e)), "text/html"

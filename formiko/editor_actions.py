@@ -82,10 +82,11 @@ class EditorActionGroup(SimpleActionGroup):
 
     def on_tab_width(self, action, param):
         width = param.get_int32()
-        self.editor_pref.tab_width = width
-        self.editor.source_view.set_tab_width(width)
-        self.renderer.set_tab_width(width)
-        self.preferences.save()
+        if width != self.editor_pref.tab_width:
+            self.editor_pref.tab_width = width
+            self.editor.source_view.set_tab_width(width)
+            self.renderer.set_tab_width(width)
+            self.preferences.save()
 
     def on_auto_indent(self, action, param):
         auto_indent = not self.editor_pref.auto_indent
