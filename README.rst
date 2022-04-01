@@ -114,6 +114,10 @@ NetBSD
 There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
 must use 1.2.x bug fix release.
 
+Installation process can be different for each BSD releases. It's about which
+Python release is default. By this, you can change ``pyXX`` to your right
+version.
+
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
 Formiko call vim and gvim directly. If you want to use vim version with
 pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
@@ -131,7 +135,11 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
 FreeBSD
 ~~~~~~~
-These you must install all these packages:
+Installation process can be different for each BSD releases. It's about which
+Python release is default. By this, you can change ``pyXX`` to your right
+version.
+
+On FreeBSD you must install all these packages:
 
 .. code:: sh
 
