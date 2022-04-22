@@ -131,7 +131,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
 FreeBSD
 ~~~~~~~
-These you must install all these packages:
+Required packages:
 
 .. code:: sh
 
@@ -145,3 +145,24 @@ These you must install all these packages:
 
     pkg install en-hunspell  # or other language you want
     pip-3.7 install docutils-tinyhtmlwriter docutils-html5-writer m2r
+
+OpenBSD
+~~~~~~~
+Required packages:
+
+.. code:: sh
+
+    pkg_add py3-gobject3 py3-docutils py3-pygments py3-pip gtksourceview3 \
+        webkitgtk4 gtkspell3 gobject-introspection librsvg adwaita-icon-theme
+
+Windows
+~~~~~~~
+Use this guide to install MSYS2 with GTK to Windows https://www.gtk.org/docs/installations/windows/, next you will need these packages:
+
+.. code:: sh
+
+    pacman -S mingw-w64-x86_64-python3-gobject
+    pacman -S mingw-w64-x86_64-gtksourceview3
+    pacman -S mingw-w64-x86_64-gtkspell3
+
+- chybí gtk-webkit, a z https://github.com/lazka/msys2-staging.git nelze nainstalovat :-(

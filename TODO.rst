@@ -10,6 +10,9 @@
 * více stylů - možnost nastavit N stylů, a přepínat mezi nimi
 * scroll to generovaný element
 
+* po otevřením prázdného okna se zeptat na typ dokumentu ?
+
+
 * **dokumentace**
     - jak se počítá počet slov a počet znaků
     - screenshoty

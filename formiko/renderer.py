@@ -94,6 +94,10 @@ class Env(object):
     srcdir = ''
 
 
+class RstWriter:
+    """Dummy rst source view class."""
+
+
 PARSERS = {
     'rst': {
         'key': 'rst',
@@ -160,6 +164,11 @@ WRITERS = {
         'title': 'HTML 5 writer',
         'class': Html5Writer,
         'url': 'https://github.com/Kozea/docutils-html5-writer'},
+    'rst': {
+        'key': 'rst',
+        'title': 'Rst Source',
+        'class': RstWriter,
+        'url': 'https://github.com/miyakogi/m2r'},
 }
 
 NOT_FOUND = """
@@ -374,6 +383,9 @@ class Renderer(Overlay):
                 except ValueError as e:
                     return False, DATA_ERROR % ('JSON', str(e)), "text/html"
             else:
+                if issubclass(self.__writer['class'], RstWriter):
+                    text = m2r_convert(self.src)
+                    return False, text, 'text/plain'
                 if not issubclass(self.__parser['class'], HtmlPreview):
                     settings = {
                         'warning_stream': StringIO(),
