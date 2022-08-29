@@ -14,7 +14,10 @@ from docutils.writers.s5_html import Writer as WriterS5
 from docutils.writers.pep_html import Writer as WriterPep
 
 from gi import require_version
-require_version('WebKit2', '4.0')   # noqa
+try:
+    require_version('WebKit2', '4.1')   # noqa
+except ValueError:
+    require_version('WebKit2', '4.0')   # noqa
 
 from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions, \
     LoadEvent # noqa
