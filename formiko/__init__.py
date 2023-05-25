@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 __version__ = "1.5.0"
 __copyright__ = "(c) 2018"
 __author__ = "Ondřej Tůma <mcbig@zeropage.cz>"

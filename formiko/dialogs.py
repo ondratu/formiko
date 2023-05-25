@@ -6,7 +6,6 @@ from gi.repository import Gtk
 from os.path import splitext
 
 from formiko import __version__, __author__, __copyright__, __comment__
-from formiko.icons import icon_list, icon_128
 
 default_manager = LanguageManager.get_default()
 LANGS = {
@@ -24,7 +23,6 @@ class AboutDialog(Gtk.AboutDialog):
     def __init__(self, transient_for):
         super(AboutDialog, self).__init__(transient_for=transient_for,
                                           modal=False)
-        self.set_icon_list(icon_list)
         self.set_program_name("Formiko")
         self.set_version(__version__)
         self.set_copyright(__copyright__ + ' The Formiko Team')
@@ -33,7 +31,8 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_license_type(Gtk.License.BSD)
         self.set_authors([__author__])
         self.set_artists(["Petr Šimčík <petrsimi.org@gmail.com>"])
-        self.set_logo(icon_128)
+        icon_theme = Gtk.IconTheme.get_default()
+        self.set_logo(icon_theme.load_icon("formiko", 128, 0))
 
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):

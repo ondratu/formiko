@@ -70,6 +70,11 @@ optionally:
 
 * vim-gtk or vim-gnome for ``formiko-vim``
 
+development:
+~~~~~~~~~~~~
+
+* pygobject-stubs
+
 Installation
 ------------
 

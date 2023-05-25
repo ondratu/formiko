@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from threading import Thread
 from traceback import print_exc
 from os import stat
@@ -17,7 +16,6 @@ from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
     FileSaveDialog
 from formiko.preferences import Preferences
 from formiko.user import UserCache, UserPreferences, View
-from formiko.icons import icon_list
 from formiko.status_menu import Statusbar
 from formiko.editor_actions import EditorActionGroup
 from formiko.widgets import IconButton
@@ -46,7 +44,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.actions()
         self.connect("delete-event", self.on_delete)
         self.set_titlebar(self.create_headerbar())
-        self.set_icon_list(icon_list)
+        self.set_default_icon_name("formiko")
         self.layout(file_name)
 
         self.__last_changes = 0

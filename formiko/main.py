@@ -14,7 +14,6 @@ from formiko.application import Application
 def handler_exit(*args):
     exit(1)
 
-
 def main():
     signal(SIGINT, handler_exit)
     app = Application()
