@@ -1,8 +1,8 @@
-from gi.repository.GLib import Variant
-from gi.repository import GObject, Gtk
-
-from sys import argv
 from os.path import commonprefix
+from sys import argv
+
+from gi.repository import GObject, Gtk
+from gi.repository.GLib import Variant
 
 from formiko.renderer import PARSERS, WRITERS
 from formiko.widgets import ActionHelper
@@ -14,10 +14,10 @@ def set_tooltip(item: Gtk.RadioButton, enabled: bool, val: dict):
     """Set right tooltip for parser or writer radio button."""
     tooltip = ""
     if not enabled:
-        tooltip = "Please intall %s." % val.get('package', val['title'])
+        tooltip = "Please intall %s." % val.get("package", val["title"])
 
-    if 'url' in val:
-        tooltip += " More info at %s" % val['url']
+    if "url" in val:
+        tooltip += " More info at %s" % val["url"]
 
     if tooltip:
         item.set_tooltip_text(tooltip)
@@ -74,7 +74,7 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
         self.add_filter(filter_all)
 
     def do_file_set(self):
-        self.action_target = Variant("s", self.get_filename() or '')
+        self.action_target = Variant("s", self.get_filename() or "")
         action, go = self.get_action_owner()
         if go:
             go.activate_action(action, self.action_target)
@@ -82,14 +82,14 @@ class ActionableFileChooserButton(Gtk.FileChooserButton, Gtk.Actionable,
 
 class Preferences(Gtk.Popover):
     def __init__(self, user_preferences):
-        super(Preferences, self).__init__(border_width=20)
+        super().__init__(border_width=20)
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.add(vbox)
 
         self.vert_btn = Gtk.RadioButton(
             label="Vertical preview",
             action_name="win.change-preview",
-            action_target=Variant('q', Gtk.Orientation.VERTICAL))
+            action_target=Variant("q", Gtk.Orientation.VERTICAL))
         if user_preferences.preview == Gtk.Orientation.VERTICAL:
             self.vert_btn.set_active(True)
         vbox.pack_start(self.vert_btn, True, True, 0)
@@ -97,15 +97,15 @@ class Preferences(Gtk.Popover):
             group=self.vert_btn,
             label="Horizontal preview",
             action_name="win.change-preview",
-            action_target=Variant('q', Gtk.Orientation.HORIZONTAL))
+            action_target=Variant("q", Gtk.Orientation.HORIZONTAL))
         if user_preferences.preview == Gtk.Orientation.HORIZONTAL:
             self.hori_btn.set_active(True)
         vbox.pack_start(self.hori_btn, True, True, 0)
 
         self.auto_scroll_btn = Gtk.CheckButton(
-            label='Auto scroll',
+            label="Auto scroll",
             action_name="win.auto-scroll-toggle",
-            action_target=Variant('b', True))
+            action_target=Variant("b", True))
         self.auto_scroll_btn.set_active(user_preferences.auto_scroll)
         vbox.pack_start(self.auto_scroll_btn, True, True, 0)
 
@@ -114,13 +114,13 @@ class Preferences(Gtk.Popover):
 
         group = None
         for key, val in PARSERS.items():
-            enabled = val['class'] is not None
+            enabled = val["class"] is not None
             item = Gtk.RadioButton(
-                label=val['title'],
+                label=val["title"],
                 group=group,
                 sensitive=enabled,
                 action_name=("win.change-parser" if enabled else None),
-                action_target=Variant('s', key))
+                action_target=Variant("s", key))
             if user_preferences.parser == key:
                 item.set_active(True)
             item.parser = key
@@ -134,13 +134,13 @@ class Preferences(Gtk.Popover):
                         True, True, 0)
         group = None
         for key, val in WRITERS.items():
-            enabled = val['class'] is not None
+            enabled = val["class"] is not None
             item = Gtk.RadioButton(
-                label=val['title'],
+                label=val["title"],
                 group=group,
                 sensitive=enabled,
                 action_name=("win.change-writer" if enabled else None),
-                action_target=Variant('s', key))
+                action_target=Variant("s", key))
             if user_preferences.writer == key:
                 item.set_active(True)
             item.writer = key
@@ -154,9 +154,9 @@ class Preferences(Gtk.Popover):
                         True, True, 0)
 
         self.custom_btn = Gtk.CheckButton(
-            label='Custom style',
+            label="Custom style",
             action_name="win.custom-style-toggle",
-            action_target=Variant('b', True))
+            action_target=Variant("b", True))
         self.custom_btn.set_active(user_preferences.custom_style)
         self.custom_btn.connect("toggled", self.on_custom_style_toggle)
         vbox.pack_start(self.custom_btn, True, True, 0)

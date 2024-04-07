@@ -1,6 +1,4 @@
-from gi.repository import Gtk
-from gi.repository import Gio
-from gi.repository import GLib
+from gi.repository import Gio, GLib, Gtk
 
 from formiko.widgets import ActionableSpinButton
 
@@ -16,7 +14,7 @@ class StatusMenuButton(Gtk.MenuButton):
         """)
 
     def __init__(self, label, popover):
-        super(StatusMenuButton, self).__init__(popover=popover)
+        super().__init__(popover=popover)
         self.set_relief(Gtk.ReliefStyle.NONE)
         ctx = self.get_style_context()
         ctx.add_provider(StatusMenuButton.css,
@@ -38,7 +36,7 @@ class StatusMenuButton(Gtk.MenuButton):
 
 class LineColPopover(Gtk.Popover):
     def __init__(self, preferences):
-        super(LineColPopover, self).__init__()
+        super().__init__()
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,
                            border_width=10)
@@ -46,12 +44,12 @@ class LineColPopover(Gtk.Popover):
 
         self.box.pack_start(
             self.check_button(
-                'Display line numbers', "editor.line-numbers-toggle",
+                "Display line numbers", "editor.line-numbers-toggle",
                 preferences.line_numbers),
             True, True, 0)
         self.box.pack_start(
             self.check_button(
-                'Highlight current line', "editor.current-line-toggle",
+                "Highlight current line", "editor.current-line-toggle",
                 preferences.current_line),
             True, True, 0)
         self.box.pack_start(
@@ -59,12 +57,12 @@ class LineColPopover(Gtk.Popover):
             True, True, 0)
         self.box.pack_start(
             self.check_button(
-                'Text wrapping', "editor.text-wrapping-toggle",
+                "Text wrapping", "editor.text-wrapping-toggle",
                 preferences.text_wrapping),
             True, True, 0)
         self.box.pack_start(
             self.check_button(
-                'Draw white chars', "editor.white-chars-toggle",
+                "Draw white chars", "editor.white-chars-toggle",
                 preferences.white_chars),
             True, True, 0)
 
@@ -74,7 +72,7 @@ class LineColPopover(Gtk.Popover):
         btn = Gtk.CheckButton(
             label=label,
             action_name=action,
-            action_target=GLib.Variant('b', True))
+            action_target=GLib.Variant("b", True))
         btn.set_active(value)
         return btn
 
@@ -82,12 +80,12 @@ class LineColPopover(Gtk.Popover):
         vbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         toggle = self.check_button(
-            'Display right margin', "editor.right-margin-toggle",
+            "Display right margin", "editor.right-margin-toggle",
             preferences.right_margin)
         vbox.pack_start(toggle, True, True, 0)
 
         spin = ActionableSpinButton(
-                'editor.right-margin-value',
+                "editor.right-margin-value",
                 sensitive=preferences.right_margin,
                 value=preferences.right_margin_value)
         spin.set_range(1.0, 256.0)
@@ -106,7 +104,7 @@ class Statusbar(Gtk.Box):
     css.load_from_data(b"* {border-top: 1px solid #91918c; padding: 1px;}")
 
     def __init__(self, preferences):
-        super(Statusbar, self).__init__(orientation=Gtk.Orientation.HORIZONTAL)
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
         ctx = self.get_style_context()
         ctx.add_provider(Statusbar.css,
                          Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
@@ -139,7 +137,7 @@ class Statusbar(Gtk.Box):
         auto_indent = Gtk.CheckButton(
             label="Auto indent",
             action_name="editor.auto-indent-toggle",
-            action_target=GLib.Variant('b', True))
+            action_target=GLib.Variant("b", True))
         box.pack_start(auto_indent, True, True, 0)
 
         box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
@@ -147,14 +145,14 @@ class Statusbar(Gtk.Box):
 
         tab_spaces_2 = Gtk.RadioButton(
             label="2",
-            action_target=GLib.Variant('i', 2))
+            action_target=GLib.Variant("i", 2))
         # not need to set active, at this moment only one radio is in group
         tab_spaces_2.connect("toggled", self.on_tab_spaces)
         box.pack_start(tab_spaces_2, True, True, 0)
 
         tab_spaces_4 = Gtk.RadioButton(
             label="4",
-            action_target=GLib.Variant('i', 4),
+            action_target=GLib.Variant("i", 4),
             group=tab_spaces_2)
         if preferences.tab_width == 4:
             tab_spaces_4.set_active(True)
@@ -163,7 +161,7 @@ class Statusbar(Gtk.Box):
 
         tab_spaces_8 = Gtk.RadioButton(
             label="8",
-            action_target=GLib.Variant('i', 8),
+            action_target=GLib.Variant("i", 8),
             group=tab_spaces_2)
         if preferences.tab_width == 8:
             tab_spaces_8.set_active(True)
@@ -171,7 +169,7 @@ class Statusbar(Gtk.Box):
         box.pack_start(tab_spaces_8, True, True, 0)
 
         for radio in (tab_spaces_2, tab_spaces_4, tab_spaces_8):
-            radio.set_action_name('editor.tab-width')
+            radio.set_action_name("editor.tab-width")
 
         box.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
                        True, True, 5)
@@ -179,7 +177,7 @@ class Statusbar(Gtk.Box):
         self.tab_use_space = Gtk.CheckButton(
             label="Use spaces",
             action_name="editor.use-spaces-toggle",
-            action_target=GLib.Variant('b', True))
+            action_target=GLib.Variant("b", True))
         box.pack_start(self.tab_use_space, True, True, 0)
 
         box.show_all()
@@ -196,16 +194,16 @@ class Statusbar(Gtk.Box):
         pop.add(box)
 
         period_btn = Gtk.CheckButton(
-            label='Save file each 5 min',
+            label="Save file each 5 min",
             action_name="editor.period-save-toggle",
-            action_target=GLib.Variant('b', True))
+            action_target=GLib.Variant("b", True))
         period_btn.set_active(preferences.period_save)
         box.pack_start(period_btn, True, True, 0)
 
         spell_btn = Gtk.CheckButton(
-            label='Check Spelling',
+            label="Check Spelling",
             action_name="editor.check-spelling-toggle",
-            action_target=GLib.Variant('b', True))
+            action_target=GLib.Variant("b", True))
         spell_btn.set_active(preferences.check_spelling)
         box.pack_start(spell_btn, True, True, 0)
 

@@ -1,7 +1,6 @@
-# -*- coding: utf-8 -*-
-from gi.repository.GdkPixbuf import Pixbuf
-
 from os import makedirs
+
+from gi.repository.GdkPixbuf import Pixbuf
 
 
 def main():

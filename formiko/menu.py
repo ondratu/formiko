@@ -3,7 +3,7 @@ from gi.repository.Gio import Menu
 
 class AppMenu(Menu):
     def __init__(self):
-        super(AppMenu, self).__init__()
+        super().__init__()
         sec = Menu()
         sec.append("New Document", "app.new-window")
         sec.append("Open Document", "win.open-document")

@@ -7,7 +7,7 @@ from gi.repository.GLib import Variant
 
 class IconButton(Gtk.Button):
     def __init__(self, symbol, tooltip, **kwargs):
-        super(IconButton, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         icon = ThemedIcon(name=symbol)
         self.set_image(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
         self.set_tooltip_text(tooltip)
@@ -15,17 +15,18 @@ class IconButton(Gtk.Button):
 
 class ActionHelper():
     """Support class for own Actionable widgets."""
+
     # pylint: disable=too-few-public-methods
     def get_action_owner(self):
         """Get action owner."""
-        action_name = getattr(self, "action_name")
+        action_name = self.action_name
         if action_name:
-            prefix, action = action_name.split('.')
-            toplevel = getattr(self, "get_toplevel")
+            prefix, action = action_name.split(".")
+            toplevel = self.get_toplevel
             top = toplevel().get_action_group(prefix)
             if top and top.has_action(action):
                 return action, top
-        return '', None
+        return "", None
 
 
 class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):

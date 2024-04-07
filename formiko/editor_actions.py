@@ -1,53 +1,53 @@
-"""Actions for sourceview editor"""
+"""Actions for sourceview editor."""
 
-from gi.repository.Gio import SimpleActionGroup, SimpleAction
-from gi.repository.GLib import VariantType, Variant
+from gi.repository.Gio import SimpleAction, SimpleActionGroup
+from gi.repository.GLib import Variant, VariantType
 
 
 class EditorActionGroup(SimpleActionGroup):
     def __init__(self, editor, renderer, preferences):
-        super(EditorActionGroup, self).__init__()
+        super().__init__()
         self.editor = editor
         self.renderer = renderer
         self.preferences = preferences
         self.editor_pref = preferences.editor
 
         self.create_stateful_action(
-            "period-save-toggle", 'b', self.editor_pref.period_save,
+            "period-save-toggle", "b", self.editor_pref.period_save,
             self.on_period_save)
         self.create_stateful_action(
-            "check-spelling-toggle", 'b', self.editor_pref.check_spelling,
+            "check-spelling-toggle", "b", self.editor_pref.check_spelling,
             self.on_check_spelling)
 
-        action = SimpleAction.new("spell-lang", VariantType('s'))
+        action = SimpleAction.new("spell-lang", VariantType("s"))
         action.connect("activate", self.on_spell_lang)
         self.add_action(action)
 
         self.create_stateful_action(
-            "use-spaces-toggle", 'b', self.editor_pref.spaces_instead_of_tabs,
+            "use-spaces-toggle", "b", self.editor_pref.spaces_instead_of_tabs,
             self.on_use_spaces)
         self.create_stateful_action(
-            "tab-width", 'i', self.editor_pref.tab_width, self.on_tab_width)
+            "tab-width", "i", self.editor_pref.tab_width, self.on_tab_width)
         self.create_stateful_action(
-            "auto-indent-toggle", 'b', self.editor_pref.auto_indent,
+            "auto-indent-toggle", "b", self.editor_pref.auto_indent,
             self.on_auto_indent)
         self.create_stateful_action(
-            "line-numbers-toggle", 'b', self.editor_pref.line_numbers,
+            "line-numbers-toggle", "b", self.editor_pref.line_numbers,
             self.on_line_numbers)
         self.create_stateful_action(
-            "right-margin-toggle", 'b', self.editor_pref.right_margin,
+            "right-margin-toggle", "b", self.editor_pref.right_margin,
             self.on_right_margin)
         self.create_stateful_action(
-            "right-margin-value", 'd', self.editor_pref.right_margin_value,
+            "right-margin-value", "d", self.editor_pref.right_margin_value,
             self.on_right_margin_value)
         self.create_stateful_action(
-            "current-line-toggle", 'b', self.editor_pref.current_line,
+            "current-line-toggle", "b", self.editor_pref.current_line,
             self.on_current_line)
         self.create_stateful_action(
-            "text-wrapping-toggle", 'b', self.editor_pref.text_wrapping,
+            "text-wrapping-toggle", "b", self.editor_pref.text_wrapping,
             self.on_text_wrapping)
         self.create_stateful_action(
-            "white-chars-toggle", 'b', self.editor_pref.white_chars,
+            "white-chars-toggle", "b", self.editor_pref.white_chars,
             self.on_white_chars)
 
     def create_stateful_action(self, name, _type, default_value, method):

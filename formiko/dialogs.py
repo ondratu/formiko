@@ -1,31 +1,30 @@
-# -*- coding: utf-8 -*-
-from gi.repository.Pango import FontDescription
-from gi.repository.GtkSource import LanguageManager
-from gi.repository import Gtk
-
 from os.path import splitext
 
-from formiko import __version__, __author__, __copyright__, __comment__
+from gi.repository import Gtk
+from gi.repository.GtkSource import LanguageManager
+from gi.repository.Pango import FontDescription
+
+from formiko import __author__, __comment__, __copyright__, __version__
 
 default_manager = LanguageManager.get_default()
 LANGS = {
-    '.rst': default_manager.get_language('rst'),
-    '.md': default_manager.get_language('markdown'),
-    '.cm': default_manager.get_language('markdown'),    # parser compatibility
-    '.m2r': default_manager.get_language('markdown'),   # parser compatibility
-    '.html': default_manager.get_language('html'),
-    '.htm': default_manager.get_language('html'),
-    '.json': default_manager.get_language('json'),
+    ".rst": default_manager.get_language("rst"),
+    ".md": default_manager.get_language("markdown"),
+    ".cm": default_manager.get_language("markdown"),    # parser compatibility
+    ".m2r": default_manager.get_language("markdown"),   # parser compatibility
+    ".html": default_manager.get_language("html"),
+    ".htm": default_manager.get_language("html"),
+    ".json": default_manager.get_language("json"),
 }
 
 
 class AboutDialog(Gtk.AboutDialog):
     def __init__(self, transient_for):
-        super(AboutDialog, self).__init__(transient_for=transient_for,
+        super().__init__(transient_for=transient_for,
                                           modal=False)
         self.set_program_name("Formiko")
         self.set_version(__version__)
-        self.set_copyright(__copyright__ + ' The Formiko Team')
+        self.set_copyright(__copyright__ + " The Formiko Team")
         self.set_comments(__comment__)
         self.set_website("https://github.com/ondratu/formiko")
         self.set_license_type(Gtk.License.BSD)
@@ -38,7 +37,7 @@ class AboutDialog(Gtk.AboutDialog):
 class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
         name = "`%s`" % file_name if file_name else ""
-        super(QuitDialogWithoutSave, self).__init__(
+        super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.WARNING,
@@ -49,21 +48,21 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
 
 class TraceBackDialog(Gtk.Dialog):
     def __init__(self, parent, traceback):
-        super(TraceBackDialog, self).__init__(
+        super().__init__(
             "Traceback error",
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             use_header_bar=True)
         box = self.get_content_area()
         label = Gtk.Label(traceback)
-        label.override_font(FontDescription.from_string('Monospace'))
+        label.override_font(FontDescription.from_string("Monospace"))
         label.show_all()
         box.add(label)
 
 
 class FileNotFoundDialog(Gtk.MessageDialog):
     def __init__(self, parent, filename):
-        super(FileNotFoundDialog, self).__init__(
+        super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.ERROR,
@@ -73,7 +72,7 @@ class FileNotFoundDialog(Gtk.MessageDialog):
 
 class FileChangedDialog(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
-        super(FileChangedDialog, self).__init__(
+        super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
             Gtk.MessageType.INFO,
@@ -88,7 +87,7 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             label = Gtk.STOCK_SAVE
         else:
             label = Gtk.STOCK_OPEN
-        super(FileChooserDialog, self).__init__(
+        super().__init__(
             title,
             parent,
             action,
@@ -102,7 +101,7 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             return file_name
 
         filter_ = self.get_filter()
-        for extension in getattr(filter_, 'extensions', ()):
+        for extension in getattr(filter_, "extensions", ()):
             if file_name.lower().endswith(extension):
                 return file_name
         return file_name + filter_.default
@@ -154,13 +153,13 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
 class FileOpenDialog(FileChooserDialog):
     def __init__(self, parent):
-        super(FileOpenDialog, self).__init__(
-            "Open Document", parent, Gtk.FileChooserAction.OPEN
+        super().__init__(
+            "Open Document", parent, Gtk.FileChooserAction.OPEN,
         )
 
 
 class FileSaveDialog(FileChooserDialog):
     def __init__(self, parent):
-        super(FileSaveDialog, self).__init__(
-            "Save As Document", parent, Gtk.FileChooserAction.SAVE
+        super().__init__(
+            "Save As Document", parent, Gtk.FileChooserAction.SAVE,
         )

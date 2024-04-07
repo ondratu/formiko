@@ -1,33 +1,44 @@
 """Webkit based renderer."""
 
 from io import StringIO
+from json import dumps, loads
+from os.path import abspath, dirname, exists, splitext
 from traceback import format_exc
-from sys import version_info
-from json import loads, dumps
-from os.path import abspath, dirname, splitext, exists
 
 from docutils import DataError
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
-from docutils.writers.s5_html import Writer as WriterS5
 from docutils.writers.pep_html import Writer as WriterPep
+from docutils.writers.s5_html import Writer as WriterS5
+from gi.repository.GLib import (
+    MAXUINT,
+    Bytes,
+    Error,
+    LogLevelFlags,
+    get_home_dir,
+    idle_add,
+    log_default_handler,
+)
+from gi.repository.Gtk import (
+    Align,
+    Label,
+    Overlay,
+    Settings,
+    StateFlags,
+    TextView,
+    main_iteration,
+    show_uri_on_window,
+)
+from gi.repository.WebKit2 import (
+    FindOptions,
+    LoadEvent,
+    PrintOperation,
+    WebView,
+)
 
-from gi import require_version
-try:
-    require_version('WebKit2', '4.1')   # noqa
-except ValueError:
-    require_version('WebKit2', '4.0')   # noqa
-
-from gi.repository.WebKit2 import WebView, PrintOperation, FindOptions, \
-    LoadEvent # noqa
-from gi.repository.GLib import idle_add, Bytes, get_home_dir, \
-    log_default_handler, LogLevelFlags, MAXUINT, Error # noqa
-from gi.repository.Gtk import Overlay, Label, Align, main_iteration, \
-    show_uri_on_window, TextView, Settings, StateFlags # noqa
-
-from formiko.dialogs import FileNotFoundDialog # noqa
-from formiko.sourceview import LANGS # noqa
+from formiko.dialogs import FileNotFoundDialog
+from formiko.sourceview import LANGS
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
@@ -45,11 +56,12 @@ try:
 
     class StringStructify(AutoStructify):
         """Support AutoStructify for publish_string function."""
+
         def apply(self):
             """Apply the transformation by configuration."""
             file_name = self.document.settings.file_name
 
-            self.url_resolver = self.config['url_resolver']
+            self.url_resolver = self.config["url_resolver"]
             assert callable(self.url_resolver)
 
             self.state_machine = DummyStateMachine()
@@ -60,10 +72,11 @@ try:
 
     class ExtendCommonMarkParser(CommonMarkParser):
         """CommonMarkParser with working AutoStructify."""
+
         settings_spec = RstParser.settings_spec
 
         def get_transforms(self):
-            return CommonMarkParser.get_transforms(self) + [StringStructify]
+            return [*CommonMarkParser.get_transforms(self), StringStructify]
 
 
 except ImportError:
@@ -74,63 +87,64 @@ try:
     from m2r import convert as m2r_convert
 
     class Mark2Resturctured(RstParser):
-        """Converting from MarkDown to reStructuredText before parse"""
+        """Converting from MarkDown to reStructuredText before parse."""
 
         def parse(self, inputstring, document):
-            return super(Mark2Resturctured, self).parse(
+            return super().parse(
                 m2r_convert(inputstring), document)
 
 except ImportError:
     Mark2Resturctured = None
 
 
-class HtmlPreview(object):
-    """Dummy html preview class"""
-    pass
+class HtmlPreview:
+    """Dummy html preview class."""
 
 
-class JSONPreview(object):
-    """Dummy json preview class"""
-    pass
+
+class JSONPreview:
+    """Dummy json preview class."""
 
 
-class Env(object):
+
+class Env:
     """Empty class for env overriding."""
-    srcdir = ''
+
+    srcdir = ""
 
 
 PARSERS = {
-    'rst': {
-        'key': 'rst',
-        'title': 'Docutils reStructuredText parser',
-        'class': RstParser,
-        'package': 'docutils',
-        'url': 'http://docutils.sourceforge.net'},
-    'm2r': {
-        'key': 'm2r',
-        'title': 'MarkDown to reStructuredText',
-        'class': Mark2Resturctured,
-        'url': 'https://github.com/miyakogi/m2r'},
-    'cm': {
-        'key': 'cm',
-        'title': 'Common Mark parser',
-        'class': ExtendCommonMarkParser,
-        'url': 'https://github.com/rtfd/recommonmark'},
-    'html': {
-        'key': 'html',
-        'title': 'HTML preview',
-        'class': HtmlPreview},
-    'json': {
-        'key': 'json',
-        'title': 'JSON preview',
-        'class': JSONPreview}
+    "rst": {
+        "key": "rst",
+        "title": "Docutils reStructuredText parser",
+        "class": RstParser,
+        "package": "docutils",
+        "url": "http://docutils.sourceforge.net"},
+    "m2r": {
+        "key": "m2r",
+        "title": "MarkDown to reStructuredText",
+        "class": Mark2Resturctured,
+        "url": "https://github.com/miyakogi/m2r"},
+    "cm": {
+        "key": "cm",
+        "title": "Common Mark parser",
+        "class": ExtendCommonMarkParser,
+        "url": "https://github.com/rtfd/recommonmark"},
+    "html": {
+        "key": "html",
+        "title": "HTML preview",
+        "class": HtmlPreview},
+    "json": {
+        "key": "json",
+        "title": "JSON preview",
+        "class": JSONPreview},
 }
 
 EXTS = {
-    '.rst': 'rst',
-    '.html': 'html',
-    '.htm': 'html',
-    '.json': 'json'
+    ".rst": "rst",
+    ".html": "html",
+    ".htm": "html",
+    ".json": "json",
 }
 
 
@@ -141,36 +155,36 @@ elif ExtendCommonMarkParser:
 
 
 WRITERS = {
-    'html4': {
-        'key': 'html4',
-        'title': 'Docutils HTML4 writer',
-        'class': Writer4css1,
-        'package': 'docutils',
-        'url': 'http://docutils.sourceforge.net'},
-    's5': {
-        'key': 's5',
-        'title': 'Docutils S5/HTML slide show writer',
-        'class': WriterS5,
-        'package': 'docutils',
-        'url': 'http://docutils.sourceforge.net'},
-    'pep': {
-        'key': 'pep',
-        'title': 'Docutils PEP HTML writer',
-        'class': WriterPep,
-        'package': 'docutils',
-        'url': 'http://docutils.sourceforge.net'},
-    'tiny': {
-        'key': 'tiny',
-        'title': 'Tiny HTML writer',
-        'class': TinyWriter,
-        'package': 'docutils-tinyhtmlwriter',
-        'url': 'https://github.com/ondratu/docutils-tinyhtmlwriter'},
-    'html5': {
-        'key': 'html5',
-        'title': 'HTML 5 writer',
-        'class': Html5Writer,
-        'package': 'docutils-html5-writer',
-        'url': 'https://github.com/Kozea/docutils-html5-writer'},
+    "html4": {
+        "key": "html4",
+        "title": "Docutils HTML4 writer",
+        "class": Writer4css1,
+        "package": "docutils",
+        "url": "http://docutils.sourceforge.net"},
+    "s5": {
+        "key": "s5",
+        "title": "Docutils S5/HTML slide show writer",
+        "class": WriterS5,
+        "package": "docutils",
+        "url": "http://docutils.sourceforge.net"},
+    "pep": {
+        "key": "pep",
+        "title": "Docutils PEP HTML writer",
+        "class": WriterPep,
+        "package": "docutils",
+        "url": "http://docutils.sourceforge.net"},
+    "tiny": {
+        "key": "tiny",
+        "title": "Tiny HTML writer",
+        "class": TinyWriter,
+        "package": "docutils-tinyhtmlwriter",
+        "url": "https://github.com/ondratu/docutils-tinyhtmlwriter"},
+    "html5": {
+        "key": "html5",
+        "title": "HTML 5 writer",
+        "class": Html5Writer,
+        "package": "docutils-html5-writer",
+        "url": "https://github.com/Kozea/docutils-html5-writer"},
 }
 
 NOT_FOUND = """
@@ -240,11 +254,11 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
-    def __init__(self, win, parser='rst', writer='html4', style=''):
-        super(Renderer, self).__init__()
+    def __init__(self, win, parser="rst", writer="html4", style=""):
+        super().__init__()
 
         self.textview = TextView()
-        self.fgcolor = '#000'
+        self.fgcolor = "#000"
 
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
@@ -282,7 +296,7 @@ class Renderer(Overlay):
         background = text_style.get_background_color(StateFlags.NORMAL)
         foreground = text_style.get_color(StateFlags.NORMAL)
         self.webview.set_background_color(background)
-        self.fgcolor = "#%x%x%x" % (
+        self.fgcolor = "#{:x}{:x}{:x}".format(
                 int(foreground.red*255),
                 int(foreground.green*255),
                 int(foreground.blue*255))
@@ -334,7 +348,7 @@ class Renderer(Overlay):
             return True
         if self.link_uri:
             if self.link_uri.startswith("file://"):    # try to open source
-                self.find_and_opendocument(self.link_uri[7:].split('#')[0])
+                self.find_and_opendocument(self.link_uri[7:].split("#")[0])
             else:
                 show_uri_on_window(None, self.link_uri, 0)
         return True
@@ -342,7 +356,7 @@ class Renderer(Overlay):
     def find_and_opendocument(self, file_path):
         ext = splitext(file_path)[1]
         if not ext:
-            for EXT in LANGS.keys():
+            for EXT in LANGS:
                 tmp = file_path + EXT
                 if exists(tmp):
                     file_path = tmp
@@ -360,22 +374,22 @@ class Renderer(Overlay):
     def set_writer(self, writer):
         assert writer in WRITERS
         self.__writer = WRITERS[writer]
-        klass = self.__writer['class']
+        klass = self.__writer["class"]
         self.writer_instance = klass() if klass is not None else None
         idle_add(self.do_render)
 
     def get_writer(self):
-        return self.__writer['key']
+        return self.__writer["key"]
 
     def set_parser(self, parser):
         assert parser in PARSERS
         self.__parser = PARSERS[parser]
-        klass = self.__parser['class']
+        klass = self.__parser["class"]
         self.parser_instance = klass() if klass is not None else None
         idle_add(self.do_render)
 
     def get_parser(self):
-        return self.__parser['key']
+        return self.__parser["key"]
 
     def set_style(self, style):
         self.style = style
@@ -389,62 +403,59 @@ class Renderer(Overlay):
         idle_add(self.do_render)
 
     def render_output(self):
-        if getattr(self, 'src', None) is None:
+        if getattr(self, "src", None) is None:
             return False, "", "text/plain"
         try:
-            if self.__parser['class'] is None:
+            if self.__parser["class"] is None:
                 html = NOT_FOUND.format(**self.__parser)
-            elif self.__writer['class'] is None:
+            elif self.__writer["class"] is None:
                 html = NOT_FOUND.format(**self.__writer)
-            elif issubclass(self.__parser['class'], JSONPreview):
+            elif issubclass(self.__parser["class"], JSONPreview):
                 try:
                     json = loads(self.src)
                     return (False, dumps(json, sort_keys=True,
                                          ensure_ascii=False,
                                          indent=self.tab_width,
-                                         separators=(',', ': ')),
-                            'application/json')
+                                         separators=(",", ": ")),
+                            "application/json")
                 except ValueError as e:
-                    return False, DATA_ERROR % ('JSON', str(e)), "text/html"
+                    return False, DATA_ERROR % ("JSON", str(e)), "text/html"
             else:
-                if not issubclass(self.__parser['class'], HtmlPreview):
+                if not issubclass(self.__parser["class"], HtmlPreview):
                     settings = {
-                        'warning_stream': StringIO(),
-                        'embed_stylesheet': True,
-                        'tab_width': self.tab_width,
-                        'file_name': self.file_name
+                        "warning_stream": StringIO(),
+                        "embed_stylesheet": True,
+                        "tab_width": self.tab_width,
+                        "file_name": self.file_name,
                     }
                     if self.style:
-                        settings['stylesheet'] = self.style
-                        settings['stylesheet_path'] = []
-                    kwargs = {'source': self.src,
-                              'parser': self.parser_instance,
-                              'writer': self.writer_instance,
-                              'writer_name': 'html',
-                              'settings_overrides': settings}
-                    if self.__writer['key'] == 'pep':
-                        kwargs['reader_name'] = 'pep'
-                        kwargs.pop('parser')    # pep is allways rst
-                    html = publish_string(**kwargs).decode('utf-8')
-                    return True, html, 'text/html'
+                        settings["stylesheet"] = self.style
+                        settings["stylesheet_path"] = []
+                    kwargs = {"source": self.src,
+                              "parser": self.parser_instance,
+                              "writer": self.writer_instance,
+                              "writer_name": "html",
+                              "settings_overrides": settings}
+                    if self.__writer["key"] == "pep":
+                        kwargs["reader_name"] = "pep"
+                        kwargs.pop("parser")    # pep is allways rst
+                    html = publish_string(**kwargs).decode("utf-8")
+                    return True, html, "text/html"
                 else:
-                    if version_info.major == 2:
-                        html = self.src.decode("utf-8")
-                    else:
-                        html = self.src
+                    html = self.src
 
             # output to file or html preview
-            return False, html, 'text/html'
+            return False, html, "text/html"
         except DataError as e:
-            return False, DATA_ERROR % ('Data', e), 'text/html'
+            return False, DATA_ERROR % ("Data", e), "text/html"
 
         except NotImplementedError:
             exc_str = format_exc()
-            return False, NOT_IMPLEMENTED_ERROR % exc_str, 'text/html'
+            return False, NOT_IMPLEMENTED_ERROR % exc_str, "text/html"
 
         except BaseException:
             exc_str = format_exc()
-            return False, EXCEPTION_ERROR % exc_str, 'text/html'
+            return False, EXCEPTION_ERROR % exc_str, "text/html"
 
     def do_render(self):
         state, html, mime_type = self.render_output()

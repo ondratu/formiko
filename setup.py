@@ -1,31 +1,30 @@
 #!/usr/bin/env python
 
-from setuptools import setup
-from docutils.core import publish_string
-from docutils.writers.manpage import Writer
-
-from io import open
-from gzip import open as zopen
+from distutils import log
 from distutils.command.build import build
 from distutils.command.clean import clean
 from distutils.command.install_data import install_data
 from distutils.core import Command
-from distutils.version import StrictVersion
 from distutils.errors import DistutilsError
-from distutils import log
-from os import path, makedirs, listdir
+from distutils.version import StrictVersion
+from gzip import open as zopen
+from os import listdir, makedirs, path
 from shutil import rmtree
 
-from formiko import __version__, __url__, __comment__
+from docutils.core import publish_string
+from docutils.writers.manpage import Writer
+from setuptools import setup
+
+from formiko import __comment__, __url__, __version__
 
 
 def doc():
-    with open("README.rst", "r", encoding="utf-8") as readme:
+    with open("README.rst", encoding="utf-8") as readme:
         return readme.read().strip()
 
 
 def icons_data():
-    path = 'share/icons/hicolor'
+    path = "share/icons/hicolor"
     icons = [("%s/scalable/apps" % path, ["icons/formiko.svg"])]
     for size in (16, 22, 24, 32, 48, 64, 128, 256, 512):
         icons.append(("%s/%dx%d/apps" % (path, size, size),
@@ -36,7 +35,7 @@ def icons_data():
 def man_page(writer, src, dst):
     with open(src, encoding="utf-8") as source:
         rst = source.read().format(version=__version__)
-    with zopen(dst, 'wb') as destination:
+    with zopen(dst, "wb") as destination:
         destination.write(publish_string(source=rst, writer=writer))
 
 
@@ -48,7 +47,7 @@ class XBuild(build):
     def finalize_options(self):
         build.finalize_options(self)
         if self.man_base is None:
-            self.man_base = path.join(self.build_base, 'man')
+            self.man_base = path.join(self.build_base, "man")
 
     def run(self):
         build.run(self)
@@ -59,10 +58,9 @@ class XBuild(build):
         writer = Writer()
         if not path.exists(self.man_base):
             makedirs(self.man_base)
-        for page in ('formiko', 'formiko-vim'):
-            log.info('manpage %s.rst -> %s/%s.1.gz'
-                     % (page, self.man_base, page))
-            man_page(writer, page+'.rst', '%s/%s.1.gz' % (self.man_base, page))
+        for page in ("formiko", "formiko-vim"):
+            log.info(f"manpage {page}.rst -> {self.man_base}/{page}.1.gz")
+            man_page(writer, page+".rst", f"{self.man_base}/{page}.1.gz")
 
 
 class XClean(clean):
@@ -73,7 +71,7 @@ class XClean(clean):
     def finalize_options(self):
         clean.finalize_options(self)
         if self.man_base is None:
-            self.man_base = path.join(self.build_base, 'man')
+            self.man_base = path.join(self.build_base, "man")
 
     def run(self):
         clean.run(self)
@@ -93,15 +91,15 @@ class XInstallData(install_data):
 
     def finalize_options(self):
         install_data.finalize_options(self)
-        self.set_undefined_options('build', ('build_base', 'build_base'))
+        self.set_undefined_options("build", ("build_base", "build_base"))
         if self.man_base is None:
-            self.man_base = path.join(self.build_base, 'man')
+            self.man_base = path.join(self.build_base, "man")
 
     def run(self):
         self.data_files.append(
-            ('share/man/man1',
-             list("%s/%s" % (self.man_base, page)
-                  for page in listdir(self.man_base))))
+            ("share/man/man1",
+             [f"{self.man_base}/{page}"
+                  for page in listdir(self.man_base)]))
         install_data.run(self)
         return False
 
@@ -124,7 +122,8 @@ class XCheckVersion(Command):
         meta_version = StrictVersion(self.read_metainfo())
         log.info("metainfo version is %s", meta_version)
         if not pkg_version == ch_version == meta_version:
-            raise DistutilsError("Versions are not same!")
+            msg = "Versions are not same!"
+            raise DistutilsError(msg)
 
     def read_changelog(self):
         """Read last version From ChangeLog."""
@@ -132,15 +131,17 @@ class XCheckVersion(Command):
             for line in chl:
                 if line.startswith("Version"):
                     return line[8:].strip()
+            return None
 
     def read_metainfo(self):
         """Read last version from formiko.metainfo.xml."""
         with open("formiko.metainfo.xml", encoding="utf-8") as meta:
             for line in meta:
                 if "<release " in line:
-                    vals = dict((x.split('=') for x in
-                                filter(lambda x: '=' in x, line.split(' '))))
+                    vals = dict(x.split("=") for x in
+                                filter(lambda x: "=" in x, line.split(" ")))
                     return vals.get("version", "").strip('"')
+            return None
 
 
 setup(
@@ -150,13 +151,8 @@ setup(
     author="Ondrej Tuma",
     author_email="mcbig@zeropage.cz",
     url=__url__,
-    packages=['formiko'],
-    data_files=[('share/doc/formiko', ['README.rst', 'COPYING', 'ChangeLog',
-                                       'AUTHORS']),
-                ("share/applications", ["formiko.desktop",
-                                        "formiko-vim.desktop"]),
-                ("share/metainfo", ['formiko.metainfo.xml']),
-                ('share/formiko/icons', ['icons/formiko.svg'])] + icons_data(),
+    packages=["formiko"],
+    data_files=[("share/doc/formiko", ["README.rst", "COPYING", "ChangeLog", "AUTHORS"]), ("share/applications", ["formiko.desktop", "formiko-vim.desktop"]), ("share/metainfo", ["formiko.metainfo.xml"]), ("share/formiko/icons", ["icons/formiko.svg"]), *icons_data()],
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
     long_description=doc(),
@@ -168,7 +164,6 @@ setup(
         "License :: OSI Approved :: BSD License",
         "Natural Language :: English",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
         "Topic :: Documentation",
         "Topic :: Software Development :: Documentation",
@@ -178,17 +173,17 @@ setup(
         "Topic :: Text Processing :: Markup",
         "Topic :: Text Processing :: Markup :: HTML",
         "Topic :: Utilities"],
-    requires=['docutils (>= 0.12)', 'python_gi', 'webkit2', 'gtksourceview'],
-    extra_requires=['m2r', 'recommonmark', 'Pygments',
-                    'docutils-tinyhtmlwriter', 'docutils-htmlwriter',
-                    'docutils-html5-writer'],
-    install_requires=['docutils >= 0.12'],
+    requires=["docutils (>= 0.12)", "python_gi", "webkit2", "gtksourceview"],
+    extra_requires=["m2r", "recommonmark", "Pygments",
+                    "docutils-tinyhtmlwriter", "docutils-htmlwriter",
+                    "docutils-html5-writer"],
+    install_requires=["docutils >= 0.12"],
     entry_points={
-        'gui_scripts': [
-            'formiko = formiko.main:main',
-            'formiko-vim = formiko.main:main_vim'
-        ]
+        "gui_scripts": [
+            "formiko = formiko.__main__:main",
+            "formiko-vim = formiko.__main__:main_vim",
+        ],
     },
-    cmdclass={'build': XBuild, 'clean': XClean, 'install_data': XInstallData,
-              'check_version': XCheckVersion}
+    cmdclass={"build": XBuild, "clean": XClean, "install_data": XInstallData,
+              "check_version": XCheckVersion},
 )

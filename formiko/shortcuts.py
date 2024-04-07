@@ -1,11 +1,14 @@
-# -*- coding: utf-8 -*-
-from gi.repository.Gtk import ShortcutsWindow, ShortcutsSection, \
-    ShortcutsGroup, ShortcutsShortcut
+from gi.repository.Gtk import (
+    ShortcutsGroup,
+    ShortcutsSection,
+    ShortcutsShortcut,
+    ShortcutsWindow,
+)
 
 
 class SourceGroup(ShortcutsGroup):
     def __init__(self):
-        super(SourceGroup, self).__init__(title="Editor")
+        super().__init__(title="Editor")
 
         self.add(ShortcutsShortcut(
             accelerator="<Control>c", title="Copy"))
@@ -23,7 +26,7 @@ class SourceGroup(ShortcutsGroup):
 
 class FindGroup(ShortcutsGroup):
     def __init__(self):
-        super(FindGroup, self).__init__(title="Find")
+        super().__init__(title="Find")
 
         self.add(ShortcutsShortcut(
             accelerator="<Control>f",
@@ -36,7 +39,7 @@ class FindGroup(ShortcutsGroup):
 
 class VimGroup(ShortcutsGroup):
     def __init__(self):
-        super(VimGroup, self).__init__(title="Vim")
+        super().__init__(title="Vim")
 
         self.add(ShortcutsShortcut(
             accelerator="y", title="Copy"))
@@ -54,7 +57,7 @@ class VimGroup(ShortcutsGroup):
 
 class PreviewGroup(ShortcutsGroup):
     def __init__(self):
-        super(PreviewGroup, self).__init__(title="Preview")
+        super().__init__(title="Preview")
 
         self.add(ShortcutsShortcut(
             accelerator="<Control>r", title="Refresh preview"))
@@ -68,7 +71,7 @@ class PreviewGroup(ShortcutsGroup):
 
 class GeneralGroup(ShortcutsGroup):
     def __init__(self, editor_type):
-        super(GeneralGroup, self).__init__(title="Genaral")
+        super().__init__(title="Genaral")
 
         self.add(ShortcutsShortcut(
             accelerator="<Control>n", title="New Document"))
@@ -98,7 +101,7 @@ class GeneralGroup(ShortcutsGroup):
 class ShortcutsWindow(ShortcutsWindow):
     def __init__(self, editor_type):
         # view_name and view does not work. Don't know why
-        super(ShortcutsWindow, self).__init__(modal=1)
+        super().__init__(modal=1)
         sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)
 
         sec.add(GeneralGroup(editor_type))

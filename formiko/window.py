@@ -1,28 +1,32 @@
-from threading import Thread
-from traceback import print_exc
+"""Gtk.ApplicationWindow implementation."""
+import re
+from enum import Enum
 from os import stat
 from os.path import splitext
-from sys import version_info
-from io import open
-from re import compile as re_compile, U as re_U
-from enum import Enum
+from threading import Thread
+from traceback import print_exc
 
-from gi.repository import Gtk, GLib, Gio
+from gi.repository import Gio, GLib, Gtk
 
-from formiko.vim import VimEditor
-from formiko.sourceview import SourceView, View as GtkSourceView
-from formiko.renderer import Renderer, EXTS, WebView as GtkWebView
-from formiko.dialogs import QuitDialogWithoutSave, FileOpenDialog, \
-    FileSaveDialog
-from formiko.preferences import Preferences
-from formiko.user import UserCache, UserPreferences, View
-from formiko.status_menu import Statusbar
+from formiko.dialogs import (
+    FileOpenDialog,
+    FileSaveDialog,
+    QuitDialogWithoutSave,
+)
 from formiko.editor_actions import EditorActionGroup
+from formiko.preferences import Preferences
+from formiko.renderer import EXTS, Renderer
+from formiko.renderer import WebView as GtkWebView
+from formiko.sourceview import SourceView
+from formiko.sourceview import View as GtkSourceView
+from formiko.status_menu import Statusbar
+from formiko.user import UserCache, UserPreferences, View
+from formiko.vim import VimEditor
 from formiko.widgets import IconButton
 
-NOT_SAVED_NAME = 'Untitled Document'
-RE_WORD = re_compile(r'([\w]+)', re_U)
-RE_CHAR = re_compile(r'[\w \t\.,\?\(\)"\']', re_U)
+NOT_SAVED_NAME = "Untitled Document"
+RE_WORD = re.compile(r"([\w]+)", re.U)
+RE_CHAR = re.compile(r'[\w \t\.,\?\(\)"\']', re.U)
 
 
 class SearchWay(Enum):
@@ -31,15 +35,28 @@ class SearchWay(Enum):
 
 
 class AppWindow(Gtk.ApplicationWindow):
-    def __init__(self, editor, file_name=''):
-        assert editor in ('vim', 'source', None)
+    """Gtk.ApplicationWindow implementation."""
+
+    # pylint: disable = too-many-public-methods
+    # pylint: disable = too-many-instance-attributes
+    # pylint: disable = unused-argument
+
+    def __init__(self, editor, file_name=""):
+        """Initor.
+
+        :param str editor:
+            One of editor type source, vim or None
+        :param str file_name:
+            File name path to open.
+        """
+        assert editor in ("vim", "source", None)
         self.runing = True
         self.editor_type = editor
         self.focused = None
         self.search_way = SearchWay.NEXT
         self.cache = UserCache()
         self.preferences = UserPreferences()
-        super(AppWindow, self).__init__()
+        super().__init__()
         self.create_renderer()
         self.actions()
         self.connect("delete-event", self.on_delete)
@@ -49,11 +66,12 @@ class AppWindow(Gtk.ApplicationWindow):
 
         self.__last_changes = 0
         if self.editor_type is None:
-            name, ext = splitext(file_name)
+            _, ext = splitext(file_name)
             self.on_file_type(None, ext)
         GLib.timeout_add(200, self.check_in_thread)
 
     def actions(self):
+        """Set window actions."""
         action = Gio.SimpleAction.new("open-document", None)
         action.connect("activate", self.on_open_document)
         self.add_action(action)
@@ -65,7 +83,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
         action = Gio.SimpleAction.new("save-document-as", None)
         action.connect("activate", self.on_save_document_as)
-        action.set_enabled(self.editor_type == 'source')
+        action.set_enabled(self.editor_type == "source")
         self.add_action(action)
 
         action = Gio.SimpleAction.new("export-document-as", None)
@@ -102,24 +120,25 @@ class AppWindow(Gtk.ApplicationWindow):
         pref = self.preferences
 
         self.create_stateful_action(
-            "switch-view-toggle", 'q', self.cache.view,
+            "switch-view-toggle", "q", self.cache.view,
             self.on_switch_view_toggle)
         self.create_stateful_action(
-            "change-preview", 'q', pref.preview, self.on_change_preview)
+            "change-preview", "q", pref.preview, self.on_change_preview)
         self.create_stateful_action(
-            "auto-scroll-toggle", 'b', pref.auto_scroll,
+            "auto-scroll-toggle", "b", pref.auto_scroll,
             self.on_auto_scroll_toggle)
         self.create_stateful_action(
-            "change-writer", 's', pref.writer, self.on_change_writer)
+            "change-writer", "s", pref.writer, self.on_change_writer)
         self.create_stateful_action(
-            "change-parser", 's', pref.parser, self.on_change_parser)
+            "change-parser", "s", pref.parser, self.on_change_parser)
         self.create_stateful_action(
-            "custom-style-toggle", 'b', pref.custom_style,
+            "custom-style-toggle", "b", pref.custom_style,
             self.on_custom_style_toggle)
         self.create_stateful_action(
-            "change-style", 's', pref.style, self.on_change_style)
+            "change-style", "s", pref.style, self.on_change_style)
 
     def create_stateful_action(self, name, _type, default_value, method):
+        """Support method for creating stateful action."""
         action = Gio.SimpleAction.new_stateful(
             name, GLib.VariantType.new(_type),
             GLib.Variant(_type, default_value))
@@ -127,12 +146,14 @@ class AppWindow(Gtk.ApplicationWindow):
         self.add_action(action)
 
     def on_close_window(self, action, *params):
+        """'close-window' action handler."""
         if self.ask_if_modified():
             self.save_win_state()
             self.destroy()
 
     def open_document(self, file_path):
-        if self.editor_type == 'source' and \
+        """Open document inw actual window."""
+        if self.editor_type == "source" and \
                 self.get_title() == NOT_SAVED_NAME:
             self.editor.read_from_file(file_path)
         else:
@@ -143,6 +164,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.get_application().new_window(self.editor_type, file_path)
 
     def on_open_document(self, actions, *params):
+        """'on-document' action handler."""
         dialog = FileOpenDialog(self)
         dialog.add_filter_plain()
         dialog.add_filter_rst()
@@ -155,17 +177,19 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.destroy()
 
     def on_save_document(self, action, *params):
-        if self.editor_type == 'source':
+        """'on-save-document' action handler."""
+        if self.editor_type == "source":
             self.editor.save()
 
     def on_save_document_as(self, action, *params):
-        if self.editor_type == 'source':
+        """'on-save-document-as' action handler."""
+        if self.editor_type == "source":
             self.editor.save_as()
 
     def on_export_document_as(self, action, *params):
         file_name = self.editor.file_name or None
         dialog = FileSaveDialog(self)
-        if self.renderer.get_parser() == 'json':
+        if self.renderer.get_parser() == "json":
             dialog.add_filter_json()
         else:
             dialog.add_filter_html()
@@ -175,7 +199,7 @@ class AppWindow(Gtk.ApplicationWindow):
         if file_name is None:
             dialog.set_current_folder(GLib.get_home_dir())
         else:
-            name, ext = splitext(file_name)
+            name, _ = splitext(file_name)
             dialog.set_current_name(name)
 
         if dialog.run() == Gtk.ResponseType.ACCEPT:
@@ -183,10 +207,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
             with open(file_name, "w+", encoding="utf-8") as output:
                 data = self.renderer.render_output()[1].strip()
-                if version_info.major == 2:
-                    output.write(data.encode("utf-8"))
-                else:   # python 3.x
-                    output.write(data)
+                output.write(data)
         dialog.destroy()
 
     def on_print_document(self, action, *params):
@@ -224,7 +245,7 @@ class AppWindow(Gtk.ApplicationWindow):
         if action.get_state() != param:
             action.set_state(param)
 
-        if not getattr(self, 'paned', False):
+        if not getattr(self, "paned", False):
             return
         orientation = param.get_uint16()
         if self.paned.get_orientation() != orientation:
@@ -281,7 +302,7 @@ class AppWindow(Gtk.ApplicationWindow):
         if custom_style and self.preferences.style:
             self.renderer.set_style(self.preferences.style)
         else:
-            self.renderer.set_style('')
+            self.renderer.set_style("")
         self.preferences.save()
 
     def on_change_style(self, action, param):
@@ -290,11 +311,11 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.preferences.custom_style and style:
             self.renderer.set_style(self.preferences.style)
         else:
-            self.renderer.set_style('')
+            self.renderer.set_style("")
         self.preferences.save()
 
     def on_find_in_document(self, action, *param):
-        if self.editor_type != 'source' and not self.renderer.props.visible:
+        if self.editor_type != "source" and not self.renderer.props.visible:
             return      # works only with source view or renderer
 
         if self.search.get_search_mode():
@@ -392,7 +413,7 @@ class AppWindow(Gtk.ApplicationWindow):
                     dialog.destroy()
                     return False        # fo not quit
             self.runing = False
-            if self.editor_type == 'vim':
+            if self.editor_type == "vim":
                 self.editor.vim_quit()  # do call destroy_from_vim
         else:
             self.runing = False
@@ -404,7 +425,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def save_win_state(self):
         self.cache.width, self.cache.height = self.get_size()
-        if getattr(self, 'paned', False):
+        if getattr(self, "paned", False):
             self.cache.paned = self.paned.get_position()
         self.cache.is_maximized = self.is_maximized()
         self.cache.save()
@@ -420,7 +441,7 @@ class AppWindow(Gtk.ApplicationWindow):
                              tooltip="Open Document",
                              action_name="win.open-document"))
 
-        if self.editor_type == 'source':
+        if self.editor_type == "source":
             headerbar.pack_start(IconButton(symbol="document-save-symbolic",
                                             tooltip="Save Document",
                                             action_name="win.save-document"))
@@ -445,7 +466,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 label="_Editor",
                 use_underline=True,
                 action_name="win.switch-view-toggle",
-                action_target=GLib.Variant('q', View.EDITOR))
+                action_target=GLib.Variant("q", View.EDITOR))
             self.editor_toggle_btn.set_tooltip_text("Show Editor")
             btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
 
@@ -453,7 +474,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 label="_Preview",
                 use_underline=True,
                 action_name="win.switch-view-toggle",
-                action_target=GLib.Variant('q', View.PREVIEW))
+                action_target=GLib.Variant("q", View.PREVIEW))
             self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
             btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
 
@@ -461,7 +482,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 label="_Both",
                 use_underline=True,
                 action_name="win.switch-view-toggle",
-                action_target=GLib.Variant('q', View.BOTH))
+                action_target=GLib.Variant("q", View.BOTH))
             self.both_toggle_btn.set_tooltip_text(
                 "Show Editor and Web Preview")
             btn_box.pack_start(self.both_toggle_btn, True, True, 0)
@@ -478,7 +499,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.renderer.set_tab_width(self.preferences.editor.tab_width)
 
     def fill_panned(self, file_name):
-        if self.editor_type == 'vim':
+        if self.editor_type == "vim":
             self.editor = VimEditor(self, file_name)
         else:
             self.editor = SourceView(self,
@@ -529,7 +550,7 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.cache.is_maximized:
             self.maximize()
 
-        if self.editor_type == 'source':
+        if self.editor_type == "source":
             self.status_bar = Statusbar(self.preferences.editor)
             box.pack_end(self.status_bar, False, True, 0)
 
@@ -559,7 +580,6 @@ class AppWindow(Gtk.ApplicationWindow):
                 tooltip="Previeous search",
                 action_name="win.find-previous-match",
                 focus_on_click=False)
-        # set_focus_on_click(False)
         sbox.pack_start(prev_button, False, False, 0)
         next_button = IconButton(
                 symbol="go-next-symbolic",
@@ -570,10 +590,10 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def check_in_thread(self, force=False):
         if self.runing:
-            if self.editor_type == 'vim':
+            if self.editor_type == "vim":
                 thread = Thread(target=self.refresh_from_vim, args=(force,))
                 thread.start()
-            elif self.editor_type == 'source':
+            elif self.editor_type == "source":
                 GLib.idle_add(self.refresh_from_source, force)
             else:   # self.editor = None
                 GLib.idle_add(self.refresh_from_file, force)
@@ -585,7 +605,7 @@ class AppWindow(Gtk.ApplicationWindow):
     def refresh_from_vim(self, force):
         another_file = False
         try:
-            star = '*' if self.editor.is_modified else ''
+            star = "*" if self.editor.is_modified else ""
             self.not_running()
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
             if title != self.get_title():
@@ -603,8 +623,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.not_running()
                 row, col = self.editor.get_vim_pos()
                 pos = 0
-                for i in range(row-1):
-                    new_line = buff.find('\n', pos)
+                for _i in range(row-1):
+                    new_line = buff.find("\n", pos)
                     if new_line < 0:
                         break
                     pos = new_line + 1
@@ -623,7 +643,7 @@ class AppWindow(Gtk.ApplicationWindow):
             if action:  # sometimes when closing window action is None
                 action.set_enabled(modified)
 
-            star = '*' if modified else ''
+            star = "*" if modified else ""
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
             if title != self.get_title():
                 self.set_title(title)
@@ -634,12 +654,12 @@ class AppWindow(Gtk.ApplicationWindow):
                 text = self.editor.text
 
                 words_count = 0
-                for w in RE_WORD.finditer(text):
+                for _w in RE_WORD.finditer(text):
                     words_count += 1
                 self.status_bar.set_words_count(words_count)
 
                 chars_count = 0
-                for c in RE_CHAR.finditer(text):
+                for _c in RE_CHAR.finditer(text):
                     chars_count += 1
                 self.status_bar.set_chars_count(chars_count)
 

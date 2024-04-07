@@ -1,57 +1,60 @@
-from gi import require_version
-require_version('GtkSource', '3.0')     # noqa
-require_version('Pango', '1.0')         # noqa
-require_version('GtkSpell', '3.0')      # noqa
-
-from gi.repository.Pango import FontDescription
-from gi.repository.GtkSource import Buffer, View, \
-    DrawSpacesFlags, SearchContext, SearchSettings
-from gi.repository.GLib import get_user_special_dir, UserDirectory, \
-    timeout_add_seconds, Variant, idle_add, timeout_add
-from gi.repository.GtkSpell import Checker
-
-from gi.repository import GObject
-from gi.repository import Gtk
-
-from os import rename, stat, fstat
-from os.path import splitext, basename, isfile, exists, dirname
-from io import open
+from os import fstat, rename, stat
+from os.path import basename, dirname, exists, isfile, splitext
+from sys import stderr
 from traceback import format_exc
-from sys import version_info, stderr
 
-from formiko.dialogs import LANGS, FileSaveDialog, TraceBackDialog, \
-    FileChangedDialog
+from gi import require_version
+
+from gi.repository import GObject, Gtk
+from gi.repository.GLib import (
+    UserDirectory,
+    Variant,
+    get_user_special_dir,
+    idle_add,
+    timeout_add,
+    timeout_add_seconds,
+)
+from gi.repository.GtkSource import (
+    Buffer,
+    DrawSpacesFlags,
+    SearchContext,
+    SearchSettings,
+    View,
+)
+from gi.repository.GtkSpell import Checker
+from gi.repository.Pango import FontDescription
+
+from formiko.dialogs import LANGS, FileChangedDialog, FileSaveDialog, TraceBackDialog
 from formiko.widgets import ActionHelper
 
 PERIOD_SAVE_TIME = 300      # 5min
 
 
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
-    __file_name = ''
+    __file_name = ""
     __last_changes = 0
     __last_ctime = 0
     __pause_period = False
 
     __gsignals__ = {
-        'file-type': (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        'scroll-changed': (GObject.SIGNAL_RUN_LAST, None, (float,))
+        "file-type": (GObject.SIGNAL_RUN_FIRST, None, (str,)),
+        "scroll-changed": (GObject.SIGNAL_RUN_LAST, None, (float,)),
     }
 
     action_name = GObject.property(type=str)
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, win, preferences, action_name=None):
-        super(SourceView, self).__init__()
+        super().__init__()
         if action_name:
             self.action_name = action_name
 
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = Buffer.new_with_language(
-            LANGS['.%s' % preferences.parser])
+            LANGS[".%s" % preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         # TODO: will work when FileSaver and FileLoader will be used
-        # self.text_buffer.set_implicit_trailing_newline(False)
         self.source_view = View.new_with_buffer(self.text_buffer)
 
         adj = self.get_vadjustment()
@@ -61,7 +64,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.spellchecker.connect("language-changed", self.on_language_changed)
 
         self.source_view.override_font(
-            FontDescription.from_string('Monospace'))
+            FontDescription.from_string("Monospace"))
         # self.source_view.set_monospace(True) since 3.16
         self.add(self.source_view)
 
@@ -126,7 +129,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.__last_changes += 1
 
     def change_mime_type(self, parser):
-        language = LANGS.get(".%s" % parser, LANGS['.rst'])
+        language = LANGS.get(".%s" % parser, LANGS[".rst"])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
 
@@ -176,7 +179,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def check_in_thread(self):
         """Check source file time.
 
-        This function is called from GLib.timeout_add"""
+        This function is called from GLib.timeout_add
+        """
         if not self.__file_name:
             return
         try:
@@ -211,7 +215,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.emit("file_type", self.file_ext)
 
         if isfile(file_name):
-            with open(file_name, 'r', encoding="utf-8") as src:
+            with open(file_name, encoding="utf-8") as src:
                 self.text_buffer.set_text(src.read())
                 self.__last_changes += 1
                 self.__last_ctime = fstat(src.fileno()).st_ctime
@@ -229,11 +233,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         try:
             if exists(self.__file_name):
                 rename(self.__file_name, "%s~" % self.__file_name)
-            with open(self.__file_name, 'w', encoding="utf-8") as src:
-                if version_info.major == 2:
-                    src.write(self.text.decode('utf-8'))
-                else:   # python version 3.x
-                    src.write(self.text)
+            with open(self.__file_name, "w", encoding="utf-8") as src:
+                src.write(self.text)
                 self.__last_ctime = fstat(src.fileno()).st_ctime
             self.text_buffer.set_modified(False)
         except Exception:
@@ -277,7 +278,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             dialog.set_current_folder(dirname(self.file_path))
             dialog.set_current_name(self.file_name)
 
-        file_name = ''
+        file_name = ""
         if dialog.run() == Gtk.ResponseType.ACCEPT:
             file_name = dialog.get_filename_with_ext()
         dialog.destroy()
@@ -285,7 +286,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def do_file_type(self, ext):
         if ext:
-            language = LANGS.get(ext, LANGS['.rst'])
+            language = LANGS.get(ext, LANGS[".rst"])
             if self.text_buffer.get_language() != language:
                 self.text_buffer.set_language(language)
 
