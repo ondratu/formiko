@@ -104,7 +104,7 @@ gtksource or webkit2 could have another version name.
 
     # python3.5, gtk3, librsvg etc are in dependencies
     apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-3.0 \
-                gir1.2-webkit2-4.0 gir1.2-gtkspell3-3.0
+                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0
     pip3 install formiko
 
     # optionaly
