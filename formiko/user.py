@@ -19,7 +19,7 @@ except ImportError:
 from formiko.renderer import PARSERS
 
 
-class View():
+class View:
     EDITOR = 1
     PREVIEW = 2
     BOTH = 3

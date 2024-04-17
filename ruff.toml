@@ -1,4 +1,4 @@
-select = [
+lint.select = [
     "F",    # pyflakes
     "E",    # pycodestyle
     "W",    # pycodestyle
@@ -49,7 +49,9 @@ select = [
     "RUF",  # Ruff-specific rules
 ]
 
-ignore = [
+lint.ignore = [
     "S101",     # Use of `assert` detected
     "ARG002",   # Unused argument
 ]
+
+line-length = 79

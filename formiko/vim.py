@@ -12,8 +12,9 @@ VIM_PATH = "/usr/bin"
 
 class VimEditor(Socket):
     __gsignals__ = {
-        "file-type": (SIGNAL_RUN_FIRST, None, (str,)),
-        "scroll-changed": (SIGNAL_RUN_LAST, None, (float,)),   # not implemented
+        "file-type": (SIGNAL_RUN_FIRST, None, (str, )),
+        "scroll-changed":
+        (SIGNAL_RUN_LAST, None, (float, )),  # not implemented
     }
 
     def __init__(self, app_window, file_name=""):
@@ -34,32 +35,40 @@ class VimEditor(Socket):
         else:
             file_type = " filetype=rst"
         args = [
-            VIM_PATH+"/gvim",
-            "--socketid", str(self.get_id()),
-            "--servername", self.__server_name,
+            VIM_PATH + "/gvim",
+            "--socketid",
+            str(self.get_id()),
+            "--servername",
+            self.__server_name,
             "--echo-wid",
             # no menu (m) a no toolbar (T)
-            "-c", "set go-=m go-=T" + file_type]
+            "-c",
+            "set go-=m go-=T" + file_type,
+        ]
         if self.__file_name:
             args.append(self.__file_name)
         server = Popen(args, stdout=PIPE)
-        server.stdout.readline()    # read wid, so server was started
-        sleep(0.1)                  # some time for vim server
+        server.stdout.readline()  # read wid, so server was started
+        sleep(0.1)  # some time for vim server
 
     def vim_remote_expr(self, command):
         out = check_output([
-            VIM_PATH+"/vim",
-            "--servername", self.__server_name,
-            "--remote-expr", command,
-            ])
+            VIM_PATH + "/vim",
+            "--servername",
+            self.__server_name,
+            "--remote-expr",
+            command,
+        ])
         return out.decode("utf-8").strip()
 
     def vim_remote_send(self, command):
         check_output([
-            VIM_PATH+"/vim",
-            "--servername", self.__server_name,
-            "--remote-send", command,
-            ])
+            VIM_PATH + "/vim",
+            "--servername",
+            self.__server_name,
+            "--remote-send",
+            command,
+        ])
 
     def get_vim_changes(self):
         return int(self.vim_remote_expr("b:changedtick") or "0")

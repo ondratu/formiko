@@ -3,8 +3,6 @@ from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi import require_version
-
 from gi.repository import GObject, Gtk
 from gi.repository.GLib import (
     UserDirectory,
@@ -24,10 +22,15 @@ from gi.repository.GtkSource import (
 from gi.repository.GtkSpell import Checker
 from gi.repository.Pango import FontDescription
 
-from formiko.dialogs import LANGS, FileChangedDialog, FileSaveDialog, TraceBackDialog
+from formiko.dialogs import (
+    LANGS,
+    FileChangedDialog,
+    FileSaveDialog,
+    TraceBackDialog,
+)
 from formiko.widgets import ActionHelper
 
-PERIOD_SAVE_TIME = 300      # 5min
+PERIOD_SAVE_TIME = 300  # 5min
 
 
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
@@ -37,8 +40,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __pause_period = False
 
     __gsignals__ = {
-        "file-type": (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        "scroll-changed": (GObject.SIGNAL_RUN_LAST, None, (float,)),
+        "file-type": (GObject.SIGNAL_RUN_FIRST, None, (str, )),
+        "scroll-changed": (GObject.SIGNAL_RUN_LAST, None, (float, )),
     }
 
     action_name = GObject.property(type=str)
@@ -51,8 +54,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
         self.set_hexpand(True)
         self.set_vexpand(True)
-        self.text_buffer = Buffer.new_with_language(
-            LANGS[".%s" % preferences.parser])
+        self.text_buffer = Buffer.new_with_language(LANGS[".%s" %
+                                                          preferences.parser])
         self.text_buffer.connect("changed", self.inc_changes)
         # TODO: will work when FileSaver and FileLoader will be used
         self.source_view = View.new_with_buffer(self.text_buffer)
@@ -77,15 +80,15 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.set_auto_indent(editor_pref.auto_indent)
         self.source_view.set_show_line_numbers(editor_pref.line_numbers)
         self.source_view.set_right_margin_position(
-                editor_pref.right_margin_value)
+            editor_pref.right_margin_value)
         self.source_view.set_show_right_margin(editor_pref.right_margin)
         self.source_view.set_highlight_current_line(editor_pref.current_line)
         self.set_text_wrapping(editor_pref.text_wrapping)
         self.set_white_chars(editor_pref.white_chars)
 
         self.search_settings = SearchSettings(wrap_around=True)
-        self.search_context = SearchContext.new(
-            self.text_buffer, self.search_settings)
+        self.search_context = SearchContext.new(self.text_buffer,
+                                                self.search_settings)
         self.search_mark = None
 
         self.__win = win
@@ -109,7 +112,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         hight = self.get_allocated_height()
         value = adj.get_value()
         if value:
-            return adj.get_value()/(adj.get_upper()-hight)
+            return adj.get_value() / (adj.get_upper() - hight)
         return 0
 
     @property
@@ -143,7 +146,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.emit("scroll-changed", self.position)
 
     def set_period_save(self, save):
-        self.period_save = bool(save)*PERIOD_SAVE_TIME
+        self.period_save = bool(save) * PERIOD_SAVE_TIME
         if save:
             self.period_save_thread()
 
@@ -200,7 +203,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                 dialog.destroy()
                 self.__pause_period = False
         except OSError:
-            pass        # file switching when modify by another software
+            pass  # file switching when modify by another software
         timeout_add(200, self.check_in_thread)
 
     def period_save_thread(self):

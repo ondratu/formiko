@@ -10,8 +10,8 @@ default_manager = LanguageManager.get_default()
 LANGS = {
     ".rst": default_manager.get_language("rst"),
     ".md": default_manager.get_language("markdown"),
-    ".cm": default_manager.get_language("markdown"),    # parser compatibility
-    ".m2r": default_manager.get_language("markdown"),   # parser compatibility
+    ".cm": default_manager.get_language("markdown"),  # parser compatibility
+    ".m2r": default_manager.get_language("markdown"),  # parser compatibility
     ".html": default_manager.get_language("html"),
     ".htm": default_manager.get_language("html"),
     ".json": default_manager.get_language("json"),
@@ -19,9 +19,9 @@ LANGS = {
 
 
 class AboutDialog(Gtk.AboutDialog):
+
     def __init__(self, transient_for):
-        super().__init__(transient_for=transient_for,
-                                          modal=False)
+        super().__init__(transient_for=transient_for, modal=False)
         self.set_program_name("Formiko")
         self.set_version(__version__)
         self.set_copyright(__copyright__ + " The Formiko Team")
@@ -35,24 +35,25 @@ class AboutDialog(Gtk.AboutDialog):
 
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
+
     def __init__(self, parent, file_name):
         name = "`%s`" % file_name if file_name else ""
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.WARNING,
-            Gtk.ButtonsType.OK_CANCEL,
+            Gtk.MessageType.WARNING, Gtk.ButtonsType.OK_CANCEL,
             "Document %s not saved.\n"
             "Are you sure you want to quit without saving?" % name)
 
 
 class TraceBackDialog(Gtk.Dialog):
+
     def __init__(self, parent, traceback):
-        super().__init__(
-            "Traceback error",
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            use_header_bar=True)
+        super().__init__("Traceback error",
+                         parent,
+                         Gtk.DialogFlags.MODAL
+                         | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+                         use_header_bar=True)
         box = self.get_content_area()
         label = Gtk.Label(traceback)
         label.override_font(FontDescription.from_string("Monospace"))
@@ -61,38 +62,36 @@ class TraceBackDialog(Gtk.Dialog):
 
 
 class FileNotFoundDialog(Gtk.MessageDialog):
+
     def __init__(self, parent, filename):
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.ERROR,
-            Gtk.ButtonsType.CANCEL,
+            Gtk.MessageType.ERROR, Gtk.ButtonsType.CANCEL,
             "Document `%s` not found" % filename)
 
 
 class FileChangedDialog(Gtk.MessageDialog):
+
     def __init__(self, parent, file_name):
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.INFO,
-            Gtk.ButtonsType.YES_NO,
+            Gtk.MessageType.INFO, Gtk.ButtonsType.YES_NO,
             "Document `%s` was changed.\n"
             "Do you want to load from storage?" % file_name)
 
 
 class FileChooserDialog(Gtk.FileChooserDialog):
+
     def __init__(self, title, parent, action):
         if action == Gtk.FileChooserAction.SAVE:
             label = Gtk.STOCK_SAVE
         else:
             label = Gtk.STOCK_OPEN
-        super().__init__(
-            title,
-            parent,
-            action,
-            (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
-             label, Gtk.ResponseType.ACCEPT))
+        super().__init__(title, parent, action,
+                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, label,
+                          Gtk.ResponseType.ACCEPT))
 
     def get_filename_with_ext(self):
         file_name = self.get_filename()
@@ -152,14 +151,13 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
 
 class FileOpenDialog(FileChooserDialog):
+
     def __init__(self, parent):
-        super().__init__(
-            "Open Document", parent, Gtk.FileChooserAction.OPEN,
-        )
+        super().__init__("Open Document", parent, Gtk.FileChooserAction.OPEN)
 
 
 class FileSaveDialog(FileChooserDialog):
+
     def __init__(self, parent):
-        super().__init__(
-            "Save As Document", parent, Gtk.FileChooserAction.SAVE,
-        )
+        super().__init__("Save As Document", parent,
+                         Gtk.FileChooserAction.SAVE)

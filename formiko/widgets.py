@@ -13,7 +13,7 @@ class IconButton(Gtk.Button):
         self.set_tooltip_text(tooltip)
 
 
-class ActionHelper():
+class ActionHelper:
     """Support class for own Actionable widgets."""
 
     # pylint: disable=too-few-public-methods

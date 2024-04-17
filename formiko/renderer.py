@@ -11,31 +11,12 @@ from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
-from gi.repository.GLib import (
-    MAXUINT,
-    Bytes,
-    Error,
-    LogLevelFlags,
-    get_home_dir,
-    idle_add,
-    log_default_handler,
-)
-from gi.repository.Gtk import (
-    Align,
-    Label,
-    Overlay,
-    Settings,
-    StateFlags,
-    TextView,
-    main_iteration,
-    show_uri_on_window,
-)
-from gi.repository.WebKit2 import (
-    FindOptions,
-    LoadEvent,
-    PrintOperation,
-    WebView,
-)
+from gi.repository.GLib import (MAXUINT, Bytes, Error, LogLevelFlags,
+                                get_home_dir, idle_add, log_default_handler)
+from gi.repository.Gtk import (Align, Label, Overlay, Settings, StateFlags,
+                               TextView, main_iteration, show_uri_on_window)
+from gi.repository.WebKit2 import (FindOptions, LoadEvent, PrintOperation,
+                                   WebView)
 
 from formiko.dialogs import FileNotFoundDialog
 from formiko.sourceview import LANGS
@@ -78,10 +59,8 @@ try:
         def get_transforms(self):
             return [*CommonMarkParser.get_transforms(self), StringStructify]
 
-
 except ImportError:
     ExtendCommonMarkParser = None
-
 
 try:
     from m2r import convert as m2r_convert
@@ -90,8 +69,7 @@ try:
         """Converting from MarkDown to reStructuredText before parse."""
 
         def parse(self, inputstring, document):
-            return super().parse(
-                m2r_convert(inputstring), document)
+            return super().parse(m2r_convert(inputstring), document)
 
 except ImportError:
     Mark2Resturctured = None
@@ -101,10 +79,8 @@ class HtmlPreview:
     """Dummy html preview class."""
 
 
-
 class JSONPreview:
     """Dummy json preview class."""
-
 
 
 class Env:
@@ -119,25 +95,30 @@ PARSERS = {
         "title": "Docutils reStructuredText parser",
         "class": RstParser,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net"},
+        "url": "http://docutils.sourceforge.net",
+    },
     "m2r": {
         "key": "m2r",
         "title": "MarkDown to reStructuredText",
         "class": Mark2Resturctured,
-        "url": "https://github.com/miyakogi/m2r"},
+        "url": "https://github.com/miyakogi/m2r",
+    },
     "cm": {
         "key": "cm",
         "title": "Common Mark parser",
         "class": ExtendCommonMarkParser,
-        "url": "https://github.com/rtfd/recommonmark"},
+        "url": "https://github.com/rtfd/recommonmark",
+    },
     "html": {
         "key": "html",
         "title": "HTML preview",
-        "class": HtmlPreview},
+        "class": HtmlPreview,
+    },
     "json": {
         "key": "json",
         "title": "JSON preview",
-        "class": JSONPreview},
+        "class": JSONPreview,
+    },
 }
 
 EXTS = {
@@ -147,12 +128,10 @@ EXTS = {
     ".json": "json",
 }
 
-
 if Mark2Resturctured:
     EXTS[".md"] = "m2r"
 elif ExtendCommonMarkParser:
     EXTS[".md"] = "cm"
-
 
 WRITERS = {
     "html4": {
@@ -160,31 +139,36 @@ WRITERS = {
         "title": "Docutils HTML4 writer",
         "class": Writer4css1,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net"},
+        "url": "http://docutils.sourceforge.net",
+    },
     "s5": {
         "key": "s5",
         "title": "Docutils S5/HTML slide show writer",
         "class": WriterS5,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net"},
+        "url": "http://docutils.sourceforge.net",
+    },
     "pep": {
         "key": "pep",
         "title": "Docutils PEP HTML writer",
         "class": WriterPep,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net"},
+        "url": "http://docutils.sourceforge.net",
+    },
     "tiny": {
         "key": "tiny",
         "title": "Tiny HTML writer",
         "class": TinyWriter,
         "package": "docutils-tinyhtmlwriter",
-        "url": "https://github.com/ondratu/docutils-tinyhtmlwriter"},
+        "url": "https://github.com/ondratu/docutils-tinyhtmlwriter",
+    },
     "html5": {
         "key": "html5",
         "title": "HTML 5 writer",
         "class": Html5Writer,
         "package": "docutils-html5-writer",
-        "url": "https://github.com/Kozea/docutils-html5-writer"},
+        "url": "https://github.com/Kozea/docutils-html5-writer",
+    },
 }
 
 NOT_FOUND = """
@@ -254,6 +238,7 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
+
     def __init__(self, win, parser="rst", writer="html4", style=""):
         super().__init__()
 
@@ -282,7 +267,7 @@ class Renderer(Overlay):
         self.label.set_valign(Align.END)
         self.add_overlay(self.label)
         self.link_uri = None
-        self.context_button = 3     # will be rewrite by real value
+        self.context_button = 3  # will be rewrite by real value
 
         self.set_writer(writer)
         self.set_parser(parser)
@@ -296,17 +281,16 @@ class Renderer(Overlay):
         background = text_style.get_background_color(StateFlags.NORMAL)
         foreground = text_style.get_color(StateFlags.NORMAL)
         self.webview.set_background_color(background)
-        self.fgcolor = "#{:x}{:x}{:x}".format(
-                int(foreground.red*255),
-                int(foreground.green*255),
-                int(foreground.blue*255))
+        self.fgcolor = (f"#{int(foreground.red*255):x}"
+                        f"{int(foreground.green*255):x}"
+                        f"{int(foreground.blue*255):x}")
         self.on_load_changed(self.webview, LoadEvent.FINISHED)
 
     @property
     def position(self):
         self.__position = -1
-        self.webview.run_javascript(
-            JS_POSITION, None, self.on_position_callback, None)
+        self.webview.run_javascript(JS_POSITION, None,
+                                    self.on_position_callback, None)
         while self.__position < 0:
             # this call at this place do problem, when Gdk.threads_init
             main_iteration()
@@ -337,7 +321,7 @@ class Renderer(Overlay):
 
     def on_context_menu(self, webview, menu, event, hit_test_result):
         self.context_button = event.button.button
-        return True     # disable context menu for now
+        return True  # disable context menu for now
 
     def on_button_release(self, webview, event):
         """Catch release-button only when try to follow link.
@@ -347,7 +331,7 @@ class Renderer(Overlay):
         if event.button == self.context_button:
             return True
         if self.link_uri:
-            if self.link_uri.startswith("file://"):    # try to open source
+            if self.link_uri.startswith("file://"):  # try to open source
                 self.find_and_opendocument(self.link_uri[7:].split("#")[0])
             else:
                 show_uri_on_window(None, self.link_uri, 0)
@@ -365,7 +349,7 @@ class Renderer(Overlay):
         if ext in LANGS:
             self.__win.open_document(file_path)
         elif exists(file_path):
-            show_uri_on_window(None, "file://"+file_path, 0)
+            show_uri_on_window(None, "file://" + file_path, 0)
         else:
             dialog = FileNotFoundDialog(self.__win, file_path)
             dialog.run()
@@ -413,36 +397,38 @@ class Renderer(Overlay):
             elif issubclass(self.__parser["class"], JSONPreview):
                 try:
                     json = loads(self.src)
-                    return (False, dumps(json, sort_keys=True,
-                                         ensure_ascii=False,
-                                         indent=self.tab_width,
-                                         separators=(",", ": ")),
-                            "application/json")
+                    return (False,
+                            dumps(json,
+                                  sort_keys=True,
+                                  ensure_ascii=False,
+                                  indent=self.tab_width,
+                                  separators=(",", ": ")), "application/json")
                 except ValueError as e:
                     return False, DATA_ERROR % ("JSON", str(e)), "text/html"
+            elif not issubclass(self.__parser["class"], HtmlPreview):
+                settings = {
+                    "warning_stream": StringIO(),
+                    "embed_stylesheet": True,
+                    "tab_width": self.tab_width,
+                    "file_name": self.file_name,
+                }
+                if self.style:
+                    settings["stylesheet"] = self.style
+                    settings["stylesheet_path"] = []
+                kwargs = {
+                    "source": self.src,
+                    "parser": self.parser_instance,
+                    "writer": self.writer_instance,
+                    "writer_name": "html",
+                    "settings_overrides": settings,
+                }
+                if self.__writer["key"] == "pep":
+                    kwargs["reader_name"] = "pep"
+                    kwargs.pop("parser")  # pep is allways rst
+                html = publish_string(**kwargs).decode("utf-8")
+                return True, html, "text/html"
             else:
-                if not issubclass(self.__parser["class"], HtmlPreview):
-                    settings = {
-                        "warning_stream": StringIO(),
-                        "embed_stylesheet": True,
-                        "tab_width": self.tab_width,
-                        "file_name": self.file_name,
-                    }
-                    if self.style:
-                        settings["stylesheet"] = self.style
-                        settings["stylesheet_path"] = []
-                    kwargs = {"source": self.src,
-                              "parser": self.parser_instance,
-                              "writer": self.writer_instance,
-                              "writer_name": "html",
-                              "settings_overrides": settings}
-                    if self.__writer["key"] == "pep":
-                        kwargs["reader_name"] = "pep"
-                        kwargs.pop("parser")    # pep is allways rst
-                    html = publish_string(**kwargs).decode("utf-8")
-                    return True, html, "text/html"
-                else:
-                    html = self.src
+                html = self.src
 
             # output to file or html preview
             return False, html, "text/html"
@@ -460,17 +446,17 @@ class Renderer(Overlay):
     def do_render(self):
         state, html, mime_type = self.render_output()
         if state:
-            if self.pos > 1:     # vim
+            if self.pos > 1:  # vim
                 a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
-                position = (float(a)/(a+b)) if a or b else 0
+                position = (float(a) / (a + b)) if a or b else 0
             else:
                 position = self.pos
 
             html += SCROLL % position
         if html and self.__win.runing:
             file_name = self.file_name or get_home_dir()
-            self.webview.load_bytes(Bytes(html.encode("utf-8")),
-                                    mime_type, "UTF-8", "file://"+file_name)
+            self.webview.load_bytes(Bytes(html.encode("utf-8")), mime_type,
+                                    "UTF-8", "file://" + file_name)
 
     def render(self, src, file_name, pos=0):
         self.src = src
@@ -490,9 +476,8 @@ class Renderer(Overlay):
 
     def on_load_changed(self, webview, load_event):
         """Set foreground color when object while object is loading."""
-        self.webview.run_javascript(
-            "document.fgColor='%s'" % self.fgcolor,
-            None, None, None)
+        self.webview.run_javascript("document.fgColor='%s'" % self.fgcolor,
+                                    None, None, None)
 
     def do_next_match(self, text):
         controller = self.webview.get_find_controller()
@@ -510,8 +495,9 @@ class Renderer(Overlay):
         controller = self.webview.get_find_controller()
         if controller.get_search_text() != text:
             self.search_done = None
-            controller.search(
-                text, FindOptions.WRAP_AROUND | FindOptions.BACKWARDS, MAXUINT)
+            controller.search(text,
+                              FindOptions.WRAP_AROUND | FindOptions.BACKWARDS,
+                              MAXUINT)
             while self.search_done is None:
                 main_iteration()
         elif self.search_done:
@@ -533,9 +519,9 @@ class Renderer(Overlay):
         if position is not None:
             self.pos = position
 
-        if self.pos > 1:     # vim
+        if self.pos > 1:  # vim
             a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
-            position = (float(a)/(a+b)) if a or b else 0
+            position = (float(a) / (a + b)) if a or b else 0
         else:
             position = self.pos
 
