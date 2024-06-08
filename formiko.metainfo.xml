@@ -4,29 +4,15 @@
     <name>Formiko</name>
     <summary>reStructuredText and MarkDown editor and live previewer</summary>
     <!-- Copyright 2018 Ondřej Tůma -->
-    <keywords>
-        <keyword>Documentation</keyword>
-        <keyword>Markup</keyword>
-        <keyword>Editor</keyword>
-        <keywords>Text</keywords>
-        <keywords>MarkDown</keywords>
-        <keywords>reStructuredText</keywords>
-    </keywords>
-    <categories>
-        <category>Office</category>
-        <category>WordProcessor</category>
-        <category>GNOME</category>
-        <category>GTK</category>
-    </categories>
-    <mimetypes>
-        <mimetype>text/plain</mimetype>
-        <mimetype>text/html</mimetype>
-        <mimetype>text/x-mardown</mimetype>
-        <mimetype>text/x-rst</mimetype>
-        <mimetype>application/json</mimetype>
-        <mimetype>text/json</mimetype>
-    </mimetypes>
-    <content_rating type="oars-1.0"/>
+    <provides>
+        <mediatype>text/plain</mediatype>
+        <mediatype>text/html</mediatype>
+        <mediatype>text/x-mardown</mediatype>
+        <mediatype>text/x-rst</mediatype>
+        <mediatype>application/json</mediatype>
+        <mediatype>text/json</mediatype>
+    </provides>
+    <content_rating type="oars-1.1"/>
     <releases>
         <release version="1.4.3" type="stable" date="2019-12-10">
             <url>https://github.com/ondratu/formiko/releases/tag/1.4.3</url>
@@ -40,6 +26,7 @@
     </releases>
     <url type="homepage">https://github.com/ondratu/formiko</url>
     <url type="bugtracker">https://github.com/ondratu/formiko/issues</url>
+    <url type="vcs-browser">https://github.com/ondratu/formiko</url>
     <launchable type="desktop-id">cz.zeropage.Formiko.desktop</launchable>
     <metadata_license>MIT</metadata_license>
     <project_license>BSD-3-Clause</project_license>
@@ -47,8 +34,7 @@
         <p>Formiko is reStructuredText and MarkDown editor and live previewer.
         It is written in Python with Gtk3, GtkSourceView and Webkit2. Use
         Docutils and recommonmark Common Mark parser.</p>
-
-        Features:
+        <p>Features:</p>
         <ul>
             <li>GtkSourceView based editor with syntax highlighting</li>
             <li>Possible use Vim editor</li>
@@ -66,5 +52,8 @@
         </screenshot>
         </screenshots>
     <developer_name>Ondřej Tůma</developer_name>
+    <developer id="cz.zeropage">
+      <name>Ondřej Tůma</name>
+    </developer>
     <update_contact>mcbig@zeropage.cz</update_contact>
 </component>
