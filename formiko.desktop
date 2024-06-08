@@ -7,4 +7,4 @@ Icon=formiko
 Terminal=false
 MimeType=text/plain;text/html;text/x-markdown;text/x-rst;application/json;text/json;
 Categories=Office;WordProcessor;GNOME;GTK;
-Keywords=Text;Editor;MarkDown;reStructuredText;
+Keywords=Text;Editor;MarkDown;reStructuredText;Documentation;Markup;
