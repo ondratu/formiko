@@ -3,7 +3,7 @@ from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import GObject, Gtk
+from gi.repository import GObject, Gtk, GtkSource
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -14,7 +14,6 @@ from gi.repository.GLib import (
 )
 from gi.repository.GtkSource import (
     Buffer,
-    DrawSpacesFlags,
     SearchContext,
     SearchSettings,
     View,
@@ -32,7 +31,6 @@ from formiko.widgets import ActionHelper
 
 PERIOD_SAVE_TIME = 300  # 5min
 
-
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __file_name = ""
     __last_changes = 0
@@ -48,6 +46,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, win, preferences, action_name=None):
+        GtkSource.init()
         super().__init__()
         if action_name:
             self.action_name = action_name
@@ -174,10 +173,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.source_view.set_wrap_mode(Gtk.WrapMode.NONE)
 
     def set_white_chars(self, white_chars):
-        if white_chars:
-            self.source_view.set_draw_spaces(DrawSpacesFlags.ALL)
-        else:
-            self.source_view.set_draw_spaces(0)
+        space_drawer = self.source_view.get_space_drawer()
+        space_drawer.set_enable_matrix(white_chars)
 
     def check_in_thread(self):
         """Check source file time.
@@ -304,7 +301,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             return False
 
-        found, search_iter, end = self.search_context.forward(search_iter)
+        found, search_iter, end, _ = self.search_context.forward(search_iter)
 
         if not found:
             self.search_mark = None
@@ -323,7 +320,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             return False
 
-        found, start, search_iter = self.search_context.backward(search_iter)
+        found, start, search_iter, _ = self.search_context.backward(search_iter)
         if not found:
             self.search_mark = None
             return False

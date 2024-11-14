@@ -20,6 +20,7 @@ Version 1.5.0
   * right margin settings (issue 36)
   * dark theme renderer support (issue #18)
   * tab_width from ini config file fix (issue #28)
+  * upgrade SourceView to version 4
 
 Version 1.4.3
 

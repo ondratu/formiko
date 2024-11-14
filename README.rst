@@ -103,8 +103,8 @@ gtksource or webkit2 could have another version name.
 .. code:: sh
 
     # python3.5, gtk3, librsvg etc are in dependencies
-    apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-3.0 \
-                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0
+    apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-4 \
+                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 python3-mr2
     pip3 install formiko
 
     # optionaly
@@ -130,7 +130,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 .. code:: sh
 
     # python3.6 is in dependecies as like gtk3
-    pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview3 \
+    pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview4 \
                   librsvg webkit-gtk py36-pygments
     pip3.6 install formiko
 
@@ -149,7 +149,7 @@ On FreeBSD you must install all these packages:
 .. code:: sh
 
     pkg install py37-gobject3 py37-docutils py37-pygments py37-pip \
-        gtksourceview3 webkit2-gtk3 gtkspell3 gobject-introspection \
+        gtksourceview4 webkit2-gtk3 gtkspell3 gobject-introspection \
         librsvg2 adwaita-icon-theme
 
 **Optionaly**
