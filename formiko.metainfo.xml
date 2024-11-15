@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2024 Ondřej Tůma -->
 <component type="desktop-application">
     <id>cz.zeropage.Formiko</id>
     <name>Formiko</name>
-    <summary>reStructuredText and MarkDown editor and live previewer</summary>
-    <!-- Copyright 2018 Ondřej Tůma -->
+    <summary>reStructuredText and MarkDown editor</summary>
     <provides>
         <mediatype>text/plain</mediatype>
         <mediatype>text/html</mediatype>
@@ -50,11 +50,15 @@
         </ul>
     </description>
     <screenshots>
-        <screenshot type="default" width="1024" height="647">
-            <image>https://raw.githubusercontent.com/ondratu/formiko/master/screenshot_1024.png</image>
-        </screenshot>
-        </screenshots>
-    <developer_name>Ondřej Tůma</developer_name>
+      <screenshot type="default" width="1024" height="647">
+        <caption>The Formiko main window with editore and preview.</caption>
+        <image>https://raw.githubusercontent.com/ondratu/formiko/master/screenshot_1024.png</image>
+      </screenshot>
+    </screenshots>
+    <branding>
+      <color type="primary" scheme_preference="light">#ebebeb</color>
+      <color type="primary" scheme_preference="dark">#828282</color>
+    </branding>
     <developer id="cz.zeropage">
       <name>Ondřej Tůma</name>
     </developer>
