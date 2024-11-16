@@ -2,7 +2,7 @@
 
 from io import StringIO
 from json import dumps, loads
-from os.path import abspath, dirname, exists, splitext
+from os.path import exists, splitext
 from traceback import format_exc
 
 from docutils import DataError
@@ -51,38 +51,6 @@ except ImportError:
     Html5Writer = None
 
 try:
-    from recommonmark.parser import CommonMarkParser
-    from recommonmark.transform import AutoStructify, DummyStateMachine
-
-    class StringStructify(AutoStructify):
-        """Support AutoStructify for publish_string function."""
-
-        def apply(self):
-            """Apply the transformation by configuration."""
-            file_name = self.document.settings.file_name
-
-            self.url_resolver = self.config["url_resolver"]
-            assert callable(self.url_resolver)
-
-            self.state_machine = DummyStateMachine()
-            self.current_level = 0
-            self.file_dir = abspath(dirname(file_name))
-            self.root_dir = self.file_dir
-            self.traverse(self.document)
-
-    class ExtendCommonMarkParser(CommonMarkParser):
-        """CommonMarkParser with working AutoStructify."""
-
-        settings_spec = RstParser.settings_spec
-
-        def get_transforms(self):
-            """Return transformations."""
-            return [*CommonMarkParser.get_transforms(self), StringStructify]
-
-except ImportError:
-    ExtendCommonMarkParser = None
-
-try:
     from m2r import convert as m2r_convert
 
     class Mark2Resturctured(RstParser):
@@ -124,12 +92,6 @@ PARSERS = {
         "class": Mark2Resturctured,
         "url": "https://github.com/miyakogi/m2r",
     },
-    "cm": {
-        "key": "cm",
-        "title": "Common Mark parser",
-        "class": ExtendCommonMarkParser,
-        "url": "https://github.com/rtfd/recommonmark",
-    },
     "html": {
         "key": "html",
         "title": "HTML preview",
@@ -151,8 +113,6 @@ EXTS = {
 
 if Mark2Resturctured:
     EXTS[".md"] = "m2r"
-elif ExtendCommonMarkParser:
-    EXTS[".md"] = "cm"
 
 WRITERS = {
     "html4": {

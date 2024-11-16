@@ -251,7 +251,6 @@ setup(
     requires=["docutils (>= 0.12)", "python_gi", "webkit2", "gtksourceview"],
     extra_requires=[
         "m2r",
-        "recommonmark",
         "Pygments",
         "docutils-tinyhtmlwriter",
         "docutils-htmlwriter",

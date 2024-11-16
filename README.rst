@@ -5,8 +5,8 @@ Formiko
 
 Formiko is reStructuredText and MarkDown editor and live previewer. It is
 written in Python with Gtk3, GtkSourceView and Webkit2. Use Docutils and
-recommonmark Common Mark parser. If you want to **donate** development, you
-can do by `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
+MarkDown to reStructuredText covertor. If you want to **donate** development,
+you can do by `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
 
 Features:
 ---------
@@ -24,7 +24,6 @@ It support these parsers and writers:
 * Docutils reStructuredText parser - http://docutils.sourceforge.net
 * MarkDown to reStructuredText convertor (M2R) -
   https://github.com/miyakogi/m2r
-* Common Mark parser - https://github.com/rtfd/recommonmark
 * Docutils HTML4, S5/HTML slide show and PEP HTML writer -
   http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
@@ -56,7 +55,6 @@ Requirements:
 recommended:
 ~~~~~~~~~~~~
 * m2r - converting MarkDown to reStructuredText
-* recommonmark - for Common Mark support (MarkDown)
 * Pygments - syntax color in html output code blocks
 
 optionally:
@@ -109,7 +107,7 @@ gtksource or webkit2 could have another version name.
 
     # optionaly
     apt install vim-gtk3
-    pip3 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
+    pip3 install docutils-tinyhtmlwriter docutils-html5-writer
 
 **Formiko is in Debian and Ubuntu repository**. So you can install it standard
 way.
@@ -136,7 +134,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
     # optionaly
     pkgin install vim-gtk3
-    pip3.6 install docutils-tinyhtmlwriter recommonmark docutils-html5-writer
+    pip3.6 install docutils-tinyhtmlwriter docutils-html5-writer
 
 FreeBSD
 ~~~~~~~
