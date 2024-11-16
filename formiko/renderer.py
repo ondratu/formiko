@@ -11,12 +11,31 @@ from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
-from gi.repository.GLib import (MAXUINT, Bytes, Error, LogLevelFlags,
-                                get_home_dir, idle_add, log_default_handler)
-from gi.repository.Gtk import (Align, Label, Overlay, Settings, StateFlags,
-                               TextView, main_iteration, show_uri_on_window)
-from gi.repository.WebKit2 import (FindOptions, LoadEvent, PrintOperation,
-                                   WebView)
+from gi.repository.GLib import (
+    MAXUINT,
+    Bytes,
+    Error,
+    LogLevelFlags,
+    get_home_dir,
+    idle_add,
+    log_default_handler,
+)
+from gi.repository.Gtk import (
+    Align,
+    Label,
+    Overlay,
+    Settings,
+    StateFlags,
+    TextView,
+    main_iteration,
+    show_uri_on_window,
+)
+from gi.repository.WebKit2 import (
+    FindOptions,
+    LoadEvent,
+    PrintOperation,
+    WebView,
+)
 
 from formiko.dialogs import FileNotFoundDialog
 from formiko.sourceview import LANGS
@@ -57,6 +76,7 @@ try:
         settings_spec = RstParser.settings_spec
 
         def get_transforms(self):
+            """Return transformations."""
             return [*CommonMarkParser.get_transforms(self), StringStructify]
 
 except ImportError:
@@ -69,6 +89,7 @@ try:
         """Converting from MarkDown to reStructuredText before parse."""
 
         def parse(self, inputstring, document):
+            """Create RST from MD first and call than parse."""
             return super().parse(m2r_convert(inputstring), document)
 
 except ImportError:
@@ -238,6 +259,7 @@ MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
+    """Renderer widget, mainly based on Webkit."""
 
     def __init__(self, win, parser="rst", writer="html4", style=""):
         super().__init__()
@@ -281,22 +303,30 @@ class Renderer(Overlay):
         background = text_style.get_background_color(StateFlags.NORMAL)
         foreground = text_style.get_color(StateFlags.NORMAL)
         self.webview.set_background_color(background)
-        self.fgcolor = (f"#{int(foreground.red*255):x}"
-                        f"{int(foreground.green*255):x}"
-                        f"{int(foreground.blue*255):x}")
+        self.fgcolor = (
+            f"#{int(foreground.red*255):x}"
+            f"{int(foreground.green*255):x}"
+            f"{int(foreground.blue*255):x}"
+        )
         self.on_load_changed(self.webview, LoadEvent.FINISHED)
 
     @property
     def position(self):
+        """Return cursor position."""
         self.__position = -1
-        self.webview.run_javascript(JS_POSITION, None,
-                                    self.on_position_callback, None)
+        self.webview.run_javascript(
+            JS_POSITION,
+            None,
+            self.on_position_callback,
+            None,
+        )
         while self.__position < 0:
             # this call at this place do problem, when Gdk.threads_init
             main_iteration()
         return self.__position
 
     def on_position_callback(self, webview, result, data):
+        """Set cursor position value."""
         try:
             js_res = webview.run_javascript_finish(result)
             self.__position = js_res.get_js_value().to_double()
@@ -304,14 +334,15 @@ class Renderer(Overlay):
             self.__position = 0
 
     def on_mouse(self, webview, hit_test_result, modifiers):
+        """Show url links on mouse over."""
         self.link_uri = None
         if hit_test_result.context_is_link():
             self.link_uri = hit_test_result.get_link_uri()
-            text = "link: %s" % self.link_uri
+            text = "link: " + self.link_uri
         elif hit_test_result.context_is_image():
-            text = "image: %s" % hit_test_result.get_image_uri()
+            text = "image:" + hit_test_result.get_image_uri()
         elif hit_test_result.context_is_media():
-            text = "media: %s" % hit_test_result.get_media_uri()
+            text = "media: " + hit_test_result.get_media_uri()
         else:
             if self.label.is_visible():
                 self.label.hide()
@@ -320,6 +351,7 @@ class Renderer(Overlay):
         self.label.show()
 
     def on_context_menu(self, webview, menu, event, hit_test_result):
+        """No action on webkit context menu."""
         self.context_button = event.button.button
         return True  # disable context menu for now
 
@@ -338,13 +370,13 @@ class Renderer(Overlay):
         return True
 
     def find_and_opendocument(self, file_path):
+        """Find file on disk and open it."""
         ext = splitext(file_path)[1]
         if not ext:
-            for EXT in LANGS:
-                tmp = file_path + EXT
+            for ext in LANGS:
+                tmp = file_path + ext
                 if exists(tmp):
                     file_path = tmp
-                    ext = EXT
                     break
         if ext in LANGS:
             self.__win.open_document(file_path)
@@ -356,6 +388,7 @@ class Renderer(Overlay):
             dialog.destroy()
 
     def set_writer(self, writer):
+        """Set renderer writer."""
         assert writer in WRITERS
         self.__writer = WRITERS[writer]
         klass = self.__writer["class"]
@@ -363,9 +396,11 @@ class Renderer(Overlay):
         idle_add(self.do_render)
 
     def get_writer(self):
+        """Return renderer writer."""
         return self.__writer["key"]
 
     def set_parser(self, parser):
+        """Set renderer parser."""
         assert parser in PARSERS
         self.__parser = PARSERS[parser]
         klass = self.__parser["class"]
@@ -373,20 +408,25 @@ class Renderer(Overlay):
         idle_add(self.do_render)
 
     def get_parser(self):
+        """Return renderer parser."""
         return self.__parser["key"]
 
     def set_style(self, style):
+        """Set style for webview."""
         self.style = style
         idle_add(self.do_render)
 
     def get_style(self):
+        """Return selected style."""
         return self.style
 
     def set_tab_width(self, width):
+        """Set tab width."""
         self.tab_width = width
         idle_add(self.do_render)
 
-    def render_output(self):
+    def render_output(self):  # noqa: C901, PLR0911, PLR0912
+        """Render source and return output."""
         if getattr(self, "src", None) is None:
             return False, "", "text/plain"
         try:
@@ -397,12 +437,17 @@ class Renderer(Overlay):
             elif issubclass(self.__parser["class"], JSONPreview):
                 try:
                     json = loads(self.src)
-                    return (False,
-                            dumps(json,
-                                  sort_keys=True,
-                                  ensure_ascii=False,
-                                  indent=self.tab_width,
-                                  separators=(",", ": ")), "application/json")
+                    return (
+                        False,
+                        dumps(
+                            json,
+                            sort_keys=True,
+                            ensure_ascii=False,
+                            indent=self.tab_width,
+                            separators=(",", ": "),
+                        ),
+                        "application/json",
+                    )
                 except ValueError as e:
                     return False, DATA_ERROR % ("JSON", str(e)), "text/html"
             elif not issubclass(self.__parser["class"], HtmlPreview):
@@ -430,8 +475,6 @@ class Renderer(Overlay):
             else:
                 html = self.src
 
-            # output to file or html preview
-            return False, html, "text/html"
         except DataError as e:
             return False, DATA_ERROR % ("Data", e), "text/html"
 
@@ -443,7 +486,12 @@ class Renderer(Overlay):
             exc_str = format_exc()
             return False, EXCEPTION_ERROR % exc_str, "text/html"
 
+        else:
+            # output to file or html preview
+            return False, html, "text/html"
+
     def do_render(self):
+        """Render the source, and show rendered output."""
         state, html, mime_type = self.render_output()
         if state:
             if self.pos > 1:  # vim
@@ -455,31 +503,46 @@ class Renderer(Overlay):
             html += SCROLL % position
         if html and self.__win.runing:
             file_name = self.file_name or get_home_dir()
-            self.webview.load_bytes(Bytes(html.encode("utf-8")), mime_type,
-                                    "UTF-8", "file://" + file_name)
+            self.webview.load_bytes(
+                Bytes(html.encode("utf-8")),
+                mime_type,
+                "UTF-8",
+                "file://" + file_name,
+            )
 
     def render(self, src, file_name, pos=0):
+        """Add render task to ui queue."""
         self.src = src
         self.pos = pos
         self.file_name = file_name
         idle_add(self.do_render)
 
     def print_page(self):
+        """Print the rendered page."""
         po = PrintOperation.new(self.webview)
         po.connect("failed", self.on_print_failed)
         po.run_dialog(self.__win)
 
     def on_print_failed(self, po, error):
+        """Log error when print failed."""
         # FIXME: if dialog is used, application will lock :-(
-        log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
-                            error.message)
+        log_default_handler(
+            "Application",
+            LogLevelFlags.LEVEL_WARNING,
+            error.message,
+        )
 
     def on_load_changed(self, webview, load_event):
         """Set foreground color when object while object is loading."""
-        self.webview.run_javascript("document.fgColor='%s'" % self.fgcolor,
-                                    None, None, None)
+        self.webview.run_javascript(
+            f"document.fgColor='{self.fgcolor}'",
+            None,
+            None,
+            None,
+        )
 
     def do_next_match(self, text):
+        """Find next metch."""
         controller = self.webview.get_find_controller()
         if controller.get_search_text() != text:
             self.search_done = None
@@ -492,12 +555,15 @@ class Renderer(Overlay):
         return self.search_done
 
     def do_previous_match(self, text):
+        """Find previous match."""
         controller = self.webview.get_find_controller()
         if controller.get_search_text() != text:
             self.search_done = None
-            controller.search(text,
-                              FindOptions.WRAP_AROUND | FindOptions.BACKWARDS,
-                              MAXUINT)
+            controller.search(
+                text,
+                FindOptions.WRAP_AROUND | FindOptions.BACKWARDS,
+                MAXUINT,
+            )
             while self.search_done is None:
                 main_iteration()
         elif self.search_done:
@@ -506,16 +572,20 @@ class Renderer(Overlay):
         return self.search_done
 
     def stop_search(self):
+        """Stop searching."""
         controller = self.webview.get_find_controller()
         controller.search_finish()
 
     def on_found_text(self, controller, count):
+        """Mark search as done."""
         self.search_done = True
 
     def on_faild_to_find_text(self, controller):
+        """Mark search as not done."""
         self.search_done = False
 
     def scroll_to_position(self, position):
+        """Scroll to right cursor position."""
         if position is not None:
             self.pos = position
 

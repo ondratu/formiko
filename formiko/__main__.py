@@ -1,4 +1,5 @@
 """Formiko module / main support."""
+
 import sys
 from signal import SIGINT, signal
 

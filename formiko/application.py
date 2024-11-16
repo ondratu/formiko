@@ -1,4 +1,5 @@
 """Gtk.Application implementation."""
+
 from os.path import join
 from traceback import print_exc
 
@@ -28,14 +29,32 @@ class Application(GtkApplication):
         """Initor."""
         super().__init__(
             application_id=application_id,
-            flags=ApplicationFlags.HANDLES_COMMAND_LINE)
-        self.add_main_option("preview", ord("p"), OptionFlags.NONE,
-                             OptionArg.NONE, "Preview only", None)
-        self.add_main_option("vim", ord("v"), OptionFlags.NONE,
-                             OptionArg.NONE, "Use vim as editor", None)
-        self.add_main_option("source-view", ord("s"), OptionFlags.NONE,
-                             OptionArg.NONE,
-                             "Use SourceView as editor (default)", None)
+            flags=ApplicationFlags.HANDLES_COMMAND_LINE,
+        )
+        self.add_main_option(
+            "preview",
+            ord("p"),
+            OptionFlags.NONE,
+            OptionArg.NONE,
+            "Preview only",
+            None,
+        )
+        self.add_main_option(
+            "vim",
+            ord("v"),
+            OptionFlags.NONE,
+            OptionArg.NONE,
+            "Use vim as editor",
+            None,
+        )
+        self.add_main_option(
+            "source-view",
+            ord("s"),
+            OptionFlags.NONE,
+            OptionArg.NONE,
+            "Use SourceView as editor (default)",
+            None,
+        )
 
     def do_startup(self):
         """'do_startup' application handler."""
@@ -74,12 +93,20 @@ class Application(GtkApplication):
         last = arguments[-1:][0] if arguments else ""
 
         if options.contains("vim"):
-            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
-                                "Use formiko-vim instead", None)
+            log_default_handler(
+                "Application",
+                LogLevelFlags.LEVEL_WARNING,
+                "Use formiko-vim instead",
+                None,
+            )
             editor = "vim"
         elif options.contains("source-view"):
-            log_default_handler(None, LogLevelFlags.LEVEL_WARNING,
-                                "Use formiko instead", None)
+            log_default_handler(
+                None,
+                LogLevelFlags.LEVEL_WARNING,
+                "Use formiko instead",
+                None,
+            )
             editor = "source"
         else:
             editor = "source"
@@ -89,13 +116,19 @@ class Application(GtkApplication):
 
         if editor == "vim":
             display = Display.get_default()
-            log_default_handler(None, LogLevelFlags.LEVEL_DEBUG,
-                                f"Backend is {display.__class__.__name__}",
-                                None)
+            log_default_handler(
+                None,
+                LogLevelFlags.LEVEL_DEBUG,
+                f"Backend is {display.__class__.__name__}",
+                None,
+            )
             if display.__class__.__name__ != "X11Display":
-                log_default_handler(None, LogLevelFlags.LEVEL_CRITICAL,
-                                    "Vim is supported only on X11 backend",
-                                    None)
+                log_default_handler(
+                    None,
+                    LogLevelFlags.LEVEL_CRITICAL,
+                    "Vim is supported only on X11 backend",
+                    None,
+                )
                 return 1
 
         if editor == "source":  # vim have disabled accels for conflict itself
@@ -116,13 +149,15 @@ class Application(GtkApplication):
 
     def on_new_window(self, action, *params):
         """'new-window' action handler."""
-        self.new_window(getattr(self.get_active_window(),
-                                "editor_type", "source"))
+        self.new_window(
+            getattr(self.get_active_window(), "editor_type", "source"),
+        )
 
     def on_shortcuts(self, action, param):
         """'shortcuts' action handler."""
-        win = ShortcutsWindow(getattr(self.get_active_window(),
-                                      "editor_type", "source"))
+        win = ShortcutsWindow(
+            getattr(self.get_active_window(), "editor_type", "source"),
+        )
         self.add_window(win)
         win.show_all()
 
@@ -142,7 +177,7 @@ class Application(GtkApplication):
             win = AppWindow(editor, file_name)
             self.add_window(win)
             win.show_all()
-        except Exception:   # pylint: disable=broad-exception-caught
+        except Exception:  # pylint: disable=broad-exception-caught
             print_exc()
 
     def set_accels(self):
@@ -152,15 +187,20 @@ class Application(GtkApplication):
 
         self.set_accels_for_action("win.open-document", ["<Control>o"])
         self.set_accels_for_action("win.save-document", ["<Control>s"])
-        self.set_accels_for_action("win.save-document-as",
-                                   ["<Shift><Control>s"])
-        self.set_accels_for_action("win.export-document-as",
-                                   ["<Shift><Control>e"])
+        self.set_accels_for_action(
+            "win.save-document-as",
+            ["<Shift><Control>s"],
+        )
+        self.set_accels_for_action(
+            "win.export-document-as",
+            ["<Shift><Control>e"],
+        )
         self.set_accels_for_action("win.print-document", ["<Control>p"])
         self.set_accels_for_action("win.close-window", ["<Control>w"])
         self.set_accels_for_action("win.find-in-document", ["<Control>f"])
         self.set_accels_for_action("win.find-next-match", ["<Control>g"])
-        self.set_accels_for_action("win.find-previous-match",
-                                   ["<Shift><Control>g"])
-        self.set_accels_for_action("win.refresh-preview",
-                                   ["<Control>r"])
+        self.set_accels_for_action(
+            "win.find-previous-match",
+            ["<Shift><Control>g"],
+        )
+        self.set_accels_for_action("win.refresh-preview", ["<Control>r"])

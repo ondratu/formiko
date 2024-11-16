@@ -51,7 +51,10 @@ lint.select = [
 
 lint.ignore = [
     "S101",     # Use of `assert` detected
+    "S603",     # Ruff don't check code right
     "ARG002",   # Unused argument
+    "INP001",   # Only one package formiko
+    "D107",     # No __init__ documentation
 ]
 
 line-length = 79

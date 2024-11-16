@@ -1,4 +1,5 @@
 """Project setup.py."""
+
 import logging
 from gzip import open as zopen
 from os import listdir, makedirs, path
@@ -28,8 +29,12 @@ def icons_data():
     _path = "share/icons/hicolor"
     icons = [(f"{_path}/scalable/apps", ["icons/formiko.svg"])]
     for size in (16, 22, 24, 32, 48, 64, 128, 256, 512):
-        icons.append((f"{_path}/{size}x{size}/apps",
-                      [f"icons/{size}x{size}/formiko.png"]))
+        icons.append(
+            (
+                f"{_path}/{size}x{size}/apps",
+                [f"icons/{size}x{size}/formiko.png"],
+            ),
+        )
     return icons
 
 
@@ -74,11 +79,13 @@ class CleanMan(Command):
     """Clean build man files."""
 
     description = "clean up man files from 'build' command"
-    user_options: ClassVar[list[tuple]] = [(
-        "build-base=",
-        "b",
-        "base build directory (default: 'build.build-base')",
-    )]
+    user_options: ClassVar[list[tuple]] = [
+        (
+            "build-base=",
+            "b",
+            "base build directory (default: 'build.build-base')",
+        ),
+    ]
 
     man_base: str | None
     build_base: str | None
@@ -196,7 +203,8 @@ class CheckVersion(Command):
                 if "<release " in line:
                     vals = dict(
                         x.split("=")
-                        for x in filter(lambda x: "=" in x, line.split(" ")))
+                        for x in filter(lambda x: "=" in x, line.split(" "))
+                    )
                     return vals.get("version", "").strip('"')
             return None
 
@@ -209,12 +217,16 @@ setup(
     author_email="mcbig@zeropage.cz",
     url=__url__,
     packages=["formiko"],
-    data_files=[("share/doc/formiko",
-                 ["README.rst", "COPYING", "ChangeLog", "AUTHORS"]),
-                ("share/applications",
-                 ["formiko.desktop", "formiko-vim.desktop"]),
-                ("share/metainfo", ["formiko.metainfo.xml"]),
-                ("share/formiko/icons", ["icons/formiko.svg"]), *icons_data()],
+    data_files=[
+        (
+            "share/doc/formiko",
+            ["README.rst", "COPYING", "ChangeLog", "AUTHORS"],
+        ),
+        ("share/applications", ["formiko.desktop", "formiko-vim.desktop"]),
+        ("share/metainfo", ["formiko.metainfo.xml"]),
+        ("share/formiko/icons", ["icons/formiko.svg"]),
+        *icons_data(),
+    ],
     keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
     license="BSD",
     long_description=doc(),

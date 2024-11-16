@@ -1,3 +1,4 @@
+"""Formiko dialog widgets."""
 from os.path import splitext
 
 from gi.repository import Gtk
@@ -19,6 +20,7 @@ LANGS = {
 
 
 class AboutDialog(Gtk.AboutDialog):
+    """About Formiko dialog."""
 
     def __init__(self, transient_for):
         super().__init__(transient_for=transient_for, modal=False)
@@ -35,25 +37,30 @@ class AboutDialog(Gtk.AboutDialog):
 
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
+    """Quit dialog without save."""
 
     def __init__(self, parent, file_name):
-        name = "`%s`" % file_name if file_name else ""
+        name = f"`{file_name}`" if file_name else ""
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.WARNING, Gtk.ButtonsType.OK_CANCEL,
-            "Document %s not saved.\n"
-            "Are you sure you want to quit without saving?" % name)
+            Gtk.MessageType.WARNING,
+            Gtk.ButtonsType.OK_CANCEL,
+            f"Document {name} not saved.\n"
+            "Are you sure you want to quit without saving?",
+        )
 
 
 class TraceBackDialog(Gtk.Dialog):
+    """Showing traceback dialog."""
 
     def __init__(self, parent, traceback):
-        super().__init__("Traceback error",
-                         parent,
-                         Gtk.DialogFlags.MODAL
-                         | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-                         use_header_bar=True)
+        super().__init__(
+            "Traceback error",
+            parent,
+            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            use_header_bar=True,
+        )
         box = self.get_content_area()
         label = Gtk.Label(traceback)
         label.override_font(FontDescription.from_string("Monospace"))
@@ -62,38 +69,54 @@ class TraceBackDialog(Gtk.Dialog):
 
 
 class FileNotFoundDialog(Gtk.MessageDialog):
+    """File not found error dialog."""
 
     def __init__(self, parent, filename):
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.ERROR, Gtk.ButtonsType.CANCEL,
-            "Document `%s` not found" % filename)
+            Gtk.MessageType.ERROR,
+            Gtk.ButtonsType.CANCEL,
+            f"Document `{filename}` not found",
+        )
 
 
 class FileChangedDialog(Gtk.MessageDialog):
+    """File changed info dialog."""
 
     def __init__(self, parent, file_name):
         super().__init__(
             parent,
             Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.INFO, Gtk.ButtonsType.YES_NO,
-            "Document `%s` was changed.\n"
-            "Do you want to load from storage?" % file_name)
+            Gtk.MessageType.INFO,
+            Gtk.ButtonsType.YES_NO,
+            f"Document `{file_name}` was changed.\n"
+            "Do you want to load from storage?",
+        )
 
 
 class FileChooserDialog(Gtk.FileChooserDialog):
+    """File chooser dialog."""
 
     def __init__(self, title, parent, action):
         if action == Gtk.FileChooserAction.SAVE:
             label = Gtk.STOCK_SAVE
         else:
             label = Gtk.STOCK_OPEN
-        super().__init__(title, parent, action,
-                         (Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, label,
-                          Gtk.ResponseType.ACCEPT))
+        super().__init__(
+            title,
+            parent,
+            action,
+            (
+                Gtk.STOCK_CANCEL,
+                Gtk.ResponseType.CANCEL,
+                label,
+                Gtk.ResponseType.ACCEPT,
+            ),
+        )
 
     def get_filename_with_ext(self):
+        """Return filename with right extension."""
         file_name = self.get_filename()
         name, ext = splitext(file_name)
         if ext:
@@ -106,6 +129,7 @@ class FileChooserDialog(Gtk.FileChooserDialog):
         return file_name + filter_.default
 
     def add_filter_lang(self, lang, default, current=False):
+        """Add filter for supported extensions."""
         filter_ = Gtk.FileFilter()
         filter_.set_name(lang.get_name())
         for pattern in lang.get_globs():
@@ -119,12 +143,15 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             self.set_filter(filter_)
 
     def add_filter_rst(self, current=False):
+        """Add filter for reStructuredText."""
         self.add_filter_lang(LANGS[".rst"], ".rst", current)
 
     def add_filter_md(self, current=False):
+        """Add filter for MarkDown."""
         self.add_filter_lang(LANGS[".md"], ".md", current)
 
     def add_filter_plain(self, current=False):
+        """Add plain text filter."""
         filter_ = Gtk.FileFilter()
         filter_.set_name("Plain text")
         filter_.add_pattern("*.txt")
@@ -135,12 +162,15 @@ class FileChooserDialog(Gtk.FileChooserDialog):
             self.set_filter(filter_)
 
     def add_filter_html(self, current=False):
+        """Add filter for HTML files."""
         self.add_filter_lang(LANGS[".html"], ".html", current)
 
     def add_filter_json(self, current=False):
+        """Add filter for JSON files."""
         self.add_filter_lang(LANGS[".json"], ".json", current)
 
     def add_filter_all(self, current=False):
+        """Add filter for all files type."""
         filter_ = Gtk.FileFilter()
         filter_.set_name("All File Types")
         filter_.add_pattern("*")
@@ -151,13 +181,18 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
 
 class FileOpenDialog(FileChooserDialog):
+    """Open file dialog."""
 
     def __init__(self, parent):
         super().__init__("Open Document", parent, Gtk.FileChooserAction.OPEN)
 
 
 class FileSaveDialog(FileChooserDialog):
+    """Save File As dialog."""
 
     def __init__(self, parent):
-        super().__init__("Save As Document", parent,
-                         Gtk.FileChooserAction.SAVE)
+        super().__init__(
+            "Save As Document",
+            parent,
+            Gtk.FileChooserAction.SAVE,
+        )

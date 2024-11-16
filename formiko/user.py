@@ -1,3 +1,5 @@
+"""Classes for working with user settings and cache."""
+from configparser import ConfigParser, NoOptionError, NoSectionError
 from os import makedirs
 from os.path import exists
 from traceback import print_exc
@@ -10,36 +12,38 @@ from gi.repository.GLib import (
 )
 from gi.repository.Gtk import Orientation
 
-try:
-    from configparser import ConfigParser, NoOptionError, NoSectionError
-except ImportError:
-    from ConfigParser import ConfigParser, NoOptionError, NoSectionError
-
-
 from formiko.renderer import PARSERS
 
 
 class View:
+    """View settings."""
+
     EDITOR = 1
     PREVIEW = 2
     BOTH = 3
 
     def __new__(cls, value):
+        """Create enum value from string or number value."""
         value = int(value)
-        assert 0 < value < 4
+        assert 0 < value < View.BOTH + 1
         return value
 
 
 def smart_bool(value):
+    """Make boolean value from any human form."""
     if value.lower() in ("1", "true", "yes", "on", "enable"):
         return True
-    elif value.lower() in ("0", "false", "no", "off", "disable"):
+    if value.lower() in ("0", "false", "no", "off", "disable"):
         return False
-    raise ValueError("%s is not boolean value" % value)
+    msg = f"{value} is not boolean value"
+    raise ValueError(msg)
 
 
 class SmartParser(ConfigParser):
+    """ConfigParser without rising excpetion whehn something does not exist."""
+
     def smart_get(self, obj, key, conv=str, sec="main"):
+        """Get with conversion function."""
         try:
             val = self.get(sec, key)
             setattr(obj, key, conv(val))
@@ -51,10 +55,13 @@ class SmartParser(ConfigParser):
             print_exc()
 
     def smart_set(self, obj, key, sec="main"):
+        """Set obj as string."""
         self.set(sec, key, str(getattr(obj, key)))
 
 
 class EditorPreferences:
+    """Editor preferences model."""
+
     period_save = True
     check_spelling = True
     spell_lang = ""
@@ -70,6 +77,8 @@ class EditorPreferences:
 
 
 class UserPreferences:
+    """User preferences settings."""
+
     preview = Orientation.HORIZONTAL.numerator
     auto_scroll = True
     parser = "rst"
@@ -82,17 +91,20 @@ class UserPreferences:
         self.load()
 
     def load(self):
+        """Load and set from user config."""
         directory = get_user_config_dir()
         cp = SmartParser()
-        cp.read("%s/formiko.ini" % directory)
+        cp.read(f"{directory}/formiko.ini")
         cp.smart_get(self, "preview", int)
         cp.smart_get(self, "auto_scroll", smart_bool)
 
         cp.smart_get(self, "parser")
         if self.parser not in PARSERS:
-            log_default_handler("Application", LogLevelFlags.LEVEL_WARNING,
-                                "Unknow parser `%s' in config, set default."
-                                % self.parser)
+            log_default_handler(
+                "Application",
+                LogLevelFlags.LEVEL_WARNING,
+                f"Unknow parser `{self.parser}' in config, set default.",
+            )
             self.parser = "rst"
         cp.smart_get(self, "writer")
         cp.smart_get(self, "style")
@@ -101,8 +113,12 @@ class UserPreferences:
         cp.smart_get(self.editor, "period_save", smart_bool, "editor")
         cp.smart_get(self.editor, "check_spelling", smart_bool, "editor")
         cp.smart_get(self.editor, "spell_lang", str, "editor")
-        cp.smart_get(self.editor, "spaces_instead_of_tabs", smart_bool,
-                     "editor")
+        cp.smart_get(
+            self.editor,
+            "spaces_instead_of_tabs",
+            smart_bool,
+            "editor",
+        )
         cp.smart_get(self.editor, "tab_width", int, "editor")
         cp.smart_get(self.editor, "auto_indent", smart_bool, "editor")
         cp.smart_get(self.editor, "line_numbers", smart_bool, "editor")
@@ -113,6 +129,7 @@ class UserPreferences:
         cp.smart_get(self.editor, "white_chars", smart_bool, "editor")
 
     def save(self):
+        """Set settings to user config."""
         cp = SmartParser()
         cp.add_section("main")
         cp.set("main", "preview", str(int(self.preview)))
@@ -140,11 +157,13 @@ class UserPreferences:
         directory = get_user_config_dir()
         if not exists(directory):
             makedirs(directory)
-        with open("%s/formiko.ini" % directory, "w+") as fp:
+        with open(f"{directory}/formiko.ini", "w+") as fp:
             cp.write(fp)
 
 
 class UserCache:
+    """User cache."""
+
     width = 800
     height = 600
     paned = 400
@@ -155,9 +174,10 @@ class UserCache:
         self.load()
 
     def load(self):
+        """Load values from cache file."""
         directory = get_user_cache_dir()
         cp = SmartParser()
-        cp.read("%s/formiko/window.ini" % directory)
+        cp.read(f"{directory}/formiko/window.ini")
         cp.smart_get(self, "width", int)
         cp.smart_get(self, "height", int)
         cp.smart_get(self, "paned", int)
@@ -165,6 +185,7 @@ class UserCache:
         cp.smart_get(self, "view", View)
 
     def save(self):
+        """Save values to cache file."""
         cp = SmartParser()
         cp.add_section("main")
         cp.set("main", "width", str(self.width))
@@ -173,8 +194,8 @@ class UserCache:
         cp.set("main", "is_maximized", str(self.is_maximized))
         cp.set("main", "view", str(self.view))
 
-        directory = get_user_cache_dir()+"/formiko"
+        directory = get_user_cache_dir() + "/formiko"
         if not exists(directory):
             makedirs(directory)
-        with open("%s/window.ini" % directory, "w+") as fp:
+        with open(f"{directory}/window.ini", "w+") as fp:
             cp.write(fp)

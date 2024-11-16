@@ -1,7 +1,10 @@
+"""Application menu definition."""
 from gi.repository.Gio import Menu
 
 
 class AppMenu(Menu):
+    """Formiko Application main menu."""
+
     def __init__(self):
         super().__init__()
         sec = Menu()
