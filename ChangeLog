@@ -1,6 +1,10 @@
 Changelog
 =========
 
+Version dev
+  * code refactoring
+
+
 Version 1.5.0
 
   * fix local url with href anchor

@@ -1,17 +1,7 @@
 """Status bar menu widgets."""
-from enum import Enum
-
 from gi.repository import Gio, GLib, Gtk
 
 from formiko.widgets import ActionableSpinButton
-
-
-class TabSpaces(Enum):
-    """Tab spaces enum."""
-
-    TWO = 2
-    FOR = 4
-    EIGHT = 8
 
 
 class StatusMenuButton(Gtk.MenuButton):
@@ -198,37 +188,19 @@ class Statusbar(Gtk.Box):
             5,
         )
 
-        # TODO: refactor with loop
-        tab_spaces_2 = Gtk.RadioButton(
-            label="2",
-            action_target=GLib.Variant("i", 2),
-        )
-        # not need to set active, at this moment only one radio is in group
-        tab_spaces_2.connect("toggled", self.on_tab_spaces)
-        box.pack_start(tab_spaces_2, True, True, 0)
+        tab_spaces = None
+        for i in (2, 4, 8):
+            tab_spaces = Gtk.RadioButton(
+                label=str(i),
+                action_target=GLib.Variant("i", i),
+                group=tab_spaces,
+            )
+            if preferences.tab_width == i:
+                tab_spaces.set_active(True)
 
-        tab_spaces_4 = Gtk.RadioButton(
-            label="4",
-            action_target=GLib.Variant("i", 4),
-            group=tab_spaces_2,
-        )
-        if preferences.tab_width == TabSpaces.FOR:
-            tab_spaces_4.set_active(True)
-        tab_spaces_4.connect("toggled", self.on_tab_spaces)
-        box.pack_start(tab_spaces_4, True, True, 0)
-
-        tab_spaces_8 = Gtk.RadioButton(
-            label="8",
-            action_target=GLib.Variant("i", 8),
-            group=tab_spaces_2,
-        )
-        if preferences.tab_width == TabSpaces.EIGHT:
-            tab_spaces_8.set_active(True)
-        tab_spaces_8.connect("toggled", self.on_tab_spaces)
-        box.pack_start(tab_spaces_8, True, True, 0)
-
-        for radio in (tab_spaces_2, tab_spaces_4, tab_spaces_8):
-            radio.set_action_name("editor.tab-width")
+            tab_spaces.connect("toggled", self.on_tab_spaces)
+            box.pack_start(tab_spaces, True, True, 0)
+            tab_spaces.set_action_name("editor.tab-width")
 
         box.pack_start(
             Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
