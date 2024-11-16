@@ -4,6 +4,7 @@ Changelog
 Version dev
   * code refactoring
   * remove deprecated recommonmark
+  * remove deprecated webkit2 4.0
 
 
 Version 1.5.0
