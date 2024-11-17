@@ -3,7 +3,6 @@
 from os.path import join
 from traceback import print_exc
 
-from gi.repository.Gdk import Display
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 from gi.repository.GLib import (
     LogLevelFlags,
@@ -113,23 +112,6 @@ class Application(GtkApplication):
 
         if self.get_application_id() == "cz.zeropage.Formiko.vim":
             editor = "vim"
-
-        if editor == "vim":
-            display = Display.get_default()
-            log_default_handler(
-                None,
-                LogLevelFlags.LEVEL_DEBUG,
-                f"Backend is {display.__class__.__name__}",
-                None,
-            )
-            if display.__class__.__name__ != "X11Display":
-                log_default_handler(
-                    None,
-                    LogLevelFlags.LEVEL_CRITICAL,
-                    "Vim is supported only on X11 backend",
-                    None,
-                )
-                return 1
 
         if editor == "source":  # vim have disabled accels for conflict itself
             self.set_accels()
