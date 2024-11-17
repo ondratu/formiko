@@ -5,6 +5,8 @@ Version dev
   * code refactoring
   * remove deprecated recommonmark
   * remove deprecated webkit2 4.0
+  * Neovim support (formiko-vim)
+    - new vte 2.91 dependency
 
 
 Version 1.5.0

@@ -32,17 +32,12 @@ It support these parsers and writers:
 
 Vim support
 ~~~~~~~~~~~
-Formiko have Vim editor support aka ``formiko-vim`` command. This run `Vim
-<https://vim.sourceforge.io/>`_ editor in GtkSocket. At this moment, this
-socket work only on X11 backend, so this is not work on Wayland yet.
-
-There is bug for GTK+:
-  Bug `721224 <https://bugzilla.gnome.org/show_bug.cgi?id=721224>`_ - please
-  add support for GtkSocket/GtkPlug in Wayland backend
+Formiko have Neovim editor support aka ``formiko-vim`` command. This run `Neovim
+<https://neovim.io/>`_ editor in Vte.Terminal.
 
 Requirements:
 -------------
-* python 2.7 or 3
+* python 3
 * GTK+3
 * gobject-introspection
 * PyGObject
@@ -50,6 +45,7 @@ Requirements:
 * GtkSourceView 3.x
 * gir files for all Gtk libraries
 * GtkSpell3
+* vte - neovim support
 * docutils - reStrucured support
 
 recommended:
@@ -66,7 +62,7 @@ optionally:
 
 **System**:
 
-* vim-gtk or vim-gnome for ``formiko-vim``
+* neovim and pynvim for ``formiko-vim``
 
 development:
 ~~~~~~~~~~~~
@@ -102,11 +98,12 @@ gtksource or webkit2 could have another version name.
 
     # python3.5, gtk3, librsvg etc are in dependencies
     apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-4 \
-                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 python3-mr2
+                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 gir1.2-vte-2.91 \
+                python3-mr2
     pip3 install formiko
 
-    # optionaly
-    apt install vim-gtk3
+    # optionally
+    apt install neovim python3-pynvim
     pip3 install docutils-tinyhtmlwriter docutils-html5-writer
 
 **Formiko is in Debian and Ubuntu repository**. So you can install it standard
@@ -114,6 +111,8 @@ way.
 
 NetBSD
 ~~~~~~
+**Broken at this moment due missing vte-2.91**
+
 There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
 must use 1.2.x bug fix release.
 
@@ -122,22 +121,24 @@ Python release is default. By this, you can change ``pyXX`` to your right
 version.
 
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
-Formiko call vim and gvim directly. If you want to use vim version with
+Formiko call neovim directly. If you want to use neovim version with
 pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
 .. code:: sh
 
-    # python3.6 is in dependecies as like gtk3
+    # python3.6 is in dependencies as like gtk3
     pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview4 \
                   librsvg webkit-gtk py36-pygments
-    pip3.6 install formiko
+    pip3.6 install m2r formiko
 
-    # optionaly
-    pkgin install vim-gtk3
+    # optionally
+    pkgin install neovim pynvim
     pip3.6 install docutils-tinyhtmlwriter docutils-html5-writer
 
 FreeBSD
 ~~~~~~~
+**Broken at this moment due missing vte-2.91**
+
 Installation process can be different for each BSD releases. It's about which
 Python release is default. By this, you can change ``pyXX`` to your right
 version.

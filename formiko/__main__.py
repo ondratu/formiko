@@ -11,6 +11,7 @@ require_version("GtkSource", "4")
 require_version("Pango", "1.0")
 require_version("GtkSpell", "3.0")
 require_version("WebKit2", "4.1")
+require_version("Vte", "2.91")
 
 # pylint: disable = wrong-import-position
 from gi.repository import Gdk  # noqa: E402

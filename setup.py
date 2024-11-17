@@ -248,15 +248,16 @@ setup(
         "Topic :: Text Processing :: Markup :: HTML",
         "Topic :: Utilities",
     ],
-    requires=["docutils (>= 0.12)", "python_gi", "webkit2", "gtksourceview"],
+    requires=["docutils>=0.12", "PyGObject"],
     extra_requires=[
+        "pynvim",
         "m2r",
         "Pygments",
         "docutils-tinyhtmlwriter",
         "docutils-htmlwriter",
         "docutils-html5-writer",
     ],
-    install_requires=["docutils >= 0.12"],
+    install_requires=["docutils>=0.12"],
     entry_points={
         "gui_scripts": [
             "formiko = formiko.__main__:main",
