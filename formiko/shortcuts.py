@@ -7,6 +7,8 @@ from gi.repository.Gtk import (
     ShortcutsShortcut,
 )
 
+from formiko.editor import EditorType
+
 
 class SourceGroup(ShortcutsGroup):
     """Shortcut group for SourceView."""
@@ -171,19 +173,19 @@ class GeneralGroup(ShortcutsGroup):
 class ShortcutsWindow(Gtk.ShortcutsWindow):
     """Shortcuts window widget."""
 
-    def __init__(self, editor_type):
+    def __init__(self, editor_type: EditorType):
         # view_name and view does not work. Don't know why
-        super().__init__(modal=1)
+        super().__init__(modal=True)
         sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)
 
         sec.add(GeneralGroup(editor_type))
         sec.add(PreviewGroup())
         sec.add(FindGroup())
 
-        if editor_type == "source":
+        if editor_type == EditorType.SOURCE:
             sec.add(SourceGroup())
 
-        elif editor_type == "vim":
+        elif editor_type == EditorType.VIM:
             sec.add(VimGroup())
 
         self.add(sec)

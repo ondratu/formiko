@@ -15,6 +15,7 @@ from gi.repository.GLib import (
 from gi.repository.Gtk import Application as GtkApplication
 
 from formiko.dialogs import AboutDialog, TraceBackDialog
+from formiko.editor import EditorType
 from formiko.menu import AppMenu
 from formiko.shortcuts import ShortcutsWindow
 from formiko.window import AppWindow
@@ -99,7 +100,7 @@ class Application(GtkApplication):
                 "Use formiko-vim instead",
                 None,
             )
-            editor = "vim"
+            editor_type = EditorType.VIM
         elif options.contains("source-view"):
             log_default_handler(
                 None,
@@ -107,14 +108,14 @@ class Application(GtkApplication):
                 "Use formiko instead",
                 None,
             )
-            editor = "source"
+            editor_type = EditorType.SOURCE
         else:
-            editor = "source"
+            editor_type = EditorType.SOURCE
 
         if self.get_application_id() == "cz.zeropage.Formiko.vim":
-            editor = "vim"
+            editor_type = EditorType.VIM
 
-        if editor == "vim" and not get_required_version("Vte"):
+        if editor_type == EditorType.VIM and not get_required_version("Vte"):
             log_default_handler(
                 None,
                 LogLevelFlags.LEVEL_CRITICAL,
@@ -123,15 +124,17 @@ class Application(GtkApplication):
             )
             return 1
 
-        if editor == "source":  # vim have disabled accels for conflict itself
+        if editor_type == EditorType.SOURCE:
+            # vim have disabled accels for conflict itself
             self.set_accels()
 
         if options.contains("preview") and last and last != "-":
-            self.new_window(None, join(command_line.get_cwd(), last))
+            self.new_window(EditorType.PREVIEW,
+                            join(command_line.get_cwd(), last))
         elif last and last[0] != "-":
-            self.new_window(editor, join(command_line.get_cwd(), last))
+            self.new_window(editor_type, join(command_line.get_cwd(), last))
         else:
-            self.new_window(editor)
+            self.new_window(editor_type)
 
         return 0
 
@@ -142,13 +145,15 @@ class Application(GtkApplication):
     def on_new_window(self, action, *params):
         """'new-window' action handler."""
         self.new_window(
-            getattr(self.get_active_window(), "editor_type", "source"),
+            getattr(self.get_active_window(),
+                    "editor_type", EditorType.SOURCE),
         )
 
     def on_shortcuts(self, action, param):
         """'shortcuts' action handler."""
         win = ShortcutsWindow(
-            getattr(self.get_active_window(), "editor_type", "source"),
+            getattr(self.get_active_window(),
+                    "editor_type", EditorType.SOURCE),
         )
         self.add_window(win)
         win.show_all()
@@ -163,10 +168,10 @@ class Application(GtkApplication):
         dialog = TraceBackDialog(self.get_active_window(), param.get_string())
         dialog.present()
 
-    def new_window(self, editor, file_name=""):
+    def new_window(self, editor_type: EditorType, file_name=""):
         """Create new application window."""
         try:
-            win = AppWindow(editor, file_name)
+            win = AppWindow(editor_type, file_name)
             self.add_window(win)
             win.show_all()
         except Exception:  # pylint: disable=broad-exception-caught

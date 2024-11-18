@@ -14,6 +14,7 @@ from formiko.dialogs import (
     FileSaveDialog,
     QuitDialogWithoutSave,
 )
+from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
 from formiko.preferences import Preferences
 from formiko.renderer import EXTS, Renderer
@@ -47,7 +48,7 @@ class AppWindow(Gtk.ApplicationWindow):
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = unused-argument
 
-    def __init__(self, editor, file_name=""):
+    def __init__(self, editor_type: EditorType, file_name=""):
         """Initor.
 
         :param str editor:
@@ -55,9 +56,8 @@ class AppWindow(Gtk.ApplicationWindow):
         :param str file_name:
             File name path to open.
         """
-        assert editor in ("vim", "source", None)
         self.runing = True
-        self.editor_type = editor
+        self.editor_type = editor_type
         self.focused = None
         self.search_way = SearchWay.NEXT
         self.cache = UserCache()
@@ -71,7 +71,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.layout(file_name)
 
         self.__last_changes = 0
-        if self.editor_type is None:
+        if self.editor_type is EditorType.PREVIEW:
             _, ext = splitext(file_name)
             self.on_file_type(None, ext)
         GLib.timeout_add(200, self.check_in_thread)
@@ -89,12 +89,12 @@ class AppWindow(Gtk.ApplicationWindow):
 
         action = Gio.SimpleAction.new("save-document-as", None)
         action.connect("activate", self.on_save_document_as)
-        action.set_enabled(self.editor_type == "source")
+        action.set_enabled(self.editor_type == EditorType.SOURCE)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("export-document-as", None)
         action.connect("activate", self.on_export_document_as)
-        action.set_enabled(self.editor_type is not None)
+        action.set_enabled(self.editor_type != EditorType.PREVIEW)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("print-document", None)
@@ -190,7 +190,8 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def open_document(self, file_path):
         """Open document inw actual window."""
-        if self.editor_type == "source" and self.get_title() == NOT_SAVED_NAME:
+        if self.editor_type == EditorType.SOURCE \
+                and self.get_title() == NOT_SAVED_NAME:
             self.editor.read_from_file(file_path)
         else:
             for window in self.get_application().get_windows():
@@ -214,12 +215,12 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_save_document(self, action, *params):
         """'save-document' action handler."""
-        if self.editor_type == "source":
+        if self.editor_type == EditorType.SOURCE:
             self.editor.save()
 
     def on_save_document_as(self, action, *params):
         """'save-document-as' action handler."""
-        if self.editor_type == "source":
+        if self.editor_type == EditorType.SOURCE:
             self.editor.save_as()
 
     def on_export_document_as(self, action, *params):
@@ -390,7 +391,8 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_find_in_document(self, action, *param):
         """'find-in-document' action handler."""
-        if self.editor_type != "source" and not self.renderer.props.visible:
+        if self.editor_type != EditorType.SOURCE \
+                and not self.renderer.props.visible:
             return  # works only with source view or renderer
 
         if self.search.get_search_mode():
@@ -428,7 +430,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 elif isinstance(self.focused, GtkWebView):
                     self.renderer.stop_search()
                 elif (
-                    self.editor_type == "source" and self.editor.props.visible
+                    self.editor_type == EditorType.SOURCE
+                    and self.editor.props.visible
                 ):
                     self.editor.stop_search()
                 elif self.renderer.props.visible:
@@ -460,7 +463,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 res = self.editor.do_next_match(text)
             elif isinstance(self.focused, GtkWebView):
                 res = self.renderer.do_next_match(text)
-            elif self.editor_type == "source" and self.editor.props.visible:
+            elif self.editor_type == EditorType.SOURCE \
+                    and self.editor.props.visible:
                 res = self.editor.do_next_match(text)
             elif self.renderer.props.visible:
                 res = self.renderer.do_next_match(text)
@@ -476,7 +480,8 @@ class AppWindow(Gtk.ApplicationWindow):
                 res = self.editor.do_previous_match(text)
             elif isinstance(self.focused, GtkWebView):
                 res = self.renderer.do_previous_match(text)
-            elif self.editor_type == "source" and self.editor.props.visible:
+            elif self.editor_type == EditorType.SOURCE \
+                    and self.editor.props.visible:
                 res = self.editor.do_previous_match(text)
             elif self.renderer.props.visible:
                 res = self.renderer.do_previous_match(text)
@@ -488,14 +493,14 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def ask_if_modified(self):
         """Ask user for quit without save file when file is modified."""
-        if self.editor_type:
+        if self.editor_type != EditorType.PREVIEW:
             if self.editor.is_modified:
                 dialog = QuitDialogWithoutSave(self, self.editor.file_name)
                 if dialog.run() != Gtk.ResponseType.OK:
                     dialog.destroy()
                     return False  # fo not quit
             self.runing = False
-            if self.editor_type == "vim":
+            if self.editor_type == EditorType.VIM:
                 self.editor.vim_quit()  # do call destroy_from_vim
         else:
             self.runing = False
@@ -534,7 +539,7 @@ class AppWindow(Gtk.ApplicationWindow):
             ),
         )
 
-        if self.editor_type == "source":
+        if self.editor_type == EditorType.SOURCE:
             headerbar.pack_start(
                 IconButton(
                     symbol="document-save-symbolic",
@@ -578,7 +583,7 @@ class AppWindow(Gtk.ApplicationWindow):
             ),
         )
 
-        if self.editor_type:
+        if self.editor_type != EditorType.PREVIEW:
             btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
             Gtk.StyleContext.add_class(btn_box.get_style_context(), "linked")
 
@@ -627,7 +632,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def fill_panned(self, file_name):
         """Fill panned widget with right widgets."""
-        if self.editor_type == "vim":
+        if self.editor_type == EditorType.VIM:
             self.editor = VimEditor(self, file_name)
         else:
             self.editor = SourceView(
@@ -672,7 +677,7 @@ class AppWindow(Gtk.ApplicationWindow):
         overlay = Gtk.Overlay()
         box.pack_start(overlay, True, True, 0)
 
-        if self.editor_type:
+        if self.editor_type != EditorType.PREVIEW:
             self.paned = Gtk.Paned(
                 orientation=self.preferences.preview,
                 position=self.cache.paned,
@@ -687,7 +692,7 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.cache.is_maximized:
             self.maximize()
 
-        if self.editor_type == "source":
+        if self.editor_type == EditorType.SOURCE:
             self.status_bar = Statusbar(self.preferences.editor)
             box.pack_end(self.status_bar, False, True, 0)
 
@@ -730,9 +735,9 @@ class AppWindow(Gtk.ApplicationWindow):
     def check_in_thread(self, force=False):
         """Check file state in thread."""
         if self.runing:
-            if self.editor_type == "vim":
+            if self.editor_type == EditorType.VIM:
                 GLib.idle_add(self.refresh_from_vim, force)
-            elif self.editor_type == "source":
+            elif self.editor_type == EditorType.SOURCE:
                 GLib.idle_add(self.refresh_from_source, force)
             else:  # self.editor = None
                 GLib.idle_add(self.refresh_from_file, force)
@@ -834,4 +839,6 @@ class AppWindow(Gtk.ApplicationWindow):
     @property
     def file_path(self):
         """Return opened file path depend on mode."""
-        return self.editor.file_path if self.editor_type else self.__file_name
+        if self.editor_type != EditorType.PREVIEW:
+            return self.editor.file_path
+        return self.__file_name
