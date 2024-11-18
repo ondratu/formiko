@@ -4,9 +4,9 @@ import re
 from enum import Enum
 from os import stat
 from os.path import splitext
-from threading import Thread
 from traceback import print_exc
 
+from gi import get_required_version
 from gi.repository import Gio, GLib, Gtk
 
 from formiko.dialogs import (
@@ -22,7 +22,10 @@ from formiko.sourceview import SourceView
 from formiko.sourceview import View as GtkSourceView
 from formiko.status_menu import Statusbar
 from formiko.user import UserCache, UserPreferences, View
-from formiko.vim import VimEditor
+
+if get_required_version("Vte"):
+    from formiko.vim import VimEditor
+
 from formiko.widgets import IconButton
 
 NOT_SAVED_NAME = "Untitled Document"
@@ -728,8 +731,7 @@ class AppWindow(Gtk.ApplicationWindow):
         """Check file state in thread."""
         if self.runing:
             if self.editor_type == "vim":
-                thread = Thread(target=self.refresh_from_vim, args=(force,))
-                thread.start()
+                GLib.idle_add(self.refresh_from_vim, force)
             elif self.editor_type == "source":
                 GLib.idle_add(self.refresh_from_source, force)
             else:  # self.editor = None
@@ -769,7 +771,7 @@ class AppWindow(Gtk.ApplicationWindow):
                     pos = new_line + 1
                 pos += col
                 self.renderer.render(buff, self.editor.file_path, pos)
-            GLib.timeout_add(300, self.check_in_thread)
+            GLib.timeout_add(100, self.check_in_thread)
         except SystemExit:
             return
         except BaseException:

@@ -12,6 +12,7 @@ import pynvim
 from gi.repository import GLib, Vte
 from gi.repository.GObject import SIGNAL_RUN_FIRST, SIGNAL_RUN_LAST
 
+from formiko.dialogs import TraceBackDialog
 from formiko.widgets import ImutableDict
 
 VIM_PATH = "/usr/bin"
@@ -29,6 +30,7 @@ class VimEditor(Vte.Terminal):
 
     def __init__(self, app_window, file_name=""):
         super().__init__()
+        self.__win = app_window
         self.__file_name = file_name
         self._uuid = "/tmp/.formiko."+str(uuid4())  # noqa: S108
         self.connect("child-exited", app_window.destroy_from_vim)
@@ -47,13 +49,19 @@ class VimEditor(Vte.Terminal):
         if self.__file_name:
             args.append(self.__file_name)
 
-        success, pid = self.spawn_sync(
-            Vte.PtyFlags.DEFAULT,
-            None,
-            args,
-            None,
-            GLib.SpawnFlags.DEFAULT,
-        )
+        try:
+            success, pid = self.spawn_sync(
+                Vte.PtyFlags.DEFAULT,
+                None,
+                args,
+                None,
+                GLib.SpawnFlags.DEFAULT,
+            )
+        except GLib.Error as error:
+            dialog = TraceBackDialog(self.__win, str(error))
+            dialog.present()
+            return
+
         while not exists(self._uuid):
             sleep(0.1)
         self.nvim = pynvim.attach("socket", path=self._uuid)

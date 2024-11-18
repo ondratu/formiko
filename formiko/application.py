@@ -3,6 +3,7 @@
 from os.path import join
 from traceback import print_exc
 
+from gi import get_required_version
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 from gi.repository.GLib import (
     LogLevelFlags,
@@ -112,6 +113,15 @@ class Application(GtkApplication):
 
         if self.get_application_id() == "cz.zeropage.Formiko.vim":
             editor = "vim"
+
+        if editor == "vim" and not get_required_version("Vte"):
+            log_default_handler(
+                None,
+                LogLevelFlags.LEVEL_CRITICAL,
+                "Vim version needs Vte 2.91 gir!",
+                None,
+            )
+            return 1
 
         if editor == "source":  # vim have disabled accels for conflict itself
             self.set_accels()
