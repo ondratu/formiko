@@ -9,4 +9,5 @@ include formiko-vim.desktop
 include formiko.rst
 include formiko-vim.rst
 graft icons
+graft formiko/data
 global-exclude *~ *.swp

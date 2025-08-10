@@ -217,6 +217,9 @@ setup(
     author_email="mcbig@zeropage.cz",
     url=__url__,
     packages=["formiko"],
+    package_data={
+        "formiko.data": ["*.js", "*.css"],
+    },
     data_files=[
         (
             "share/doc/formiko",
@@ -248,7 +251,7 @@ setup(
         "Topic :: Text Processing :: Markup :: HTML",
         "Topic :: Utilities",
     ],
-    requires=["docutils>=0.12", "PyGObject"],
+    requires=["docutils>=0.12", "PyGObject", "jsonpath-ng"],
     extra_requires=[
         "pynvim",
         "m2r",
