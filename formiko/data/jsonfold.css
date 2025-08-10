@@ -1,0 +1,25 @@
+body{font-family:monospace}
+.jblock{margin-left:1em}
+.jblock>.jtoggler{
+  cursor:pointer;
+  margin-right:0.2em;
+  display:inline-block;
+  width:1em;
+}
+.jblock.collapsed>.children{display:none}
+.jtoggler::before{content:"\25bc";display:block}
+.jblock.collapsed>.jtoggler::before{content:"\25b6"}
+.jkey{color:#922}
+.jstr{color:#070}
+.jnum{color:#164}
+.jbool{color:#00f}
+.jnull{color:#c00}
+.jhighlight { background-color: #fff59d; }
+@media (prefers-color-scheme: dark){
+  .jkey{color:#f88}
+  .jstr{color:#9f9}
+  .jnum{color:#9cf}
+  .jbool{color:#6af}
+  .jnull{color:#f99}
+  .jhighlight { background-color: #455A64; }
+}

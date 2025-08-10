@@ -151,6 +151,9 @@ class Statusbar(Gtk.Box):
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
+        self.message_label = Gtk.Label()
+        self.pack_start(self.message_label, True, True, 10)
+
         self.info_bar = self.create_info_bar()
         self.pack_start(self.info_bar, False, False, 10)
 
@@ -271,3 +274,8 @@ class Statusbar(Gtk.Box):
     def set_chars_count(self, count):
         """Set chars count label."""
         self.info_bar.chars_count.set_label(str(count))
+
+    def push(self, context_id, text):
+        """Set message to status bar."""
+        self.message_label.set_text(text)
+
