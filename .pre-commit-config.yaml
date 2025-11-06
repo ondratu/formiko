@@ -21,9 +21,9 @@ repos:
 #    hooks:
 #    -   id: yapf
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: 'v0.7.4'
+    rev: v0.7.4
     hooks:
-    - id: ruff
+      - id: ruff
   - repo: https://github.com/pycqa/flake8
     rev: 7.1.1
     hooks:

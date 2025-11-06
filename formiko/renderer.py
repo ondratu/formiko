@@ -37,8 +37,8 @@ from gi.repository.WebKit2 import (
 )
 
 from formiko.dialogs import FileNotFoundDialog
-from formiko.sourceview import LANGS
 from formiko.json_preview import JSONPreview
+from formiko.sourceview import LANGS
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
@@ -257,7 +257,6 @@ class Renderer(Overlay):
         self.style = style
         self.tab_width = 8
 
-
     def on_theme_changed(self, obj=None, pspec=None):
         """Change webkit background and default foreground color."""
         text_style = self.textview.get_style_context()
@@ -265,9 +264,9 @@ class Renderer(Overlay):
         foreground = text_style.get_color(StateFlags.NORMAL)
         self.webview.set_background_color(background)
         self.fgcolor = (
-            f"#{int(foreground.red*255):x}"
-            f"{int(foreground.green*255):x}"
-            f"{int(foreground.blue*255):x}"
+            f"#{int(foreground.red * 255):x}"
+            f"{int(foreground.green * 255):x}"
+            f"{int(foreground.blue * 255):x}"
         )
         self.on_load_changed(self.webview, LoadEvent.FINISHED)
 

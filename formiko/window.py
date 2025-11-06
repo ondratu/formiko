@@ -334,8 +334,8 @@ class AppWindow(Gtk.ApplicationWindow):
         parser = EXTS.get(ext, self.preferences.parser)
         self.pref_menu.set_parser(parser)
         is_json = parser == "json"
-        for widget in self.json_filter_widgets:
-            widget.set_visible(is_json)
+        for _widget in self.json_filter_widgets:
+            _widget.set_visible(is_json)
 
     def on_scroll_changed(self, widget, position):
         """'scroll-changed' event handler."""
@@ -552,8 +552,7 @@ class AppWindow(Gtk.ApplicationWindow):
         self.path_entry.set_width_chars(50)
         self.path_entry.connect("activate", self._on_filter_activate)
         filter_btn = Gtk.Button.new_from_icon_name(
-            "system-search-symbolic", Gtk.IconSize.BUTTON
-        )
+            "system-search-symbolic", Gtk.IconSize.BUTTON)
         filter_btn.set_tooltip_text("Apply Filter")
         filter_btn.connect("clicked", self._on_filter_activate)
 

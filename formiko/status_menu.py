@@ -278,4 +278,3 @@ class Statusbar(Gtk.Box):
     def push(self, context_id, text):
         """Set message to status bar."""
         self.message_label.set_text(text)
-

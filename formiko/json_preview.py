@@ -11,7 +11,6 @@ from typing import Any
 from gi.repository import GLib, Gtk
 from gi.repository.Gtk import MessageDialog, MessageType
 from gi.repository.WebKit2 import LoadEvent, WebView
-
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse as json_parse
 
@@ -19,7 +18,11 @@ JS_EXPAND_HIGHLIGHT = r"""
 const highlights = __HIGHLIGHTS__;
 const expands = __EXPANDS__;
 
-document.querySelectorAll('.jblock').forEach(el => el.classList.add('collapsed'));
+document
+  .querySelectorAll('.jblock')
+  .forEach(el =>
+    el.classList.add('collapsed')
+  );
 
 expands.forEach(p => {
   const el = document.querySelector(`[data-jpath="${p}"]`);
@@ -41,11 +44,12 @@ document.querySelectorAll('.jblock').forEach(
 _EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 
-def compute_jsonpath_view(json_data, expression: str | None):
-    """Return (data, highlights, expands, expr) for a given JSONPath expression.
+def compute_jsonpath_view(json_data, expression: str | None):  # noqa: C901
+    """Return (data, highlights, expands, expr) for given JSONPath expression.
 
     - highlights: list[str] of matched node paths
-    - expands: set[str] of all paths to expand (ancestors + matched + descendants)
+    - expands: set[str] of all paths to expand
+      (ancestors + matched + descendants)
     - expr: the original expression ('' if none/blank)
     """
     if not expression or not expression.strip():
@@ -57,7 +61,8 @@ def compute_jsonpath_view(json_data, expression: str | None):
     except JsonPathParserError:
         raise
     except Exception as e:
-        raise JsonPathParserError("Filter error") from e
+        msg = "Filter error"
+        raise JsonPathParserError(msg) from e
 
     def collect_descendant_paths(val, base_path=""):
         paths = {base_path}
@@ -111,7 +116,7 @@ class JSONPreview:
         self._win: Gtk.Window | None = None
 
         self._tab_width = 2
-        self.filter_callback = None  # optional callback: (expr, match_count) -> None
+        self.filter_callback = None  # optional callback: (expr, match_count)
 
     # -------------------------- Public API ---------------------------------
 
@@ -185,9 +190,7 @@ class JSONPreview:
         return (
             "<html><head><meta charset='utf-8'>"
             f"<style>{css}</style>"
-            "</head><body><pre>"
-            + body
-            + "</pre>"
+            "</head><body><pre>" + body + "</pre>"
             f"<script>{js}</script>"
             "</body></html>"
         )
@@ -207,7 +210,8 @@ class JSONPreview:
         level: int,
         path: str,
     ) -> str:
-        # Dictionary: use dot notation for child keys, store data-jpath for JSONPath lookup
+        # Dictionary: use dot notation for child keys, store data-jpath for
+        #             JSONPath lookup
         if isinstance(value, dict):
             css_classes = ["jblock"]
             if collapse and level > 0:
@@ -215,14 +219,19 @@ class JSONPreview:
             items = []
             for _key, val in value.items():
                 new_path = f"{path}.{_key}" if path else _key
-                child_html = self._value_to_html(val, collapse, level + 1, new_path)
+                child_html = self._value_to_html(
+                    val,
+                    collapse,
+                    level + 1,
+                    new_path,
+                )
                 items.append(
                     '<div class="jitem">'
                     '<span class="jkey">'
                     f'"{escape(str(_key))}"'
                     "</span>: "
                     f"{child_html}"
-                    "</div>"
+                    "</div>",
                 )
             children = "".join(items)
             return (
@@ -239,8 +248,13 @@ class JSONPreview:
             items = []
             for i, v in enumerate(value):
                 new_path = f"{path}.[{i}]" if path else f"[{i}]"
-                child_html = self._value_to_html(v, collapse, level + 1, new_path)
-                items.append('<div class="jitem">' f"{child_html}" "</div>")
+                child_html = self._value_to_html(
+                    v,
+                    collapse,
+                    level + 1,
+                    new_path,
+                )
+                items.append(f'<div class="jitem">{child_html}</div>')
             children = "".join(items)
             return (
                 f'<div class="{" ".join(css_classes)}" data-jpath="{path}">'
@@ -248,7 +262,8 @@ class JSONPreview:
                 f'<div class="children">{children}</div>]</div>'
             )
 
-        # Primitive values: wrap with a span, assign class by type, and store data-jpath
+        # Primitive values: wrap with a span, assign class by type, and store
+        #                   data-jpath
         if isinstance(value, str):
             esc = escape(value)
             return f'<span class="jstr" data-jpath="{path}">"{esc}"</span>'
@@ -280,11 +295,10 @@ class JSONPreview:
         def on_load_finished(webview: WebView, load_event: LoadEvent):
             if load_event == LoadEvent.FINISHED:
                 if expr:
-                    js = (
-                        JS_EXPAND_HIGHLIGHT
-                        .replace("__HIGHLIGHTS__", dumps(highlights))
-                        .replace("__EXPANDS__", dumps(list(expands)))
-                    )
+                    js = JS_EXPAND_HIGHLIGHT.replace(
+                        "__HIGHLIGHTS__",
+                        dumps(highlights),
+                    ).replace("__EXPANDS__", dumps(list(expands)))
                     webview.run_javascript(js)
                 else:
                     webview.run_javascript(JS_EXPAND_ALL)
