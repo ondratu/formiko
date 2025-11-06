@@ -8,6 +8,7 @@ from docutils import DataError
 from docutils.core import publish_string
 from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
+from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
 from gi.repository.GLib import (
@@ -44,11 +45,6 @@ try:
     from docutils_tinyhtml import Writer as TinyWriter
 except ImportError:
     TinyWriter = None
-
-try:
-    from docutils_html5 import Writer as Html5Writer
-except ImportError:
-    Html5Writer = None
 
 try:
     from m2r import convert as m2r_convert
@@ -116,21 +112,21 @@ WRITERS = {
         "title": "Docutils HTML4 writer",
         "class": Writer4css1,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net",
+        "url": "https://www.docutils.org",
     },
     "s5": {
         "key": "s5",
         "title": "Docutils S5/HTML slide show writer",
         "class": WriterS5,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net",
+        "url": "https://www.docutils.org",
     },
     "pep": {
         "key": "pep",
         "title": "Docutils PEP HTML writer",
         "class": WriterPep,
         "package": "docutils",
-        "url": "http://docutils.sourceforge.net",
+        "url": "https://www.docutils.org",
     },
     "tiny": {
         "key": "tiny",
@@ -143,8 +139,8 @@ WRITERS = {
         "key": "html5",
         "title": "HTML 5 writer",
         "class": Html5Writer,
-        "package": "docutils-html5-writer",
-        "url": "https://github.com/Kozea/docutils-html5-writer",
+        "package": "docutils",
+        "url": "https://www.docutils.org",
     },
 }
 

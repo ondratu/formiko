@@ -190,8 +190,10 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def open_document(self, file_path):
         """Open document inw actual window."""
-        if self.editor_type == EditorType.SOURCE \
-                and self.get_title() == NOT_SAVED_NAME:
+        if (
+            self.editor_type == EditorType.SOURCE
+            and self.get_title() == NOT_SAVED_NAME
+        ):
             self.editor.read_from_file(file_path)
         else:
             for window in self.get_application().get_windows():
@@ -391,8 +393,10 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_find_in_document(self, action, *param):
         """'find-in-document' action handler."""
-        if self.editor_type != EditorType.SOURCE \
-                and not self.renderer.props.visible:
+        if (
+            self.editor_type != EditorType.SOURCE
+            and not self.renderer.props.visible
+        ):
             return  # works only with source view or renderer
 
         if self.search.get_search_mode():
@@ -463,8 +467,10 @@ class AppWindow(Gtk.ApplicationWindow):
                 res = self.editor.do_next_match(text)
             elif isinstance(self.focused, GtkWebView):
                 res = self.renderer.do_next_match(text)
-            elif self.editor_type == EditorType.SOURCE \
-                    and self.editor.props.visible:
+            elif (
+                self.editor_type == EditorType.SOURCE
+                and self.editor.props.visible
+            ):
                 res = self.editor.do_next_match(text)
             elif self.renderer.props.visible:
                 res = self.renderer.do_next_match(text)
@@ -480,8 +486,10 @@ class AppWindow(Gtk.ApplicationWindow):
                 res = self.editor.do_previous_match(text)
             elif isinstance(self.focused, GtkWebView):
                 res = self.renderer.do_previous_match(text)
-            elif self.editor_type == EditorType.SOURCE \
-                    and self.editor.props.visible:
+            elif (
+                self.editor_type == EditorType.SOURCE
+                and self.editor.props.visible
+            ):
                 res = self.editor.do_previous_match(text)
             elif self.renderer.props.visible:
                 res = self.renderer.do_previous_match(text)

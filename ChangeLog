@@ -7,8 +7,10 @@ Version dev
   * remove deprecated webkit2 4.0
   * Neovim support (formiko-vim)
     - new vte 2.91 dependency
+  * fix #1 - Vim support in Wayland
   * JSON preview: add collapsible folding view
   * JSON preview: add json path filter
+  * Use HTML5 Writer from docutils instead of deprecated docutils-html5-writer
 
 
 Version 1.5.0

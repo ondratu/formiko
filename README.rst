@@ -21,14 +21,12 @@ Features:
 
 It support these parsers and writers:
 
-* Docutils reStructuredText parser - http://docutils.sourceforge.net
+* Docutils reStructuredText parser - https://www.docutils.org
 * MarkDown to reStructuredText convertor (M2R) -
   https://github.com/miyakogi/m2r
-* Docutils HTML4, S5/HTML slide show and PEP HTML writer -
+* Docutils HTML4, HTML5, S5/HTML slide show and PEP HTML writer -
   http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
-* Yet another HTML writer - https://github.com/masayuko/docutils-htmlwriter
-* HTML 5 writer - https://github.com/Kozea/docutils-html5-writer
 
 Vim support
 ~~~~~~~~~~~
@@ -42,7 +40,7 @@ Requirements:
 * gobject-introspection
 * PyGObject
 * Webkit2 4.x
-* GtkSourceView 3.x
+* GtkSourceView 4.x
 * gir files for all Gtk libraries
 * GtkSpell3
 * vte - neovim support
@@ -58,7 +56,6 @@ optionally:
 **Python**:
 
 * docutils-tinyhtmlwriter
-* docutils-html5-writer
 
 **System**:
 
@@ -104,7 +101,7 @@ gtksource or webkit2 could have another version name.
 
     # optionally
     apt install neovim python3-pynvim
-    pip3 install docutils-tinyhtmlwriter docutils-html5-writer
+    pip3 install docutils-tinyhtmlwriter jsonpath-ng
 
 **Formiko is in Debian and Ubuntu repository**. So you can install it standard
 way.
@@ -133,7 +130,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
     # optionally
     pkgin install neovim pynvim
-    pip3.6 install docutils-tinyhtmlwriter docutils-html5-writer
+    pip3.6 install docutils-tinyhtmlwriter jsonpath-ng
 
 FreeBSD
 ~~~~~~~
@@ -156,4 +153,4 @@ On FreeBSD you must install all these packages:
 .. code:: sh
 
     pkg install en-hunspell  # or other language you want
-    pip-3.7 install docutils-tinyhtmlwriter docutils-html5-writer m2r
+    pip-3.7 install docutils-tinyhtmlwriter m2r jsonpath-ng
