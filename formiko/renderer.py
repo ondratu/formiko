@@ -40,11 +40,15 @@ from gi.repository.WebKit2 import (
 from formiko.dialogs import FileNotFoundDialog
 from formiko.json_preview import JSONPreview
 from formiko.sourceview import LANGS
+from formiko.utils import Undefined
 
 try:
     from docutils_tinyhtml import Writer as TinyWriter
 except ImportError:
-    TinyWriter = None
+
+    class TinyWriter(Undefined):  # type: ignore[no-redef]
+        """Not imported TinyWriter."""
+
 
 try:
     from m2r import convert as m2r_convert
@@ -57,7 +61,9 @@ try:
             return super().parse(m2r_convert(inputstring), document)
 
 except ImportError:
-    Mark2Resturctured = None
+
+    class Mark2Resturctured(Undefined):  # type: ignore[no-redef]
+        """Not imported TinyWriter."""
 
 
 class HtmlPreview:
@@ -103,7 +109,7 @@ EXTS = {
     ".json": "json",
 }
 
-if Mark2Resturctured:
+if not issubclass(Mark2Resturctured, Undefined):
     EXTS[".md"] = "m2r"
 
 WRITERS = {
