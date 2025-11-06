@@ -319,25 +319,23 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_change_parser(self, action, param):
         """'change-parser' action handler."""
+        parser = param.get_string()
+
         if action.get_state() != param:
             action.set_state(param)
-            parser = param.get_string()
             self.renderer.set_parser(parser)
             self.preferences.parser = parser
             self.editor.change_mime_type(parser)
         self.preferences.save()
 
-        is_json = param.get_string() == "json"
-        for widget in self.json_filter_widgets:
-            widget.set_visible(is_json)
+        self.json_box.set_visible(parser == "json")
 
     def on_file_type(self, widget, ext):
         """'file-type' event handler."""
         parser = EXTS.get(ext, self.preferences.parser)
         self.pref_menu.set_parser(parser)
-        is_json = parser == "json"
-        for _widget in self.json_filter_widgets:
-            _widget.set_visible(is_json)
+
+        self.json_box.set_visible(parser == "json")
 
     def on_scroll_changed(self, widget, position):
         """'scroll-changed' event handler."""
@@ -564,15 +562,14 @@ class AppWindow(Gtk.ApplicationWindow):
         filter_btn.set_tooltip_text("Apply Filter")
         filter_btn.connect("clicked", self._on_filter_activate)
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        Gtk.StyleContext.add_class(box.get_style_context(), "linked")
-        box.pack_start(self.path_entry, True, True, 0)
-        box.pack_start(filter_btn, False, False, 0)
-        headerbar.pack_start(box)
-
-        self.json_filter_widgets = [box]
-        for widget in self.json_filter_widgets:
-            widget.hide()
+        self.json_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        Gtk.StyleContext.add_class(self.json_box.get_style_context(), "linked")
+        self.json_box.pack_start(self.path_entry, True, True, 0)
+        self.json_box.pack_start(filter_btn, False, False, 0)
+        self.json_box.show_all()
+        self.json_box.set_visible(False)
+        self.json_box.set_no_show_all(True)
+        headerbar.pack_start(self.json_box)
 
         self.pref_menu = Preferences(self.preferences)
 
