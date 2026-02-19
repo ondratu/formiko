@@ -93,15 +93,14 @@ gtksource or webkit2 could have another version name.
 
 .. code:: sh
 
-    # python3.5, gtk3, librsvg etc are in dependencies
+    # python3, gtk3, librsvg etc are in dependencies
     apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-4 \
-                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 gir1.2-vte-2.91 \
-                python3-mr2
+                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 gir1.2-vte-2.91
     pip3 install formiko
 
     # optionally
     apt install neovim python3-pynvim
-    pip3 install docutils-tinyhtmlwriter jsonpath-ng
+    pip3 install m2r docutils-tinyhtmlwriter jsonpath-ng
 
 **Formiko is in Debian and Ubuntu repository**. So you can install it standard
 way.
