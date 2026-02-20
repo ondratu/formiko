@@ -212,6 +212,11 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         """
         if not self.__file_name:
             return
+        if not self.__win.get_realized():
+            return  # window was closed, stop the loop
+        if not self.__win.is_active():
+            timeout_add(200, self.check_in_thread)
+            return
         try:
             last_ctime = stat(self.__file_name).st_ctime
             if last_ctime > self.__last_ctime:
