@@ -13,9 +13,11 @@ from formiko.dialogs import (
     FileOpenDialog,
     FileSaveDialog,
     QuitDialogWithoutSave,
+    run_dialog,
 )
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
+from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.renderer import EXTS, Renderer
 from formiko.renderer import WebView as GtkWebView
@@ -62,10 +64,11 @@ class AppWindow(Gtk.ApplicationWindow):
         self.search_way = SearchWay.NEXT
         self.cache = UserCache()
         self.preferences = UserPreferences()
+        self._action_groups = {}
         super().__init__()
         self.create_renderer()
         self.actions()
-        self.connect("delete-event", self.on_delete)
+        self.connect("close-request", self.on_close_request)
         self.set_titlebar(self.create_headerbar())
         self.set_default_icon_name("formiko")
         self.layout(file_name)
@@ -75,6 +78,19 @@ class AppWindow(Gtk.ApplicationWindow):
             _, ext = splitext(file_name)
             self.on_file_type(None, ext)
         GLib.timeout_add(200, self.check_in_thread)
+
+    def insert_action_group(self, prefix, group):
+        """Override to track inserted action groups for get_action_group()."""
+        self._action_groups[prefix] = group
+        super().insert_action_group(prefix, group)
+
+    def get_action_group(self, prefix):
+        """Return action group by prefix (GTK4 replacement for removed API)."""
+        if prefix == "win":
+            return self
+        if prefix == "app":
+            return self.get_application()
+        return self._action_groups.get(prefix)
 
     def actions(self):
         """Set window actions."""
@@ -141,9 +157,8 @@ class AppWindow(Gtk.ApplicationWindow):
             pref.preview,
             self.on_change_preview,
         )
-        self.create_stateful_action(
+        self.create_toggle_action(
             "auto-scroll-toggle",
-            "b",
             pref.auto_scroll,
             self.on_auto_scroll_toggle,
         )
@@ -159,9 +174,8 @@ class AppWindow(Gtk.ApplicationWindow):
             pref.parser,
             self.on_change_parser,
         )
-        self.create_stateful_action(
+        self.create_toggle_action(
             "custom-style-toggle",
-            "b",
             pref.custom_style,
             self.on_custom_style_toggle,
         )
@@ -180,6 +194,16 @@ class AppWindow(Gtk.ApplicationWindow):
             GLib.Variant(_type, default_value),
         )
         action.connect("change-state", method)
+        self.add_action(action)
+
+    def create_toggle_action(self, name, default_value, method):
+        """Create boolean toggle action (no parameter type, activate-based)."""
+        action = Gio.SimpleAction.new_stateful(
+            name,
+            None,
+            GLib.Variant("b", default_value),
+        )
+        action.connect("activate", method)
         self.add_action(action)
 
     def on_close_window(self, action, *params):
@@ -211,8 +235,10 @@ class AppWindow(Gtk.ApplicationWindow):
         dialog.add_filter_html()
         dialog.add_filter_all()
 
-        if dialog.run() == Gtk.ResponseType.ACCEPT:
-            self.open_document(dialog.get_filename())
+        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
+            gfile = dialog.get_file()
+            if gfile:
+                self.open_document(gfile.get_path())
         dialog.destroy()
 
     def on_save_document(self, action, *params):
@@ -234,15 +260,16 @@ class AppWindow(Gtk.ApplicationWindow):
         else:
             dialog.add_filter_html()
         dialog.add_filter_all()
-        dialog.set_do_overwrite_confirmation(True)
 
         if file_name is None:
-            dialog.set_current_folder(GLib.get_home_dir())
+            dialog.set_current_folder(
+                Gio.File.new_for_path(GLib.get_home_dir()),
+            )
         else:
             name, _ = splitext(file_name)
             dialog.set_current_name(name)
 
-        if dialog.run() == Gtk.ResponseType.ACCEPT:
+        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
             file_name = dialog.get_filename_with_ext()
 
             with open(file_name, "w+", encoding="utf-8") as output:
@@ -254,12 +281,12 @@ class AppWindow(Gtk.ApplicationWindow):
         """'print-document' action handler."""
         self.renderer.print_page()
 
-    def on_delete(self, *args):
-        """'delete-event' handler."""
+    def on_close_request(self, *args):
+        """'close-request' handler (GTK4 replacement for delete-event)."""
         rv = self.ask_if_modified()
         if rv:
             self.save_win_state()
-        return not rv
+        return not rv  # True = prevent close
 
     def on_switch_view_toggle(self, action, param):
         """'switch-view-toggle' action handler."""
@@ -269,18 +296,18 @@ class AppWindow(Gtk.ApplicationWindow):
         state = param.get_uint16()
         self.cache.view = state
         if state == View.BOTH:
-            self.editor.show()
-            self.renderer.show()
+            self.editor.set_visible(True)
+            self.renderer.set_visible(True)
             self.refresh_preview_action.set_enabled(True)
             self.both_toggle_btn.set_active(True)
         elif state == View.EDITOR:
-            self.editor.show()
-            self.renderer.hide()
+            self.editor.set_visible(True)
+            self.renderer.set_visible(False)
             self.refresh_preview_action.set_enabled(False)
             self.editor_toggle_btn.set_active(True)
         else:
-            self.editor.hide()
-            self.renderer.show()
+            self.editor.set_visible(False)
+            self.renderer.set_visible(True)
             self.refresh_preview_action.set_enabled(True)
             self.preview_toggle_btn.set_active(True)
 
@@ -307,13 +334,14 @@ class AppWindow(Gtk.ApplicationWindow):
         https://gitlab.gnome.org/GNOME/gtk/issues/1959
         """
         if self.paned.get_orientation() == Gtk.Orientation.VERTICAL:
-            self.paned.set_position(self.paned.get_allocated_height() / 2)
+            self.paned.set_position(self.paned.get_height() // 2)
         else:
-            self.paned.set_position(self.paned.get_allocated_width() / 2)
+            self.paned.set_position(self.paned.get_width() // 2)
 
     def on_auto_scroll_toggle(self, action, param):
         """'auto-schroll-toggle' action handler."""
-        auto_scroll = not self.preferences.auto_scroll
+        auto_scroll = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant("b", auto_scroll))
         self.preferences.auto_scroll = auto_scroll
         self.preferences.save()
 
@@ -371,7 +399,8 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def on_custom_style_toggle(self, action, param):
         """'custom-style-toggle' action handler."""
-        custom_style = not self.preferences.custom_style
+        custom_style = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant("b", custom_style))
         self.preferences.custom_style = custom_style
         if custom_style and self.preferences.style:
             self.renderer.set_style(self.preferences.style)
@@ -414,12 +443,9 @@ class AppWindow(Gtk.ApplicationWindow):
                 self.search_entry.set_text(self.search_text)
                 self.search_entry.select_region(0, -1)
 
-    def on_search_focus_out(self, search_entry, param):
-        """'focus-out' event handler."""
-        # on_search_focus_out is called by on_search_mode_changed
-        # so text will be reset
+    def on_search_focus_out(self, *args):
+        """'focus-leave' event handler (replaces focus-out-event)."""
         self.search_text = self.search_entry.get_text()
-        # stop searching when click to editor
         if self.search.get_search_mode():
             self.search.set_search_mode(False)
 
@@ -502,9 +528,9 @@ class AppWindow(Gtk.ApplicationWindow):
         if self.editor_type != EditorType.PREVIEW:
             if self.editor.is_modified:
                 dialog = QuitDialogWithoutSave(self, self.editor.file_name)
-                if dialog.run() != Gtk.ResponseType.OK:
+                if run_dialog(dialog) != Gtk.ResponseType.OK:
                     dialog.destroy()
-                    return False  # fo not quit
+                    return False  # do not quit
             self.runing = False
             if self.editor_type == EditorType.VIM:
                 self.editor.vim_quit()  # do call destroy_from_vim
@@ -519,7 +545,8 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def save_win_state(self):
         """Save window state to cache."""
-        self.cache.width, self.cache.height = self.get_size()
+        self.cache.width = self.get_width()
+        self.cache.height = self.get_height()
         if getattr(self, "paned", False):
             self.cache.paned = self.paned.get_position()
         self.cache.is_maximized = self.is_maximized()
@@ -528,7 +555,6 @@ class AppWindow(Gtk.ApplicationWindow):
     def create_headerbar(self):
         """Create main window header bar."""
         headerbar = Gtk.HeaderBar()
-        headerbar.set_show_close_button(True)
 
         headerbar.pack_start(
             IconButton(
@@ -557,27 +583,33 @@ class AppWindow(Gtk.ApplicationWindow):
         self.path_entry = Gtk.SearchEntry(placeholder_text="JSONPath filter…")
         self.path_entry.set_width_chars(50)
         self.path_entry.connect("activate", self._on_filter_activate)
-        filter_btn = Gtk.Button.new_from_icon_name(
-            "system-search-symbolic", Gtk.IconSize.BUTTON)
+
+        filter_btn = Gtk.Button.new_from_icon_name("system-search-symbolic")
         filter_btn.set_tooltip_text("Apply Filter")
         filter_btn.connect("clicked", self._on_filter_activate)
 
         self.json_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        Gtk.StyleContext.add_class(self.json_box.get_style_context(), "linked")
-        self.json_box.pack_start(self.path_entry, True, True, 0)
-        self.json_box.pack_start(filter_btn, False, False, 0)
-        self.json_box.show_all()
+        self.json_box.add_css_class("linked")
+        self.path_entry.set_hexpand(True)
+        self.json_box.append(self.path_entry)
+        self.json_box.append(filter_btn)
         self.json_box.set_visible(False)
-        self.json_box.set_no_show_all(True)
         headerbar.pack_start(self.json_box)
 
         self.pref_menu = Preferences(self.preferences)
 
         btn = Gtk.MenuButton(popover=self.pref_menu)
         icon = Gio.ThemedIcon(name="emblem-system-symbolic")
-        btn.add(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
+        btn.set_child(Gtk.Image.new_from_gicon(icon))
         btn.set_tooltip_text("Preferences")
         headerbar.pack_end(btn)
+
+        menu_btn = Gtk.MenuButton(
+            icon_name="open-menu-symbolic",
+            tooltip_text="Main Menu",
+            menu_model=AppMenu(self.editor_type),
+        )
+        headerbar.pack_end(menu_btn)
 
         headerbar.pack_end(
             IconButton(
@@ -588,8 +620,8 @@ class AppWindow(Gtk.ApplicationWindow):
         )
 
         if self.editor_type != EditorType.PREVIEW:
-            btn_box = Gtk.ButtonBox.new(orientation=Gtk.Orientation.HORIZONTAL)
-            Gtk.StyleContext.add_class(btn_box.get_style_context(), "linked")
+            btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            btn_box.add_css_class("linked")
 
             self.editor_toggle_btn = Gtk.ToggleButton(
                 label="_Editor",
@@ -598,7 +630,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 action_target=GLib.Variant("q", View.EDITOR),
             )
             self.editor_toggle_btn.set_tooltip_text("Show Editor")
-            btn_box.pack_start(self.editor_toggle_btn, True, True, 0)
+            btn_box.append(self.editor_toggle_btn)
 
             self.preview_toggle_btn = Gtk.ToggleButton(
                 label="_Preview",
@@ -607,7 +639,7 @@ class AppWindow(Gtk.ApplicationWindow):
                 action_target=GLib.Variant("q", View.PREVIEW),
             )
             self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
-            btn_box.pack_start(self.preview_toggle_btn, True, True, 0)
+            btn_box.append(self.preview_toggle_btn)
 
             self.both_toggle_btn = Gtk.ToggleButton(
                 label="_Both",
@@ -618,7 +650,7 @@ class AppWindow(Gtk.ApplicationWindow):
             self.both_toggle_btn.set_tooltip_text(
                 "Show Editor and Web Preview",
             )
-            btn_box.pack_start(self.both_toggle_btn, True, True, 0)
+            btn_box.append(self.both_toggle_btn)
 
             headerbar.pack_end(btn_box)
         return headerbar
@@ -659,46 +691,47 @@ class AppWindow(Gtk.ApplicationWindow):
         if file_name:
             self.editor.read_from_file(file_name)
 
-        self.paned.pack1(self.editor, True, False)
-        self.paned.pack2(self.renderer, True, False)
+        self.paned.set_start_child(self.editor)
+        self.paned.set_resize_start_child(True)
+        self.paned.set_shrink_start_child(False)
+        self.paned.set_end_child(self.renderer)
+        self.paned.set_resize_end_child(True)
+        self.paned.set_shrink_end_child(False)
 
         if self.cache.view == View.EDITOR:
-            self.renderer.show_all()
-            self.renderer.hide()
-            self.renderer.set_no_show_all(True)
+            self.renderer.set_visible(False)
             self.refresh_preview_action.set_enabled(False)
         elif self.cache.view == View.PREVIEW:
-            self.editor.show_all()
-            self.editor.hide()
-            self.editor.set_no_show_all(True)
+            self.editor.set_visible(False)
 
     def layout(self, file_name):
         """Create and fill window layout."""
         self.set_default_size(self.cache.width, self.cache.height)
         box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.add(box)
+        self.set_child(box)
 
         overlay = Gtk.Overlay()
-        box.pack_start(overlay, True, True, 0)
+        overlay.set_vexpand(True)
+        box.append(overlay)
 
         if self.editor_type != EditorType.PREVIEW:
             self.paned = Gtk.Paned(
                 orientation=self.preferences.preview,
                 position=self.cache.paned,
             )
-            overlay.add_overlay(self.paned)
+            overlay.set_child(self.paned)
             self.fill_panned(file_name)
         else:
             self.__file_name = file_name
             self.set_title(file_name)
-            overlay.add_overlay(self.renderer)
+            overlay.set_child(self.renderer)
 
         if self.cache.is_maximized:
             self.maximize()
 
         if self.editor_type == EditorType.SOURCE:
             self.status_bar = Statusbar(self.preferences.editor)
-            box.pack_end(self.status_bar, False, True, 0)
+            box.append(self.status_bar)
 
         self.search_text = ""
         self.search = Gtk.SearchBar()
@@ -711,30 +744,36 @@ class AppWindow(Gtk.ApplicationWindow):
         )
         overlay.add_overlay(self.search)
 
-        sbox = Gtk.Box(Gtk.Orientation.HORIZONTAL, 0)
-        Gtk.StyleContext.add_class(sbox.get_style_context(), "linked")
-        self.search.add(sbox)
+        sbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        sbox.add_css_class("linked")
+        self.search.set_child(sbox)
 
         self.search_entry = Gtk.SearchEntry()
         self.search_entry.set_width_chars(30)
-        sbox.pack_start(self.search_entry, True, True, 0)
+        self.search_entry.set_hexpand(True)
+        sbox.append(self.search_entry)
         self.search.connect_entry(self.search_entry)
         self.search_entry.connect("search-changed", self.on_search_changed)
-        self.search_entry.connect("focus-out-event", self.on_search_focus_out)
+
+        # GTK4: use EventControllerFocus instead of focus-out-event
+        focus_ctrl = Gtk.EventControllerFocus.new()
+        focus_ctrl.connect("leave", self.on_search_focus_out)
+        self.search_entry.add_controller(focus_ctrl)
+
         prev_button = IconButton(
             symbol="go-previous-symbolic",
             tooltip="Previeous search",
             action_name="win.find-previous-match",
             focus_on_click=False,
         )
-        sbox.pack_start(prev_button, False, False, 0)
+        sbox.append(prev_button)
         next_button = IconButton(
             symbol="go-next-symbolic",
             tooltip="Next search",
             action_name="win.find-next-match",
             focus_on_click=False,
         )
-        sbox.pack_start(next_button, False, False, 0)
+        sbox.append(next_button)
 
     def check_in_thread(self, force=False):
         """Check file state in thread."""

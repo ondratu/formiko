@@ -11,11 +11,13 @@ from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
+from gi.repository import Gdk, Gtk
 from gi.repository.GLib import (
     MAXUINT,
     Bytes,
     Error,
     LogLevelFlags,
+    MainContext,
     get_home_dir,
     idle_add,
     log_default_handler,
@@ -25,19 +27,16 @@ from gi.repository.Gtk import (
     Label,
     Overlay,
     Settings,
-    StateFlags,
     TextView,
-    main_iteration,
-    show_uri_on_window,
 )
-from gi.repository.WebKit2 import (
+from gi.repository.WebKit import (
     FindOptions,
     LoadEvent,
     PrintOperation,
     WebView,
 )
 
-from formiko.dialogs import FileNotFoundDialog
+from formiko.dialogs import FileNotFoundDialog, run_dialog
 from formiko.json_preview import JSONPreview
 from formiko.sourceview import LANGS
 from formiko.utils import Undefined
@@ -228,14 +227,20 @@ class Renderer(Overlay):
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
         self.webview.connect("context-menu", self.on_context_menu)
-        self.webview.connect("button-release-event", self.on_button_release)
         self.webview.connect("load-changed", self.on_load_changed)
+
+        # Button release via GestureClick (GTK4)
+        gesture = Gtk.GestureClick.new()
+        gesture.set_button(0)  # all buttons
+        gesture.connect("released", self.on_button_release)
+        self.webview.add_controller(gesture)
+        self._gesture = gesture
 
         settings = Settings.get_default()
         settings.connect("notify::gtk-theme-name", self.on_theme_changed)
         self.on_theme_changed()
 
-        self.add(self.webview)
+        self.set_child(self.webview)
 
         web_settings = self.webview.get_settings()
         web_settings.set_enable_javascript_markup(False)  # XSS Fix
@@ -250,7 +255,7 @@ class Renderer(Overlay):
         self.label.set_valign(Align.END)
         self.add_overlay(self.label)
         self.link_uri = None
-        self.context_button = 3  # will be rewrite by real value
+        self.context_button = 3  # will be rewritten by real value
 
         # Window reference must be available before parser initialization
         self.__win = win
@@ -261,17 +266,26 @@ class Renderer(Overlay):
 
         self.style = style
         self.tab_width = 8
+        self.__position = -1
+        self.file_name = None
+        self.pos = 0
+        self.src = ""
 
-    def on_theme_changed(self, obj=None, pspec=None):
+    def on_theme_changed(self, **_):
         """Change webkit background and default foreground color."""
-        text_style = self.textview.get_style_context()
-        background = text_style.get_background_color(StateFlags.NORMAL)
-        foreground = text_style.get_color(StateFlags.NORMAL)
+        style_ctx = self.textview.get_style_context()
+        found_bg, background = style_ctx.lookup_color("window_bg_color")
+        if not found_bg:
+            background = Gdk.RGBA()
+            background.parse("white")
+        found_fg, foreground = style_ctx.lookup_color("window_fg_color")
+        if not found_fg:
+            foreground = style_ctx.get_color()
         self.webview.set_background_color(background)
         self.fgcolor = (
-            f"#{int(foreground.red * 255):x}"
-            f"{int(foreground.green * 255):x}"
-            f"{int(foreground.blue * 255):x}"
+            f"#{int(foreground.red * 255):02x}"
+            f"{int(foreground.green * 255):02x}"
+            f"{int(foreground.blue * 255):02x}"
         )
         self.on_load_changed(self.webview, LoadEvent.FINISHED)
 
@@ -279,21 +293,18 @@ class Renderer(Overlay):
     def position(self):
         """Return cursor position."""
         self.__position = -1
-        self.webview.run_javascript(
-            JS_POSITION,
-            None,
+        self.webview.evaluate_javascript(
+            JS_POSITION, -1, None, None, None,
             self.on_position_callback,
-            None,
         )
         while self.__position < 0:
-            # this call at this place do problem, when Gdk.threads_init
-            main_iteration()
+            Gtk.main_iteration()
         return self.__position
 
-    def on_position_callback(self, webview, result, data):
+    def on_position_callback(self, webview, result):
         """Set cursor position value."""
         try:
-            js_res = webview.run_javascript_finish(result)
+            js_res = webview.evaluate_javascript_finish(result)
             self.__position = js_res.get_js_value().to_double()
         except Error:
             self.__position = 0
@@ -315,20 +326,19 @@ class Renderer(Overlay):
         self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
         self.label.show()
 
-    def on_context_menu(self, webview, menu, event, hit_test_result):
+    def on_context_menu(self, webview, menu, hit_test_result):
         """No action on webkit context menu."""
-        self.context_button = event.button.button
+        self.context_button = self._gesture.get_current_button()
         return True  # disable context menu for now
 
-    def on_button_release(self, webview, event):
+    def on_button_release(self, gesture, *_):
         """Open links and let other clicks propagate."""
-        if event.button != self.context_button and self.link_uri:
+        button = gesture.get_current_button()
+        if button != self.context_button and self.link_uri:
             if self.link_uri.startswith("file://"):  # try to open source
                 self.find_and_opendocument(self.link_uri[7:].split("#")[0])
             else:
-                show_uri_on_window(None, self.link_uri, 0)
-            return True
-        return False
+                Gtk.show_uri(None, self.link_uri, Gdk.CURRENT_TIME)
 
     def find_and_opendocument(self, file_path):
         """Find file on disk and open it."""
@@ -342,10 +352,10 @@ class Renderer(Overlay):
         if ext in LANGS:
             self.__win.open_document(file_path)
         elif exists(file_path):
-            show_uri_on_window(None, "file://" + file_path, 0)
+            Gtk.show_uri(None, "file://" + file_path, Gdk.CURRENT_TIME)
         else:
             dialog = FileNotFoundDialog(self.__win, file_path)
-            dialog.run()
+            run_dialog(dialog)
             dialog.destroy()
 
     def set_writer(self, writer):
@@ -472,7 +482,7 @@ class Renderer(Overlay):
         po.connect("failed", self.on_print_failed)
         po.run_dialog(self.__win)
 
-    def on_print_failed(self, po, error):
+    def on_print_failed(self, _, error):
         """Log error when print failed."""
         # FIXME: if dialog is used, application will lock :-(
         log_default_handler(
@@ -481,13 +491,11 @@ class Renderer(Overlay):
             error.message,
         )
 
-    def on_load_changed(self, webview, load_event):
+    def on_load_changed(self, *_):
         """Set foreground color when object while object is loading."""
-        self.webview.run_javascript(
+        self.webview.evaluate_javascript(
             f"document.fgColor='{self.fgcolor}'",
-            None,
-            None,
-            None,
+            -1, None, None, None, None,
         )
 
     def do_next_match(self, text):
@@ -497,7 +505,7 @@ class Renderer(Overlay):
             self.search_done = None
             controller.search(text, FindOptions.WRAP_AROUND, MAXUINT)
             while self.search_done is None:
-                main_iteration()
+                MainContext.default().iteration(False)
         elif self.search_done:
             controller.search_next()
 
@@ -514,7 +522,7 @@ class Renderer(Overlay):
                 MAXUINT,
             )
             while self.search_done is None:
-                main_iteration()
+                MainContext.default().iteration(False)
         elif self.search_done:
             controller.search_previous()
 
@@ -525,11 +533,11 @@ class Renderer(Overlay):
         controller = self.webview.get_find_controller()
         controller.search_finish()
 
-    def on_found_text(self, controller, count):
+    def on_found_text(self, *_):
         """Mark search as done."""
         self.search_done = True
 
-    def on_faild_to_find_text(self, controller):
+    def on_faild_to_find_text(self, _):
         """Mark search as not done."""
         self.search_done = False
 
@@ -544,4 +552,6 @@ class Renderer(Overlay):
         else:
             position = self.pos
 
-        self.webview.run_javascript(JS_SCROLL % position, None, None, None)
+        self.webview.evaluate_javascript(
+            JS_SCROLL % position, -1, None, None, None, None,
+        )

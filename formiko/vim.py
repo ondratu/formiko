@@ -121,7 +121,7 @@ class VimEditor(Vte.Terminal):
         """Return file openned in vim."""
         __file_name = self.vim_remote_expr("@%")
         if __file_name != self.__file_name:
-            name, ext = splitext(__file_name)
+            _, ext = splitext(__file_name)
             self.emit("file-type", ext)
         self.__file_name = __file_name
         return self.__file_name
@@ -134,14 +134,14 @@ class VimEditor(Vte.Terminal):
     def do_file_type(self, ext):
         """Do nothing - just compatible interface."""
 
-    def read_from_file(self, file_name):
+    def read_from_file(self, _):
         """Log error, read_from_file is not supported."""
         error("Not supported call read_from_file in VimEditor")
 
-    def save(self, *args):
+    def save(self, _):
         """Log error, save is not supported."""
         error("Not supported call save in VimEditor")
 
-    def save_as(self, *args):
+    def save_as(self, *_):
         """Log error, save as is not supported."""
         error("Not supported call save_as in VimEditor")

@@ -10,8 +10,7 @@ from json import dumps, loads
 from typing import Any
 
 from gi.repository import GLib, Gtk
-from gi.repository.Gtk import MessageDialog, MessageType
-from gi.repository.WebKit2 import LoadEvent, WebView
+from gi.repository.WebKit import LoadEvent, WebView
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse as json_parse
 
@@ -205,16 +204,9 @@ class JSONPreview:
 
     def _show_error_dialog(self, message: str) -> bool:
         """Display an error dialog when JSONPath parsing fails."""
-        dialog = MessageDialog(
-            transient_for=self._win,
-            modal=True,
-            message_type=MessageType.ERROR,
-            buttons=Gtk.ButtonsType.OK,
-            text="Invalid JSONPath Expression",
-        )
-        dialog.format_secondary_text(message)
-        dialog.run()
-        dialog.destroy()
+        dialog = Gtk.AlertDialog.new("Invalid JSONPath Expression")
+        dialog.set_detail(message)
+        dialog.show(self._win)
         return False
 
     def _generate_html(self, data: Any) -> str:
@@ -345,7 +337,7 @@ class JSONPreview:
                     ).replace("__EXPANDS__", dumps(list(expands)))
                     webview.run_javascript(js, None, None, None)
                 else:
-                    webview.run_javascript(JS_EXPAND_ALL, None, None, None)
+                    webview.evaluate_javascript(js, -1, None, None, None, None)
 
                 if hasattr(webview, "highlight_handler_id"):
                     webview.disconnect(webview.highlight_handler_id)

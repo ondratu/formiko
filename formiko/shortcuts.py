@@ -16,19 +16,19 @@ class SourceGroup(ShortcutsGroup):
     def __init__(self):
         super().__init__(title="Editor")
 
-        self.add(ShortcutsShortcut(accelerator="<Control>c", title="Copy"))
-        self.add(ShortcutsShortcut(accelerator="<Control>x", title="Cut"))
-        self.add(ShortcutsShortcut(accelerator="<Control>v", title="Paste"))
-        self.add(
+        self.append(ShortcutsShortcut(accelerator="<Control>c", title="Copy"))
+        self.append(ShortcutsShortcut(accelerator="<Control>x", title="Cut"))
+        self.append(ShortcutsShortcut(accelerator="<Control>v", title="Paste"))
+        self.append(
             ShortcutsShortcut(accelerator="<Control>a", title="Select All"),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>Home",
                 title="Go to Begin of Document",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>End",
                 title="Go to End of Document",
@@ -42,19 +42,19 @@ class FindGroup(ShortcutsGroup):
     def __init__(self):
         super().__init__(title="Find")
 
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>f",
                 title="Find in Document / Find another match in same way",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>g",
                 title="Find next match",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Shift><Control>g",
                 title="Find previous match",
@@ -68,22 +68,22 @@ class VimGroup(ShortcutsGroup):
     def __init__(self):
         super().__init__(title="Vim")
 
-        self.add(ShortcutsShortcut(accelerator="y", title="Copy"))
-        self.add(ShortcutsShortcut(accelerator="x", title="Cut"))
-        self.add(ShortcutsShortcut(accelerator="p", title="Paste"))
-        self.add(
+        self.append(ShortcutsShortcut(accelerator="y", title="Copy"))
+        self.append(ShortcutsShortcut(accelerator="x", title="Cut"))
+        self.append(ShortcutsShortcut(accelerator="p", title="Paste"))
+        self.append(
             ShortcutsShortcut(
                 accelerator="Escape+g+g",
                 title="Go to Begin of Document",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="Escape+<Shift>G",
                 title="Go to End of Document",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="Escape+g+g+<Shift>v+<Shift>G",
                 title="Select All",
@@ -97,19 +97,19 @@ class PreviewGroup(ShortcutsGroup):
     def __init__(self):
         super().__init__(title="Preview")
 
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>r",
                 title="Refresh preview",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(accelerator="<Alt>e", title="Show editor only"),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(accelerator="<Alt>p", title="Show preview only"),
         )
-        self.add(ShortcutsShortcut(accelerator="<Alt>b", title="Show both"))
+        self.append(ShortcutsShortcut(accelerator="<Alt>b", title="Show both"))
 
 
 class GeneralGroup(ShortcutsGroup):
@@ -118,21 +118,21 @@ class GeneralGroup(ShortcutsGroup):
     def __init__(self, editor_type):
         super().__init__(title="Genaral")
 
-        self.add(
+        self.append(
             ShortcutsShortcut(accelerator="<Control>n", title="New Document"),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(accelerator="<Control>o", title="Open Document"),
         )
 
         if editor_type == "source":
-            self.add(
+            self.append(
                 ShortcutsShortcut(
                     accelerator="<Control>s",
                     title="Save Document",
                 ),
             )
-            self.add(
+            self.append(
                 ShortcutsShortcut(
                     accelerator="<Shift><Control>s",
                     title="Save Document As",
@@ -140,32 +140,32 @@ class GeneralGroup(ShortcutsGroup):
             )
 
         elif editor_type == "vim":
-            self.add(
+            self.append(
                 ShortcutsShortcut(
                     accelerator="Escape+colon+w",
                     title="Save Document Vim",
                 ),
             )
 
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Shift><Control>e",
                 title="Export Document As",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>p",
                 title="Print Document",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(
                 accelerator="<Control>w",
                 title="Close Document",
             ),
         )
-        self.add(
+        self.append(
             ShortcutsShortcut(accelerator="<Control>q", title="Quit Formiko"),
         )
 
@@ -178,14 +178,14 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
         super().__init__(modal=True)
         sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)
 
-        sec.add(GeneralGroup(editor_type))
-        sec.add(PreviewGroup())
-        sec.add(FindGroup())
+        sec.add_group(GeneralGroup(editor_type))
+        sec.add_group(PreviewGroup())
+        sec.add_group(FindGroup())
 
         if editor_type == EditorType.SOURCE:
-            sec.add(SourceGroup())
+            sec.add_group(SourceGroup())
 
         elif editor_type == EditorType.VIM:
-            sec.add(VimGroup())
+            sec.add_group(VimGroup())
 
-        self.add(sec)
+        self.add_section(sec)

@@ -6,15 +6,17 @@ from signal import SIGINT, signal
 
 from gi import require_version
 
-require_version("Gdk", "3.0")
-require_version("Gtk", "3.0")
-require_version("GtkSource", "4")
+require_version("Gtk", "4.0")
+require_version("Gdk", "4.0")
+require_version("GtkSource", "5")
 require_version("Pango", "1.0")
-require_version("GtkSpell", "3.0")
-require_version("WebKit2", "4.1")
+require_version("WebKit", "6.0")
 
 with suppress(ValueError):
-    require_version("Vte", "2.91")
+    require_version("Spelling", "1")
+
+with suppress(ValueError):
+    require_version("Vte", "3.91")
 
 # pylint: disable = wrong-import-position
 from formiko.application import Application  # noqa: E402

@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Version dev
+Version 1.6.0dev
   * code refactoring
   * remove deprecated recommonmark
   * remove deprecated webkit2 4.0
@@ -13,6 +13,11 @@ Version dev
   * Use HTML5 Writer from docutils instead of deprecated docutils-html5-writer
   * fix #42 - "reload from storage" pops up during editing
   * fix #45 - pip3 install ERROR
+  * Migrate from GTK3 to GTK4
+    - WebKit2 (4.1) replaced by WebKit (6.0)
+    - GtkSource 4 replaced by GtkSource 5
+    - GtkSpell replaced by libspelling 1
+    - VTE 2.91 (GTK3) replaced by VTE 3.91 (GTK4)
   * fix #53 - replace unmaintained m2r with m2r2
 
 
