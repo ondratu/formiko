@@ -11,6 +11,9 @@ Version dev
   * JSON preview: add collapsible folding view
   * JSON preview: add json path filter
   * Use HTML5 Writer from docutils instead of deprecated docutils-html5-writer
+  * fix #42 - "reload from storage" pops up during editing
+  * fix #45 - pip3 install ERROR
+  * fix #29 - Default preview is vulnerable to XSS
 
 
 Version 1.5.0
