@@ -51,7 +51,7 @@ except ImportError:
 
 
 try:
-    from m2r import convert as m2r_convert
+    from m2r2 import convert as m2r_convert  # type: ignore[import]
 
     class Mark2Resturctured(RstParser):
         """Converting from MarkDown to reStructuredText before parse."""
@@ -88,7 +88,7 @@ PARSERS = {
         "key": "m2r",
         "title": "MarkDown to reStructuredText",
         "class": Mark2Resturctured,
-        "url": "https://github.com/miyakogi/m2r",
+        "url": "https://github.com/crossnox/m2r2",
     },
     "html": {
         "key": "html",

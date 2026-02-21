@@ -31,7 +31,7 @@ dependencies = ["docutils>=0.12"]
 [project.optional-dependencies]
 extra = [
     "pynvim",
-    "m2r",
+    "m2r2",
     "Pygments",
     "docutils-tinyhtmlwriter",
     "docutils-htmlwriter",

@@ -13,7 +13,7 @@ Version dev
   * Use HTML5 Writer from docutils instead of deprecated docutils-html5-writer
   * fix #42 - "reload from storage" pops up during editing
   * fix #45 - pip3 install ERROR
-  * fix #29 - Default preview is vulnerable to XSS
+  * fix #53 - replace unmaintained m2r with m2r2
 
 
 Version 1.5.0

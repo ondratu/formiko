@@ -22,8 +22,8 @@ Features:
 It support these parsers and writers:
 
 * Docutils reStructuredText parser - https://www.docutils.org
-* MarkDown to reStructuredText convertor (M2R) -
-  https://github.com/miyakogi/m2r
+* MarkDown to reStructuredText convertor (M2R2) -
+  https://github.com/crossnox/m2r2
 * Docutils HTML4, HTML5, S5/HTML slide show and PEP HTML writer -
   http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
@@ -48,7 +48,7 @@ Requirements:
 
 recommended:
 ~~~~~~~~~~~~
-* m2r - converting MarkDown to reStructuredText
+* m2r2 - converting MarkDown to reStructuredText
 * Pygments - syntax color in html output code blocks
 
 optionally:
@@ -101,7 +101,7 @@ gtksource or webkit2 could have another version name.
 
     # optionally
     apt install neovim python3-pynvim
-    pip3 install m2r docutils-tinyhtmlwriter jsonpath-ng
+    pip3 install m2r2 docutils-tinyhtmlwriter jsonpath-ng
 
 **Formiko is in Debian and Ubuntu repository**. So you can install it standard
 way.
@@ -126,7 +126,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
     # python3.6 is in dependencies as like gtk3
     pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview4 \
                   librsvg webkit-gtk py36-pygments
-    pip3.6 install m2r formiko
+    pip3.6 install m2r2 formiko
 
     # optionally
     pkgin install neovim pynvim
@@ -153,4 +153,4 @@ On FreeBSD you must install all these packages:
 .. code:: sh
 
     pkg install en-hunspell  # or other language you want
-    pip-3.7 install docutils-tinyhtmlwriter m2r jsonpath-ng
+    pip-3.7 install docutils-tinyhtmlwriter m2r2 jsonpath-ng
