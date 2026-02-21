@@ -1,6 +1,7 @@
-"""Project setup.py."""
+"""Project setup.py - custom build commands and data_files."""
 
 import logging
+import re
 from gzip import open as zopen
 from os import listdir, makedirs, path
 from shutil import rmtree
@@ -12,16 +13,27 @@ from setuptools import Command, setup
 from setuptools.command.build import build
 from setuptools.command.install import install
 
-from formiko import __comment__, __url__, __version__
 
-# pylint: disable=missing-function-docstring
-# ruff: noqa: D102
+def _read_version():
+    """Read project version from formiko/__init__.py without importing it."""
+    init = path.join(
+        path.dirname(path.abspath(__file__)),
+        "formiko",
+        "__init__.py",
+    )
+    with open(init, encoding="utf-8") as f:
+        match = re.search(
+            r'^__version__\s*=\s*["\']([^"\']+)["\']',
+            f.read(),
+            re.M,
+        )
+        if match:
+            return match.group(1)
+    error = "Cannot find __version__ in formiko/__init__.py"
+    raise RuntimeError(error)
 
 
-def doc():
-    """Return documentation from README.rst."""
-    with open("README.rst", encoding="utf-8") as readme:
-        return readme.read().strip()
+__version__ = _read_version()
 
 
 def icons_data():
@@ -52,15 +64,18 @@ class Build(build):
     man_base: str | None
 
     def initialize_options(self):
+        """Initialize default option values."""
         super().initialize_options()
         self.man_base = None
 
     def finalize_options(self):
+        """Finalize and validate option values."""
         super().finalize_options()
         if self.man_base is None:
             self.man_base = path.join(self.build_base, "man")
 
     def run(self):
+        """Build man pages in addition to standard build."""
         super().run()
         logging.info("building man pages")
         if self.dry_run:
@@ -91,15 +106,18 @@ class CleanMan(Command):
     build_base: str | None
 
     def initialize_options(self):
+        """Initialize default option values."""
         self.man_base = None
         self.build_base = None
 
     def finalize_options(self):
+        """Finalize and validate option values."""
         self.set_undefined_options("build", ("build_base", "build_base"))
         if self.man_base is None:
             self.man_base = path.join(self.build_base, "man")
 
     def run(self):
+        """Remove generated man page files."""
         logging.info("clean man pages")
         if self.dry_run:
             return
@@ -134,6 +152,7 @@ class InstallMan(Command):
     outfiles: list[str]
 
     def initialize_options(self):
+        """Initialize default option values."""
         self.man_base = None
         self.build_base = None
         self.install_data = None
@@ -141,6 +160,7 @@ class InstallMan(Command):
         self.outfiles = []
 
     def finalize_options(self):
+        """Finalize and validate option values."""
         self.set_undefined_options("build", ("build_base", "build_base"))
         self.set_undefined_options("install", ("install_data", "install_data"))
         if self.man_base is None:
@@ -149,6 +169,7 @@ class InstallMan(Command):
             self.man_dir = path.join(self.install_data, "share", "man", "man1")
 
     def run(self):
+        """Install built man pages to the target directory."""
         self.mkpath(self.man_dir)
         for page in listdir(self.man_base):
             src = f"{self.man_base}/{page}"
@@ -156,9 +177,11 @@ class InstallMan(Command):
             self.outfiles.append(out)
 
     def get_inputs(self):
+        """Return list of input files (none for man pages)."""
         return []
 
     def get_outputs(self):
+        """Return list of installed man page files."""
         return self.outfiles
 
 
@@ -166,15 +189,16 @@ class CheckVersion(Command):
     """Check versions validation."""
 
     description = "check if all all versions in all files are same"
-    user_options: ClassVar[list[str]] = []
+    user_options: ClassVar[list[tuple]] = []
 
     def initialize_options(self):
-        pass
+        """Initialize default option values (none needed)."""
 
     def finalize_options(self):
-        pass
+        """Finalize and validate option values (none needed)."""
 
     def run(self):
+        """Check that versions in all project files match."""
         # pylint: disable=import-outside-toplevel
         from packaging.version import Version
 
@@ -210,16 +234,6 @@ class CheckVersion(Command):
 
 
 setup(
-    name="formiko",
-    version=__version__,
-    description=__comment__,
-    author="Ondrej Tuma",
-    author_email="mcbig@zeropage.cz",
-    url=__url__,
-    packages=["formiko"],
-    package_data={
-        "formiko.data": ["*.js", "*.css"],
-    },
     data_files=[
         (
             "share/doc/formiko",
@@ -230,43 +244,6 @@ setup(
         ("share/formiko/icons", ["icons/formiko.svg"]),
         *icons_data(),
     ],
-    keywords=["doc", "html", "rst", "docutils", "md", "markdown", "editor"],
-    license="BSD",
-    long_description=doc(),
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "Environment :: X11 Applications :: GTK",
-        "Intended Audience :: Developers",
-        "Intended Audience :: End Users/Desktop",
-        "License :: OSI Approved :: BSD License",
-        "Natural Language :: English",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Topic :: Documentation",
-        "Topic :: Software Development :: Documentation",
-        "Topic :: Text Editors :: Documentation",
-        "Topic :: Text Editors :: Text Processing",
-        "Topic :: Text Processing",
-        "Topic :: Text Processing :: Markup",
-        "Topic :: Text Processing :: Markup :: HTML",
-        "Topic :: Utilities",
-    ],
-    requires=["docutils>=0.12", "PyGObject", "jsonpath-ng"],
-    extra_requires=[
-        "pynvim",
-        "m2r",
-        "Pygments",
-        "docutils-tinyhtmlwriter",
-        "docutils-htmlwriter",
-        "docutils-html5-writer",
-    ],
-    install_requires=["docutils>=0.12"],
-    entry_points={
-        "gui_scripts": [
-            "formiko = formiko.__main__:main",
-            "formiko-vim = formiko.__main__:main_vim",
-        ],
-    },
     cmdclass={
         "build": Build,
         "install_man": InstallMan,

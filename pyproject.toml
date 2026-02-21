@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=64", "docutils>=0.12"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "formiko"
+dynamic = ["version", "readme"]
+description = "Formiko is reStructuredText and MarkDown editor and live previewer."
+authors = [{name = "Ondrej Tuma", email = "mcbig@zeropage.cz"}]
+license = "BSD-3-Clause"
+keywords = ["doc", "html", "rst", "docutils", "md", "markdown", "editor"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: X11 Applications :: GTK",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Documentation",
+    "Topic :: Software Development :: Documentation",
+    "Topic :: Text Editors :: Documentation",
+    "Topic :: Text Editors :: Text Processing",
+    "Topic :: Text Processing",
+    "Topic :: Text Processing :: Markup",
+    "Topic :: Text Processing :: Markup :: HTML",
+    "Topic :: Utilities",
+]
+dependencies = ["docutils>=0.12"]
+
+[project.optional-dependencies]
+extra = [
+    "pynvim",
+    "m2r",
+    "Pygments",
+    "docutils-tinyhtmlwriter",
+    "docutils-htmlwriter",
+    "docutils-html5-writer",
+]
+
+[project.urls]
+Homepage = "https://github.com/ondratu/formiko"
+
+[project.gui-scripts]
+formiko = "formiko.__main__:main"
+formiko-vim = "formiko.__main__:main_vim"
+
+[tool.setuptools.dynamic]
+version = {attr = "formiko.__version__"}
+readme = {file = "README.rst"}
+
+[tool.setuptools.packages.find]
+include = ["formiko*"]
+
+[tool.setuptools.package-data]
+"formiko.data" = ["*.js", "*.css"]
