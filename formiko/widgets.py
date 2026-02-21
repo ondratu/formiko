@@ -1,7 +1,6 @@
 """Gtk Widgets extensions."""
 
 from gi.repository import GObject, Gtk
-from gi.repository.Gio import ThemedIcon
 from gi.repository.GLib import Variant
 
 
@@ -29,8 +28,7 @@ class IconButton(Gtk.Button):
 
     def __init__(self, symbol, tooltip, **kwargs):
         super().__init__(**kwargs)
-        icon = ThemedIcon(name=symbol)
-        self.set_image(Gtk.Image.new_from_gicon(icon, Gtk.IconSize.BUTTON))
+        self.set_icon_name(symbol)
         self.set_tooltip_text(tooltip)
 
 
@@ -43,8 +41,8 @@ class ActionHelper:
         action_name = self.action_name
         if action_name:
             prefix, action = action_name.split(".")
-            toplevel = self.get_toplevel
-            top = toplevel().get_action_group(prefix)
+            root = self.get_root()
+            top = root.get_action_group(prefix) if root else None
             if top and top.has_action(action):
                 return action, top
         return "", None

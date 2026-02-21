@@ -8,7 +8,7 @@ class StatusMenuButton(Gtk.MenuButton):
     """Status bar menu button."""
 
     css = Gtk.CssProvider()
-    css.load_from_data(b"""
+    css.load_from_string("""
             * {
                 border: 0;
                 padding: 1px 8px 2px 4px;
@@ -18,7 +18,6 @@ class StatusMenuButton(Gtk.MenuButton):
 
     def __init__(self, label, popover):
         super().__init__(popover=popover)
-        self.set_relief(Gtk.ReliefStyle.NONE)
         ctx = self.get_style_context()
         ctx.add_provider(
             StatusMenuButton.css,
@@ -26,17 +25,13 @@ class StatusMenuButton(Gtk.MenuButton):
         )
 
         box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.add(box)
-        self.label = Gtk.Label(label)
-        box.pack_start(self.label, True, True, 0)
+        self.set_child(box)
+        self.label = Gtk.Label(label=label)
+        box.append(self.label)
 
         icon = Gio.ThemedIcon(name="pan-down-symbolic")
-        box.pack_start(
-            Gtk.Image.new_from_gicon(icon, Gtk.IconSize.MENU),
-            True,
-            True,
-            0,
-        )
+        img = Gtk.Image.new_from_gicon(icon)
+        box.append(img)
 
     def set_label(self, label):
         """Set button label."""
@@ -49,65 +44,47 @@ class LineColPopover(Gtk.Popover):
     def __init__(self, preferences):
         super().__init__()
 
-        self.box = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL,
-            border_width=10,
-        )
-        self.add(self.box)
+        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.box.set_margin_top(10)
+        self.box.set_margin_bottom(10)
+        self.box.set_margin_start(10)
+        self.box.set_margin_end(10)
+        self.set_child(self.box)
 
-        self.box.pack_start(
+        self.box.append(
             self.check_button(
                 "Display line numbers",
                 "editor.line-numbers-toggle",
                 preferences.line_numbers,
             ),
-            True,
-            True,
-            0,
         )
-        self.box.pack_start(
+        self.box.append(
             self.check_button(
                 "Highlight current line",
                 "editor.current-line-toggle",
                 preferences.current_line,
             ),
-            True,
-            True,
-            0,
         )
-        self.box.pack_start(self.margin(preferences), True, True, 0)
-        self.box.pack_start(
+        self.box.append(self.margin(preferences))
+        self.box.append(
             self.check_button(
                 "Text wrapping",
                 "editor.text-wrapping-toggle",
                 preferences.text_wrapping,
             ),
-            True,
-            True,
-            0,
         )
-        self.box.pack_start(
+        self.box.append(
             self.check_button(
                 "Draw white chars",
                 "editor.white-chars-toggle",
                 preferences.white_chars,
             ),
-            True,
-            True,
-            0,
         )
-
-        self.box.show_all()
 
     def check_button(self, label, action, value):
         """Create check button for specific settings."""
-        btn = Gtk.CheckButton(
-            label=label,
-            action_name=action,
-            action_target=GLib.Variant("b", True),
-        )
-        btn.set_active(value)
-        return btn
+        del value  # GTK4 auto-syncs from action state
+        return Gtk.CheckButton(label=label, action_name=action)
 
     def margin(self, preferences):
         """Create Box with right margin settings."""
@@ -118,7 +95,7 @@ class LineColPopover(Gtk.Popover):
             "editor.right-margin-toggle",
             preferences.right_margin,
         )
-        vbox.pack_start(toggle, True, True, 0)
+        vbox.append(toggle)
 
         spin = ActionableSpinButton(
             "editor.right-margin-value",
@@ -127,7 +104,7 @@ class LineColPopover(Gtk.Popover):
         )
         spin.set_range(1.0, 256.0)
         spin.set_increments(1.0, 8.0)
-        vbox.pack_start(spin, True, True, 0)
+        vbox.append(spin)
         toggle.connect("toggled", self.on_margin_toggle, spin)
 
         return vbox
@@ -141,7 +118,7 @@ class Statusbar(Gtk.Box):
     """Status bar widget."""
 
     css = Gtk.CssProvider()
-    css.load_from_data(b"* {border-top: 1px solid #91918c; padding: 1px;}")
+    css.load_from_string("* {border-top: 1px solid #91918c; padding: 1px;}")
 
     def __init__(self, preferences):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL)
@@ -152,74 +129,75 @@ class Statusbar(Gtk.Box):
         )
 
         self.message_label = Gtk.Label()
-        self.pack_start(self.message_label, True, True, 10)
+        self.message_label.set_hexpand(True)
+        self.message_label.set_margin_start(10)
+        self.message_label.set_margin_end(10)
+        self.append(self.message_label)
 
         self.info_bar = self.create_info_bar()
-        self.pack_start(self.info_bar, False, False, 10)
-
-        btn = StatusMenuButton("Line 1, Col 1", LineColPopover(preferences))
-        self.pack_end(btn, False, False, 1)
-
-        self.tab_popover = self.create_tab_popover(preferences)
-        self.width_btn = StatusMenuButton(
-            "Tabulator width %d" % preferences.tab_width,
-            self.tab_popover,
-        )
-        self.pack_end(self.width_btn, False, False, 1)
+        self.info_bar.set_margin_start(10)
+        self.info_bar.set_margin_end(10)
+        self.append(self.info_bar)
 
         self.editor_popover = self.create_editor_popover(preferences)
         self.editor_btn = StatusMenuButton("Editor", self.editor_popover)
-        self.pack_end(self.editor_btn, False, False, 1)
+        self.append(self.editor_btn)
+
+        self.tab_popover = self.create_tab_popover(preferences)
+        self.width_btn = StatusMenuButton(
+            f"Tabulator width {preferences.tab_width}",
+            self.tab_popover,
+        )
+        self.append(self.width_btn)
+
+        btn = StatusMenuButton("Line 1, Col 1", LineColPopover(preferences))
+        self.append(btn)
 
     def create_tab_popover(self, preferences):
         """Create popover for tab settings."""
         pop = Gtk.Popover()
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
-        pop.add(box)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        pop.set_child(box)
 
         auto_indent = Gtk.CheckButton(
             label="Auto indent",
             action_name="editor.auto-indent-toggle",
-            action_target=GLib.Variant("b", True),
         )
-        box.pack_start(auto_indent, True, True, 0)
+        box.append(auto_indent)
 
-        box.pack_start(
+        box.append(
             Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-            True,
-            True,
-            5,
         )
 
-        tab_spaces = None
+        tab_group = None
         for i in (2, 4, 8):
-            tab_spaces = Gtk.RadioButton(
+            tab_btn = Gtk.CheckButton(
                 label=str(i),
+                group=tab_group,
                 action_target=GLib.Variant("i", i),
-                group=tab_spaces,
             )
             if preferences.tab_width == i:
-                tab_spaces.set_active(True)
+                tab_btn.set_active(True)
+            tab_btn.connect("toggled", self.on_tab_spaces)
+            tab_btn.set_action_name("editor.tab-width")
+            box.append(tab_btn)
+            if tab_group is None:
+                tab_group = tab_btn
 
-            tab_spaces.connect("toggled", self.on_tab_spaces)
-            box.pack_start(tab_spaces, True, True, 0)
-            tab_spaces.set_action_name("editor.tab-width")
-
-        box.pack_start(
+        box.append(
             Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-            True,
-            True,
-            5,
         )
 
         self.tab_use_space = Gtk.CheckButton(
             label="Use spaces",
             action_name="editor.use-spaces-toggle",
-            action_target=GLib.Variant("b", True),
         )
-        box.pack_start(self.tab_use_space, True, True, 0)
+        box.append(self.tab_use_space)
 
-        box.show_all()
         return pop
 
     def on_tab_spaces(self, widget):
@@ -232,39 +210,36 @@ class Statusbar(Gtk.Box):
     def create_editor_popover(self, preferences):
         """Create Editor preferences popover."""
         pop = Gtk.Popover()
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, border_width=10)
-        pop.add(box)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.set_margin_top(10)
+        box.set_margin_bottom(10)
+        box.set_margin_start(10)
+        box.set_margin_end(10)
+        pop.set_child(box)
 
         period_btn = Gtk.CheckButton(
             label="Save file each 5 min",
             action_name="editor.period-save-toggle",
-            action_target=GLib.Variant("b", True),
         )
-        period_btn.set_active(preferences.period_save)
-        box.pack_start(period_btn, True, True, 0)
+        box.append(period_btn)
 
         spell_btn = Gtk.CheckButton(
             label="Check Spelling",
             action_name="editor.check-spelling-toggle",
-            action_target=GLib.Variant("b", True),
         )
-        spell_btn.set_active(preferences.check_spelling)
-        box.pack_start(spell_btn, True, True, 0)
+        box.append(spell_btn)
 
-        box.show_all()
         return pop
 
     def create_info_bar(self):
         """Create info bar part."""
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        bar.words_count = Gtk.Label("0")
-        bar.pack_start(bar.words_count, True, True, 0)
-        bar.pack_start(Gtk.Label("words,"), True, True, 5)
-        bar.chars_count = Gtk.Label("0")
-        bar.pack_start(bar.chars_count, True, True, 0)
-        bar.pack_start(Gtk.Label("characters"), True, True, 5)
-
-        bar.show_all()
+        bar.words_count = Gtk.Label(label="0")
+        bar.append(bar.words_count)
+        bar.append(Gtk.Label(label="words,"))
+        bar.chars_count = Gtk.Label(label="0")
+        bar.append(bar.chars_count)
+        bar.append(Gtk.Label(label="characters"))
         return bar
 
     def set_words_count(self, count):

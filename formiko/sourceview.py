@@ -4,7 +4,7 @@ from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import GObject, Gtk, GtkSource
+from gi.repository import Gio, GObject, Gtk, GtkSource
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -19,16 +19,21 @@ from gi.repository.GtkSource import (
     SearchSettings,
     View,
 )
-from gi.repository.GtkSpell import Checker
-from gi.repository.Pango import FontDescription
 
 from formiko.dialogs import (
     LANGS,
     FileChangedDialog,
     FileSaveDialog,
     TraceBackDialog,
+    run_dialog,
 )
 from formiko.widgets import ActionHelper, ImutableDict
+
+try:
+    from gi.repository import Spelling
+    _SPELLING_AVAILABLE = True
+except ImportError:
+    _SPELLING_AVAILABLE = False
 
 PERIOD_SAVE_TIME = 300  # 5min
 
@@ -51,6 +56,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def __init__(self, win, preferences, action_name=None):
         GtkSource.init()
+        if _SPELLING_AVAILABLE:
+            Spelling.init()
         super().__init__()
         if action_name:
             self.action_name = action_name
@@ -61,20 +68,42 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             LANGS["."+preferences.parser],
         )
         self.text_buffer.connect("changed", self.inc_changes)
-        # TODO: will work when FileSaver and FileLoader will be used
         self.source_view = View.new_with_buffer(self.text_buffer)
 
         adj = self.get_vadjustment()
         adj.connect("value-changed", self.on_scroll_changed)
 
-        self.spellchecker = Checker()
-        self.spellchecker.connect("language-changed", self.on_language_changed)
-
-        self.source_view.override_font(
-            FontDescription.from_string("Monospace"),
+        # Set monospace font via CSS provider
+        css = Gtk.CssProvider()
+        css.load_from_string("textview { font-family: Monospace; }")
+        self.source_view.get_style_context().add_provider(
+            css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
-        # self.source_view.set_monospace(True) since 3.16
-        self.add(self.source_view)
+
+        self.set_child(self.source_view)
+
+        # Initialize spell checker
+        self.spell_adapter = None
+        self.checker = None
+        if _SPELLING_AVAILABLE:
+            self.checker = Spelling.Checker.get_default()
+            self.spell_adapter = Spelling.TextBufferAdapter.new(
+                self.text_buffer, self.checker,
+            )
+            self.spell_adapter.set_enabled(False)  # off until user enables
+            self.source_view.insert_action_group(
+                "spelling", self.spell_adapter,
+            )
+            self.source_view.set_extra_menu(
+                self.spell_adapter.get_menu_model(),
+            )
+            # Connect to checker (not adapter) — context menu's language action
+            # calls spelling_checker_set_language() directly, bypassing the
+            # adapter's own notify::language signal.
+            self.checker.connect(
+                "notify::language",
+                self.on_language_changed,
+            )
 
         editor_pref = preferences.editor
         self.set_period_save(editor_pref.period_save)
@@ -123,7 +152,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def position(self):
         """Return cursor position."""
         adj = self.source_view.get_vadjustment()
-        hight = self.get_allocated_height()
+        hight = self.get_height()
         value = adj.get_value()
         if value:
             return adj.get_value() / (adj.get_upper() - hight)
@@ -142,7 +171,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     @property
     def file_ext(self):
         """Returned opened file extension."""
-        name, ext = splitext(self.__file_name)
+        _, ext = splitext(self.__file_name)
         return ext
 
     def inc_changes(self, text_buffer):
@@ -155,14 +184,16 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
 
-    def on_language_changed(self, spellchecker, language):
-        """Proxy the action."""
+    def on_language_changed(self, checker, pspec):
+        """Proxy the language change action and re-check the buffer."""
+        if self.spell_adapter is not None:
+            self.spell_adapter.invalidate_all()
         action, go = self.get_action_owner()
         if go:
-            action_target = Variant("s", language)
-            go.activate_action(action, action_target)
+            code = checker.get_language() or ""
+            go.activate_action(action, Variant("s", code))
 
-    def on_scroll_changed(self, *params):
+    def on_scroll_changed(self, *_):
         """Emit scroll event."""
         self.emit("scroll-changed", self.position)
 
@@ -174,19 +205,17 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def set_check_spelling(self, check_spelling, spell_lang):
         """Set spell check."""
+        if self.spell_adapter is None:
+            return
         if check_spelling:
-            if spell_lang in Checker.get_language_list():
-                self.spellchecker.set_language(spell_lang)
+            if spell_lang:
+                self.spell_adapter.set_language(spell_lang)
             else:
-                # refresh from temporary off check spelling
-                self.on_language_changed(
-                    self.spellchecker,
-                    self.spellchecker.get_language(),
-                )
-            self.spellchecker.attach(self.source_view)
+                # No saved language: save the system default (GTK3 behaviour)
+                self.on_language_changed(self.checker, None)
+            self.spell_adapter.set_enabled(True)
         else:
-            self.spellchecker.detach()
-            self.on_language_changed(self.spellchecker, "")
+            self.spell_adapter.set_enabled(False)
 
     def set_spaces_instead_of_tabs(self, use_spaces):
         """Set spaces instead of tabs."""
@@ -222,7 +251,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             if last_ctime > self.__last_ctime:
                 self.__pause_period = True
                 dialog = FileChangedDialog(self.__win, self.__file_name)
-                if dialog.run() == Gtk.ResponseType.YES:
+                if run_dialog(dialog) == Gtk.ResponseType.YES:
                     cursor = self.text_buffer.get_insert()
                     offset = self.text_buffer.get_iter_at_mark(
                         cursor,
@@ -283,7 +312,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             error = format_exc()
             if self.__win:
                 md = TraceBackDialog(self.__win, error)
-                md.run()
+                run_dialog(md)
                 md.destroy()
             stderr.write(error)
             stderr.flush()
@@ -313,19 +342,22 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         dialog.add_filter_html(lang.get_id() == "html")
         dialog.add_filter_json(lang.get_id() == "json")
         dialog.add_filter_plain(lang.get_id() == "text")
-        dialog.set_do_overwrite_confirmation(True)
 
         if not self.__file_name:
             dialog.set_current_folder(
-                get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS),
+                Gio.File.new_for_path(
+                    get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS),
+                ),
             )
             dialog.set_current_name("Untitled document")
         else:
-            dialog.set_current_folder(dirname(self.file_path))
+            dialog.set_current_folder(
+                Gio.File.new_for_path(dirname(self.file_path)),
+            )
             dialog.set_current_name(self.file_name)
 
         file_name = ""
-        if dialog.run() == Gtk.ResponseType.ACCEPT:
+        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
             file_name = dialog.get_filename_with_ext()
         dialog.destroy()
         return file_name
@@ -349,7 +381,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             return False
 
-        found, search_iter, end, _ = self.search_context.forward(search_iter)
+        found, search_iter, _end, _ = self.search_context.forward(search_iter)
 
         if not found:
             self.search_mark = None
@@ -369,7 +401,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             return False
 
-        found, start, search_iter, _ = self.search_context.backward(
+        found, _start, search_iter, _ = self.search_context.backward(
             search_iter,
         )
         if not found:

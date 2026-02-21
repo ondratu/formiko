@@ -1,9 +1,9 @@
 """Formiko dialog widgets."""
 from os.path import splitext
 
-from gi.repository import Gtk
+from gi.repository import GLib, Gtk
 from gi.repository.GtkSource import LanguageManager
-from gi.repository.Pango import FontDescription
+from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
 from formiko import __author__, __comment__, __copyright__, __version__
 
@@ -18,6 +18,22 @@ LANGS = {
 }
 
 
+def run_dialog(dialog):
+    """Run a GTK4 dialog synchronously using a nested main loop."""
+    result = [Gtk.ResponseType.NONE]
+    loop = GLib.MainLoop()
+
+    def on_response(_, response):
+        result[0] = response
+        loop.quit()
+
+    handler = dialog.connect("response", on_response)
+    dialog.present()
+    loop.run()
+    dialog.disconnect(handler)
+    return result[0]
+
+
 class AboutDialog(Gtk.AboutDialog):
     """About Formiko dialog."""
 
@@ -28,11 +44,10 @@ class AboutDialog(Gtk.AboutDialog):
         self.set_copyright(__copyright__ + " The Formiko Team")
         self.set_comments(__comment__)
         self.set_website("https://github.com/ondratu/formiko")
-        self.set_license_type(Gtk.License.BSD)
+        self.set_license_type(Gtk.License.BSD_3)
         self.set_authors([__author__])
         self.set_artists(["Petr Šimčík <petrsimi.org@gmail.com>"])
-        icon_theme = Gtk.IconTheme.get_default()
-        self.set_logo(icon_theme.load_icon("formiko", 128, 0))
+        self.set_logo_icon_name("formiko")
 
 
 class QuitDialogWithoutSave(Gtk.MessageDialog):
@@ -41,11 +56,11 @@ class QuitDialogWithoutSave(Gtk.MessageDialog):
     def __init__(self, parent, file_name):
         name = f"`{file_name}`" if file_name else ""
         super().__init__(
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.WARNING,
-            Gtk.ButtonsType.OK_CANCEL,
-            f"Document {name} not saved.\n"
+            transient_for=parent,
+            modal=True,
+            message_type=Gtk.MessageType.WARNING,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text=f"Document {name} not saved.\n"
             "Are you sure you want to quit without saving?",
         )
 
@@ -55,16 +70,19 @@ class TraceBackDialog(Gtk.Dialog):
 
     def __init__(self, parent, traceback):
         super().__init__(
-            "Traceback error",
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
+            title="Traceback error",
+            transient_for=parent,
+            modal=True,
             use_header_bar=True,
         )
         box = self.get_content_area()
-        label = Gtk.Label(traceback)
-        label.override_font(FontDescription.from_string("Monospace"))
-        label.show_all()
-        box.add(label)
+        label = Gtk.Label(label=traceback)
+        attrs = AttrList()
+        attrs.insert(
+            AttrFontDesc.new(FontDescription.from_string("Monospace")),
+        )
+        label.set_attributes(attrs)
+        box.append(label)
 
 
 class FileNotFoundDialog(Gtk.MessageDialog):
@@ -72,11 +90,11 @@ class FileNotFoundDialog(Gtk.MessageDialog):
 
     def __init__(self, parent, filename):
         super().__init__(
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.ERROR,
-            Gtk.ButtonsType.CANCEL,
-            f"Document `{filename}` not found",
+            transient_for=parent,
+            modal=True,
+            message_type=Gtk.MessageType.ERROR,
+            buttons=Gtk.ButtonsType.CANCEL,
+            text=f"Document `{filename}` not found",
         )
 
 
@@ -85,11 +103,11 @@ class FileChangedDialog(Gtk.MessageDialog):
 
     def __init__(self, parent, file_name):
         super().__init__(
-            parent,
-            Gtk.DialogFlags.MODAL | Gtk.DialogFlags.DESTROY_WITH_PARENT,
-            Gtk.MessageType.INFO,
-            Gtk.ButtonsType.YES_NO,
-            f"Document `{file_name}` was changed.\n"
+            transient_for=parent,
+            modal=True,
+            message_type=Gtk.MessageType.INFO,
+            buttons=Gtk.ButtonsType.YES_NO,
+            text=f"Document `{file_name}` was changed.\n"
             "Do you want to load from storage?",
         )
 
@@ -98,26 +116,20 @@ class FileChooserDialog(Gtk.FileChooserDialog):
     """File chooser dialog."""
 
     def __init__(self, title, parent, action):
+        super().__init__(title=title, transient_for=parent, action=action)
+        self.add_button("_Cancel", Gtk.ResponseType.CANCEL)
         if action == Gtk.FileChooserAction.SAVE:
-            label = Gtk.STOCK_SAVE
+            self.add_button("_Save", Gtk.ResponseType.ACCEPT)
         else:
-            label = Gtk.STOCK_OPEN
-        super().__init__(
-            title,
-            parent,
-            action,
-            (
-                Gtk.STOCK_CANCEL,
-                Gtk.ResponseType.CANCEL,
-                label,
-                Gtk.ResponseType.ACCEPT,
-            ),
-        )
+            self.add_button("_Open", Gtk.ResponseType.ACCEPT)
 
     def get_filename_with_ext(self):
         """Return filename with right extension."""
-        file_name = self.get_filename()
-        name, ext = splitext(file_name)
+        gfile = self.get_file()
+        if gfile is None:
+            return ""
+        file_name = gfile.get_path()
+        _, ext = splitext(file_name)
         if ext:
             return file_name
 

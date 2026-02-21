@@ -16,7 +16,6 @@ from gi.repository.Gtk import Application as GtkApplication
 
 from formiko.dialogs import AboutDialog, TraceBackDialog
 from formiko.editor import EditorType
-from formiko.menu import AppMenu
 from formiko.shortcuts import ShortcutsWindow
 from formiko.window import AppWindow
 
@@ -80,8 +79,6 @@ class Application(GtkApplication):
         action = SimpleAction.new("quit", None)
         action.connect("activate", self.on_quit)
         self.add_action(action)
-
-        self.set_app_menu(AppMenu())
 
     def do_activate(self):
         """'do_activate' application handler."""
@@ -156,7 +153,7 @@ class Application(GtkApplication):
                     "editor_type", EditorType.SOURCE),
         )
         self.add_window(win)
-        win.show_all()
+        win.present()
 
     def on_about(self, action, param):
         """'about' action handler."""
@@ -173,7 +170,7 @@ class Application(GtkApplication):
         try:
             win = AppWindow(editor_type, file_name)
             self.add_window(win)
-            win.show_all()
+            win.present()
         except Exception:  # pylint: disable=broad-exception-caught
             print_exc()
 

@@ -4,8 +4,8 @@ Formiko
 :author: Ondřej Tůma <mcbig@zeropage.cz>
 
 Formiko is reStructuredText and MarkDown editor and live previewer. It is
-written in Python with Gtk3, GtkSourceView and Webkit2. Use Docutils and
-MarkDown to reStructuredText covertor. If you want to **donate** development,
+written in Python with Gtk4, GtkSourceView and WebKit. Use Docutils and
+MarkDown to reStructuredText convertor. If you want to **donate** development,
 you can do by `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
 
 Features:
@@ -36,13 +36,13 @@ Formiko have Neovim editor support aka ``formiko-vim`` command. This run `Neovim
 Requirements:
 -------------
 * python 3
-* GTK+3
+* GTK 4
 * gobject-introspection
 * PyGObject
-* Webkit2 4.x
-* GtkSourceView 4.x
+* WebKitGTK 6.x (``gir1.2-webkit-6.0``)
+* GtkSourceView 5.x (``gir1.2-gtksource-5``)
+* libspelling 1.x (``gir1.2-spelling-1``)
 * gir files for all Gtk libraries
-* GtkSpell3
 * vte - neovim support
 * docutils - reStrucured support
 
@@ -93,9 +93,9 @@ gtksource or webkit2 could have another version name.
 
 .. code:: sh
 
-    # python3, gtk3, librsvg etc are in dependencies
-    apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-4 \
-                gir1.2-webkit2-4.1 gir1.2-gtkspell3-3.0 gir1.2-vte-2.91
+    # python3, gtk4, librsvg etc are in dependencies
+    apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-5 \
+                gir1.2-webkit-6.0 gir1.2-spelling-1 gir1.2-vte-3.91
 
     pip3 install formiko --break-system-packages
 
@@ -108,7 +108,7 @@ way.
 
 NetBSD
 ~~~~~~
-**Broken at this moment due missing vte-2.91**
+**Broken at this moment - not tested with GTK4**
 
 There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
 must use 1.2.x bug fix release.
@@ -134,7 +134,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
 FreeBSD
 ~~~~~~~
-**Broken at this moment due missing vte-2.91**
+**Broken at this moment - not tested with GTK4**
 
 Installation process can be different for each BSD releases. It's about which
 Python release is default. By this, you can change ``pyXX`` to your right

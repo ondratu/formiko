@@ -2,16 +2,17 @@
 from os.path import commonprefix
 from sys import argv
 
-from gi.repository import GObject, Gtk
+from gi.repository import GLib, GObject, Gtk
 from gi.repository.GLib import Variant
 
+from formiko.dialogs import run_dialog
 from formiko.renderer import PARSERS, WRITERS
 from formiko.widgets import ActionHelper
 
 PREFIX = commonprefix((argv[0], __file__))
 
 
-def set_tooltip(item: Gtk.RadioButton, enabled: bool, val: dict):
+def set_tooltip(item: Gtk.CheckButton, enabled: bool, val: dict):
     """Set right tooltip for parser or writer radio button."""
     tooltip = ""
     if not enabled:
@@ -25,46 +26,44 @@ def set_tooltip(item: Gtk.RadioButton, enabled: bool, val: dict):
         item.set_tooltip_text(tooltip)
 
 
-class ActionableFileChooserButton(
-    Gtk.FileChooserButton,
-    Gtk.Actionable,
-    ActionHelper,
-):
-    """FileChooserButton with actions."""
+class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
+    """Button that opens a file chooser dialog and supports actions."""
 
     action_name = GObject.property(type=str)
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, action_name=None, filename="", **kwargs):
-        Gtk.FileChooserButton.__init__(
-            self,
-            title="Select custom stylesheet",
-            **kwargs,
-        )
-        self.add_filter_style()
-        self.add_filter_all()
-        if filename:
-            self.set_filename(filename)
+        Gtk.Button.__init__(self, label=filename or "Select stylesheet…",
+                            **kwargs)
+        self._filename = filename
         if action_name:
             self.action_name = action_name
+        self.connect("clicked", self._on_clicked)
 
     def do_realize(self):
-        """Realize and set filename."""
-        Gtk.FileChooserButton.do_realize(self)
+        """Realize and set filename from action state."""
+        Gtk.Button.do_realize(self)
         action, go = self.get_action_owner()
         if go:
-            self.set_filename(go.get_action_state(action).get_string())
+            fname = go.get_action_state(action).get_string()
+            self._set_filename(fname)
+
+    def _set_filename(self, filename):
+        """Update stored filename and button label."""
+        self._filename = filename
+        label = filename if filename else "Select stylesheet…"
+        self.set_label(label)
 
     def set_action_name(self, action_name):
-        """Set action name."""
+        """Set action name to widget."""
         self.action_name = action_name
         if self.get_realized():
             action, go = self.get_action_owner()
             if go:
-                self.set_filename(go.get_action_state(action).get_string())
+                self._set_filename(go.get_action_state(action).get_string())
 
     def get_action_name(self):
-        """Return action name."""
+        """Return action name from widget."""
         return self.action_name
 
     def set_action_target_value(self, target_value):
@@ -75,73 +74,86 @@ class ActionableFileChooserButton(
         """Get action target."""
         return self.action_target
 
-    def add_filter_style(self):
-        """Add filter for style sheets files."""
-        filter_txt = Gtk.FileFilter()
-        filter_txt.set_name("Stylesheet file")
-        filter_txt.add_mime_type("text/css")
-        self.add_filter(filter_txt)
+    def _on_clicked(self, _btn):
+        """Open file chooser dialog."""
+        root = self.get_root()
+        dialog = Gtk.FileChooserDialog(
+            title="Select custom stylesheet",
+            transient_for=root,
+            action=Gtk.FileChooserAction.OPEN,
+        )
+        dialog.add_button("_Cancel", Gtk.ResponseType.CANCEL)
+        dialog.add_button("_Open", Gtk.ResponseType.ACCEPT)
 
-    def add_filter_all(self):
-        """Add filter for all files."""
-        filter_all = Gtk.FileFilter()
-        filter_all.set_name("all files")
-        filter_all.add_pattern("*")
-        self.add_filter(filter_all)
+        css_filter = Gtk.FileFilter()
+        css_filter.set_name("Stylesheet file")
+        css_filter.add_mime_type("text/css")
+        dialog.add_filter(css_filter)
 
-    def do_file_set(self):
-        """Set the file and emit the action."""
-        self.action_target = Variant("s", self.get_filename() or "")
-        action, go = self.get_action_owner()
-        if go:
-            go.activate_action(action, self.action_target)
+        all_filter = Gtk.FileFilter()
+        all_filter.set_name("all files")
+        all_filter.add_pattern("*")
+        dialog.add_filter(all_filter)
+
+        if self._filename:
+            dialog.set_current_folder(
+                GLib.get_dirname(self._filename) or GLib.get_home_dir(),
+            )
+
+        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
+            gfile = dialog.get_file()
+            fname = gfile.get_path() if gfile else ""
+            self._set_filename(fname)
+            self.action_target = Variant("s", fname)
+            action, go = self.get_action_owner()
+            if go:
+                go.activate_action(action, self.action_target)
+        dialog.destroy()
 
 
 class Preferences(Gtk.Popover):
     """Preferences widget."""
 
     def __init__(self, user_preferences):
-        super().__init__(border_width=20)
+        super().__init__()
+        self.set_margin_top(20)
+        self.set_margin_bottom(20)
+        self.set_margin_start(20)
+        self.set_margin_end(20)
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.add(vbox)
+        self.set_child(vbox)
 
-        self.vert_btn = Gtk.RadioButton(
+        self.vert_btn = Gtk.CheckButton(
             label="Vertical preview",
             action_name="win.change-preview",
             action_target=Variant("q", Gtk.Orientation.VERTICAL),
         )
         if user_preferences.preview == Gtk.Orientation.VERTICAL:
             self.vert_btn.set_active(True)
-        vbox.pack_start(self.vert_btn, True, True, 0)
-        self.hori_btn = Gtk.RadioButton(
-            group=self.vert_btn,
+        vbox.append(self.vert_btn)
+
+        self.hori_btn = Gtk.CheckButton(
             label="Horizontal preview",
+            group=self.vert_btn,
             action_name="win.change-preview",
             action_target=Variant("q", Gtk.Orientation.HORIZONTAL),
         )
         if user_preferences.preview == Gtk.Orientation.HORIZONTAL:
             self.hori_btn.set_active(True)
-        vbox.pack_start(self.hori_btn, True, True, 0)
+        vbox.append(self.hori_btn)
 
         self.auto_scroll_btn = Gtk.CheckButton(
             label="Auto scroll",
             action_name="win.auto-scroll-toggle",
-            action_target=Variant("b", True),
         )
-        self.auto_scroll_btn.set_active(user_preferences.auto_scroll)
-        vbox.pack_start(self.auto_scroll_btn, True, True, 0)
+        vbox.append(self.auto_scroll_btn)
 
-        vbox.pack_start(
-            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-            True,
-            True,
-            0,
-        )
+        vbox.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         group = None
         for key, val in PARSERS.items():
             enabled = val["class"] is not None
-            item = Gtk.RadioButton(
+            item = Gtk.CheckButton(
                 label=val["title"],
                 group=group,
                 sensitive=enabled,
@@ -154,19 +166,15 @@ class Preferences(Gtk.Popover):
             set_tooltip(item, enabled, val)
             if group is None:
                 group = item
-            vbox.pack_start(item, True, True, 0)
-        self.parser_group = group.get_group()
+            vbox.append(item)
+        self.parser_group = group
 
-        vbox.pack_start(
-            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-            True,
-            True,
-            0,
-        )
+        vbox.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+
         group = None
         for key, val in WRITERS.items():
             enabled = val["class"] is not None
-            item = Gtk.RadioButton(
+            item = Gtk.CheckButton(
                 label=val["title"],
                 group=group,
                 sensitive=enabled,
@@ -179,39 +187,34 @@ class Preferences(Gtk.Popover):
             set_tooltip(item, enabled, val)
             if group is None:
                 group = item
-            vbox.pack_start(item, True, True, 0)
-        self.writer_group = group.get_group()
+            vbox.append(item)
+        self.writer_group = group
 
-        vbox.pack_start(
-            Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL),
-            True,
-            True,
-            0,
-        )
+        vbox.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.custom_btn = Gtk.CheckButton(
             label="Custom style",
             action_name="win.custom-style-toggle",
-            action_target=Variant("b", True),
         )
-        self.custom_btn.set_active(user_preferences.custom_style)
         self.custom_btn.connect("toggled", self.on_custom_style_toggle)
-        vbox.pack_start(self.custom_btn, True, True, 0)
+        vbox.append(self.custom_btn)
 
-        self.style_btn = ActionableFileChooserButton(
+        self.style_btn = ActionableFileButton(
             sensitive=user_preferences.custom_style,
             action_name="win.change-style",
         )
-        vbox.pack_start(self.style_btn, True, True, 0)
-
-        vbox.show_all()
+        vbox.append(self.style_btn)
 
     def set_parser(self, parser):
         """Set right parser."""
-        for it in self.parser_group:
-            if it.parser == parser:
-                it.set_active(True)
+        btn = self.parser_group
+        while btn:
+            if getattr(btn, "parser", None) == parser:
+                btn.set_active(True)
                 break
+            btn = btn.get_next_in_group() if hasattr(
+                btn, "get_next_in_group",
+            ) else None
 
     def on_custom_style_toggle(self, widget):
         """Set sensitive for own style."""
