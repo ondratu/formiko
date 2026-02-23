@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 from concurrent.futures import ThreadPoolExecutor
 from html import escape
 from importlib.resources import files
@@ -123,11 +124,52 @@ class JSONPreview:
     def to_html(self, text: str, tab_width: int = 2) -> str:
         """Parse JSON text and return the initial full HTML representation.
 
-        The parsed data is stored for later filtering.
+        The parsed data is stored for later filtering.  A one-shot
+        ``load-changed`` handler is registered so that *jsonfold.js* is
+        injected via :meth:`inject_fold_js` after the renderer loads the
+        returned HTML — necessary because ``enable-javascript-markup`` is
+        disabled for XSS protection.
         """
         self._json_data = loads(text)
         self._tab_width = tab_width
+        self._schedule_fold_injection()
         return self._generate_html(self._json_data)
+
+    def inject_fold_js(self, webview: WebView) -> None:
+        """Inject jsonfold.js into the current page via run_javascript.
+
+        Called from ``load-changed`` handlers instead of relying on the
+        inline ``<script>`` tag, which is blocked by the XSS protection
+        setting ``enable-javascript-markup = False``.
+        """
+        _, js = self._resources()
+        webview.run_javascript(js, None, None, None)
+
+    def _schedule_fold_injection(self) -> None:
+        """Register a one-shot load-changed handler on the webview.
+
+        Injects the fold JS after the renderer calls ``load_bytes()`` for
+        the initial render.  Any previous pending handler is disconnected
+        first so that rapid re-renders do not accumulate stale handlers.
+        """
+        if self.webview is None:
+            return
+        handler_id = getattr(self, "_fold_handler_id", None)
+        if handler_id is not None:
+            with contextlib.suppress(Exception):
+                self.webview.disconnect(handler_id)
+            self._fold_handler_id = None
+
+        def on_loaded(webview: WebView, load_event: LoadEvent) -> None:
+            if load_event == LoadEvent.FINISHED:
+                self.inject_fold_js(webview)
+                if self._fold_handler_id is not None:
+                    webview.disconnect(self._fold_handler_id)
+                    self._fold_handler_id = None
+
+        self._fold_handler_id = self.webview.connect(
+            "load-changed", on_loaded,
+        )
 
     def apply_path_filter(self, expression: str | None) -> None:
         """Filter JSON by JSONPath and update the preview asynchronously.
@@ -186,12 +228,11 @@ class JSONPreview:
         line_count = pretty.count("\n") + 1
         collapse = line_count > self.collapse_lines
         body = self._value_to_html(data, collapse, 0, "")
-        css, js = self._resources()
+        css, _ = self._resources()
         return (
             "<html><head><meta charset='utf-8'>"
             f"<style>{css}</style>"
             "</head><body><pre>" + body + "</pre>"
-            f"<script>{js}</script>"
             "</body></html>"
         )
 
@@ -294,14 +335,17 @@ class JSONPreview:
 
         def on_load_finished(webview: WebView, load_event: LoadEvent):
             if load_event == LoadEvent.FINISHED:
+                # jsonfold.js must be injected first because inline <script>
+                # is blocked by enable-javascript-markup = False (XSS fix)
+                self.inject_fold_js(webview)
                 if expr:
                     js = JS_EXPAND_HIGHLIGHT.replace(
                         "__HIGHLIGHTS__",
                         dumps(highlights),
                     ).replace("__EXPANDS__", dumps(list(expands)))
-                    webview.run_javascript(js)
+                    webview.run_javascript(js, None, None, None)
                 else:
-                    webview.run_javascript(JS_EXPAND_ALL)
+                    webview.run_javascript(JS_EXPAND_ALL, None, None, None)
 
                 if hasattr(webview, "highlight_handler_id"):
                     webview.disconnect(webview.highlight_handler_id)
