@@ -4,6 +4,7 @@ from os.path import join
 from traceback import print_exc
 
 from gi import get_required_version
+from gi.repository import Adw
 from gi.repository.Gio import ApplicationFlags, SimpleAction
 from gi.repository.GLib import (
     LogLevelFlags,
@@ -12,7 +13,7 @@ from gi.repository.GLib import (
     VariantType,
     log_default_handler,
 )
-from gi.repository.Gtk import Application as GtkApplication
+from gi.repository.Gtk import Application as GtkApplication  # noqa: F401
 
 from formiko.dialogs import AboutDialog, TraceBackDialog
 from formiko.editor import EditorType
@@ -22,7 +23,7 @@ from formiko.window import AppWindow
 # pylint: disable = unused-argument
 
 
-class Application(GtkApplication):
+class Application(Adw.Application):
     """Formiko Application."""
 
     def __init__(self, application_id="cz.zeropage.Formiko"):
@@ -58,7 +59,7 @@ class Application(GtkApplication):
 
     def do_startup(self):
         """'do_startup' application handler."""
-        GtkApplication.do_startup(self)
+        Adw.Application.do_startup(self)
 
         action = SimpleAction.new("new-window", None)
         action.connect("activate", self.on_new_window)
@@ -157,8 +158,8 @@ class Application(GtkApplication):
 
     def on_about(self, action, param):
         """'about' action handler."""
-        dialog = AboutDialog(None)
-        dialog.present()
+        dialog = AboutDialog()
+        dialog.present(self.get_active_window())
 
     def on_traceback(self, action, param):
         """'traceback' action handler."""

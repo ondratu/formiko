@@ -118,7 +118,9 @@ class Statusbar(Gtk.Box):
     """Status bar widget."""
 
     css = Gtk.CssProvider()
-    css.load_from_string("* {border-top: 1px solid #91918c; padding: 1px;}")
+    css.load_from_string(
+        "* {border-top: 1px solid alpha(currentColor, 0.15); padding: 1px;}",
+    )
 
     def __init__(self, preferences):
         super().__init__(orientation=Gtk.Orientation.HORIZONTAL)

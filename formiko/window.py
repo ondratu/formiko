@@ -7,12 +7,13 @@ from os.path import splitext
 from traceback import print_exc
 
 from gi import get_required_version
-from gi.repository import Gio, GLib, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
 from formiko.dialogs import (
     FileOpenDialog,
     FileSaveDialog,
     QuitDialogWithoutSave,
+    run_alert_dialog,
     run_dialog,
 )
 from formiko.editor import EditorType
@@ -43,7 +44,7 @@ class SearchWay(Enum):
     PREVIOUS = 1
 
 
-class AppWindow(Gtk.ApplicationWindow):
+class AppWindow(Adw.ApplicationWindow):
     """Gtk.ApplicationWindow implementation."""
 
     # pylint: disable = too-many-public-methods
@@ -69,7 +70,6 @@ class AppWindow(Gtk.ApplicationWindow):
         self.create_renderer()
         self.actions()
         self.connect("close-request", self.on_close_request)
-        self.set_titlebar(self.create_headerbar())
         self.set_default_icon_name("formiko")
         self.layout(file_name)
 
@@ -527,9 +527,8 @@ class AppWindow(Gtk.ApplicationWindow):
         """Ask user for quit without save file when file is modified."""
         if self.editor_type != EditorType.PREVIEW:
             if self.editor.is_modified:
-                dialog = QuitDialogWithoutSave(self, self.editor.file_name)
-                if run_dialog(dialog) != Gtk.ResponseType.OK:
-                    dialog.destroy()
+                dialog = QuitDialogWithoutSave(self.editor.file_name)
+                if run_alert_dialog(dialog, self) != "ok":
                     return False  # do not quit
             self.runing = False
             if self.editor_type == EditorType.VIM:
@@ -554,7 +553,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
     def create_headerbar(self):
         """Create main window header bar."""
-        headerbar = Gtk.HeaderBar()
+        headerbar = Adw.HeaderBar()
 
         headerbar.pack_start(
             IconButton(
@@ -707,12 +706,14 @@ class AppWindow(Gtk.ApplicationWindow):
     def layout(self, file_name):
         """Create and fill window layout."""
         self.set_default_size(self.cache.width, self.cache.height)
-        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.set_child(box)
+
+        toolbar_view = Adw.ToolbarView()
+        toolbar_view.add_top_bar(self.create_headerbar())
+        self.set_content(toolbar_view)
 
         overlay = Gtk.Overlay()
         overlay.set_vexpand(True)
-        box.append(overlay)
+        toolbar_view.set_content(overlay)
 
         if self.editor_type != EditorType.PREVIEW:
             self.paned = Gtk.Paned(
@@ -731,7 +732,7 @@ class AppWindow(Gtk.ApplicationWindow):
 
         if self.editor_type == EditorType.SOURCE:
             self.status_bar = Statusbar(self.preferences.editor)
-            box.append(self.status_bar)
+            toolbar_view.add_bottom_bar(self.status_bar)
 
         self.search_text = ""
         self.search = Gtk.SearchBar()
