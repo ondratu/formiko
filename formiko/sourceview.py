@@ -4,7 +4,7 @@ from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import Gio, GObject, Gtk, GtkSource
+from gi.repository import Adw, Gio, GObject, Gtk, GtkSource
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -25,6 +25,7 @@ from formiko.dialogs import (
     FileChangedDialog,
     FileSaveDialog,
     TraceBackDialog,
+    run_alert_dialog,
     run_dialog,
 )
 from formiko.widgets import ActionHelper, ImutableDict
@@ -81,6 +82,15 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         )
 
         self.set_child(self.source_view)
+
+        # Follow Adwaita dark/light mode for syntax highlighting scheme
+        self._apply_color_scheme(self._is_dark())
+        Adw.StyleManager.get_default().connect(
+            "notify::dark", self.on_style_scheme_changed,
+        )
+        Gtk.Settings.get_default().connect(
+            "notify::gtk-theme-name", self.on_style_scheme_changed,
+        )
 
         # Initialize spell checker
         self.spell_adapter = None
@@ -178,6 +188,32 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         """Incrace changes from last storing to storage."""
         self.__last_changes += 1
 
+    @staticmethod
+    def _is_dark():
+        """Return True if dark mode is active.
+
+        Checks both Adwaita StyleManager and the GTK theme name so that
+        the correct colour scheme is applied regardless of whether the
+        user switches via GNOME Settings (color-scheme) or GNOME Tweaks
+        (gtk-theme-name).
+        """
+        if Adw.StyleManager.get_default().get_dark():
+            return True
+        theme = Gtk.Settings.get_default().get_property("gtk-theme-name")
+        return "dark" in theme.lower()
+
+    def _apply_color_scheme(self, is_dark):
+        """Apply Adwaita or Adwaita-dark source view color scheme."""
+        scheme_id = "Adwaita-dark" if is_dark else "Adwaita"
+        manager = GtkSource.StyleSchemeManager.get_default()
+        scheme = manager.get_scheme(scheme_id)
+        if scheme:
+            self.text_buffer.set_style_scheme(scheme)
+
+    def on_style_scheme_changed(self, *_):
+        """React to dark/light mode change (Adwaita or GTK theme name)."""
+        self._apply_color_scheme(self._is_dark())
+
     def change_mime_type(self, parser):
         """Change internal mime type for right syntax highlighting."""
         language = LANGS.get("."+parser, LANGS[".rst"])
@@ -250,8 +286,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             last_ctime = stat(self.__file_name).st_ctime
             if last_ctime > self.__last_ctime:
                 self.__pause_period = True
-                dialog = FileChangedDialog(self.__win, self.__file_name)
-                if run_dialog(dialog) == Gtk.ResponseType.YES:
+                dialog = FileChangedDialog(self.__file_name)
+                if run_alert_dialog(dialog, self.__win) == "yes":
                     cursor = self.text_buffer.get_insert()
                     offset = self.text_buffer.get_iter_at_mark(
                         cursor,
@@ -311,9 +347,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         except Exception:
             error = format_exc()
             if self.__win:
-                md = TraceBackDialog(self.__win, error)
-                run_dialog(md)
-                md.destroy()
+                md = TraceBackDialog(error)
+                run_alert_dialog(md, self.__win)
             stderr.write(error)
             stderr.flush()
 

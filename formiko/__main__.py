@@ -8,6 +8,7 @@ from gi import require_version
 
 require_version("Gtk", "4.0")
 require_version("Gdk", "4.0")
+require_version("Adw", "1")
 require_version("GtkSource", "5")
 require_version("Pango", "1.0")
 require_version("WebKit", "6.0")

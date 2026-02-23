@@ -1,7 +1,7 @@
 """Formiko dialog widgets."""
 from os.path import splitext
 
-from gi.repository import GLib, Gtk
+from gi.repository import Adw, GLib, Gtk
 from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
@@ -19,7 +19,7 @@ LANGS = {
 
 
 def run_dialog(dialog):
-    """Run a GTK4 dialog synchronously using a nested main loop."""
+    """Run a GTK4 file-chooser dialog synchronously using a nested loop."""
     result = [Gtk.ResponseType.NONE]
     loop = GLib.MainLoop()
 
@@ -34,82 +34,101 @@ def run_dialog(dialog):
     return result[0]
 
 
-class AboutDialog(Gtk.AboutDialog):
-    """About Formiko dialog."""
+def run_alert_dialog(dialog, parent):
+    """Run an Adw.AlertDialog synchronously; returns the string response id."""
+    result = [dialog.get_close_response()]
+    loop = GLib.MainLoop()
 
-    def __init__(self, transient_for):
-        super().__init__(transient_for=transient_for, modal=False)
-        self.set_program_name("Formiko")
-        self.set_version(__version__)
-        self.set_copyright(__copyright__ + " The Formiko Team")
-        self.set_comments(__comment__)
-        self.set_website("https://github.com/ondratu/formiko")
-        self.set_license_type(Gtk.License.BSD_3)
-        self.set_authors([__author__])
-        self.set_artists(["Petr Šimčík <petrsimi.org@gmail.com>"])
-        self.set_logo_icon_name("formiko")
+    def on_response(_, response):
+        result[0] = response
+        loop.quit()
+
+    handler = dialog.connect("response", on_response)
+    dialog.present(parent)
+    loop.run()
+    dialog.disconnect(handler)
+    return result[0]
 
 
-class QuitDialogWithoutSave(Gtk.MessageDialog):
+def AboutDialog():  # noqa: N802
+    """Create About Formiko dialog."""
+    return Adw.AboutDialog(
+        application_name="Formiko",
+        application_icon="formiko",
+        version=__version__,
+        copyright=__copyright__ + " The Formiko Team",
+        comments=__comment__,
+        website="https://github.com/ondratu/formiko",
+        license_type=Gtk.License.BSD_3,
+        developer_name=__author__,
+        developers=[__author__],
+        artists=["Petr Šimčík <petrsimi.org@gmail.com>"],
+    )
+
+
+class QuitDialogWithoutSave(Adw.AlertDialog):
     """Quit dialog without save."""
 
-    def __init__(self, parent, file_name):
+    def __init__(self, file_name):
         name = f"`{file_name}`" if file_name else ""
         super().__init__(
-            transient_for=parent,
-            modal=True,
-            message_type=Gtk.MessageType.WARNING,
-            buttons=Gtk.ButtonsType.OK_CANCEL,
-            text=f"Document {name} not saved.\n"
+            heading="Quit without saving?",
+            body=f"Document {name} is not saved.\n"
             "Are you sure you want to quit without saving?",
         )
+        self.add_response("cancel", "Cancel")
+        self.add_response("ok", "Quit")
+        self.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
+        self.set_default_response("cancel")
+        self.set_close_response("cancel")
 
 
-class TraceBackDialog(Gtk.Dialog):
+class TraceBackDialog(Adw.AlertDialog):
     """Showing traceback dialog."""
 
-    def __init__(self, parent, traceback):
-        super().__init__(
-            title="Traceback error",
-            transient_for=parent,
-            modal=True,
-            use_header_bar=True,
-        )
-        box = self.get_content_area()
-        label = Gtk.Label(label=traceback)
+    def __init__(self, traceback):
+        super().__init__(heading="Traceback error", body="")
+        self.add_response("ok", "OK")
+        self.set_close_response("ok")
+        label = Gtk.Label(label=traceback, selectable=True)
         attrs = AttrList()
         attrs.insert(
             AttrFontDesc.new(FontDescription.from_string("Monospace")),
         )
         label.set_attributes(attrs)
-        box.append(label)
+        scroll = Gtk.ScrolledWindow(
+            min_content_width=500,
+            min_content_height=200,
+        )
+        scroll.set_child(label)
+        self.set_extra_child(scroll)
 
 
-class FileNotFoundDialog(Gtk.MessageDialog):
+class FileNotFoundDialog(Adw.AlertDialog):
     """File not found error dialog."""
 
-    def __init__(self, parent, filename):
+    def __init__(self, filename):
         super().__init__(
-            transient_for=parent,
-            modal=True,
-            message_type=Gtk.MessageType.ERROR,
-            buttons=Gtk.ButtonsType.CANCEL,
-            text=f"Document `{filename}` not found",
+            heading="File not found",
+            body=f"Document `{filename}` not found.",
         )
+        self.add_response("ok", "OK")
+        self.set_close_response("ok")
 
 
-class FileChangedDialog(Gtk.MessageDialog):
+class FileChangedDialog(Adw.AlertDialog):
     """File changed info dialog."""
 
-    def __init__(self, parent, file_name):
+    def __init__(self, file_name):
         super().__init__(
-            transient_for=parent,
-            modal=True,
-            message_type=Gtk.MessageType.INFO,
-            buttons=Gtk.ButtonsType.YES_NO,
-            text=f"Document `{file_name}` was changed.\n"
-            "Do you want to load from storage?",
+            heading="File changed",
+            body=f"Document `{file_name}` was changed.\n"
+            "Do you want to reload from storage?",
         )
+        self.add_response("no", "No")
+        self.add_response("yes", "Reload")
+        self.set_default_response("yes")
+        self.set_close_response("no")
 
 
 class FileChooserDialog(Gtk.FileChooserDialog):

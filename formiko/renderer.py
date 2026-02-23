@@ -11,7 +11,7 @@ from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
-from gi.repository import Gdk, Gtk
+from gi.repository import Adw, Gdk, Gtk
 from gi.repository.GLib import (
     MAXUINT,
     Bytes,
@@ -26,17 +26,14 @@ from gi.repository.Gtk import (
     Align,
     Label,
     Overlay,
-    Settings,
-    TextView,
 )
 from gi.repository.WebKit import (
     FindOptions,
-    LoadEvent,
     PrintOperation,
     WebView,
 )
 
-from formiko.dialogs import FileNotFoundDialog, run_dialog
+from formiko.dialogs import FileNotFoundDialog, run_alert_dialog
 from formiko.json_preview import JSONPreview
 from formiko.sourceview import LANGS
 from formiko.utils import Undefined
@@ -221,8 +218,9 @@ class Renderer(Overlay):
     def __init__(self, win, parser="rst", writer="html4", style=""):
         super().__init__()
 
-        self.textview = TextView()
         self.fgcolor = "#000"
+        self.bgcolor = "#fff"
+        self.linkcolor = "#000"
 
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
@@ -236,9 +234,12 @@ class Renderer(Overlay):
         self.webview.add_controller(gesture)
         self._gesture = gesture
 
-        settings = Settings.get_default()
-        settings.connect("notify::gtk-theme-name", self.on_theme_changed)
-        self.on_theme_changed()
+        style_manager = Adw.StyleManager.get_default()
+        style_manager.connect("notify::dark", self.on_theme_changed)
+        Gtk.Settings.get_default().connect(
+            "notify::gtk-theme-name", self.on_theme_changed,
+        )
+        self.connect("realize", lambda _w: self.on_theme_changed())
 
         self.set_child(self.webview)
 
@@ -271,23 +272,69 @@ class Renderer(Overlay):
         self.pos = 0
         self.src = ""
 
-    def on_theme_changed(self, **_):
-        """Change webkit background and default foreground color."""
-        style_ctx = self.textview.get_style_context()
-        found_bg, background = style_ctx.lookup_color("window_bg_color")
-        if not found_bg:
-            background = Gdk.RGBA()
-            background.parse("white")
-        found_fg, foreground = style_ctx.lookup_color("window_fg_color")
-        if not found_fg:
-            foreground = style_ctx.get_color()
-        self.webview.set_background_color(background)
-        self.fgcolor = (
-            f"#{int(foreground.red * 255):02x}"
-            f"{int(foreground.green * 255):02x}"
-            f"{int(foreground.blue * 255):02x}"
+    @staticmethod
+    def _rgba_to_hex(rgba):
+        """Convert Gdk.RGBA to #rrggbb hex string."""
+        r = round(rgba.red * 255)
+        g = round(rgba.green * 255)
+        b = round(rgba.blue * 255)
+        return f"#{r:02x}{g:02x}{b:02x}"
+
+    def _read_theme_colors(self):
+        """Read background, foreground and accent colors from the widget style.
+
+        Uses Adwaita named colors (view_bg_color, view_fg_color,
+        accent_color) looked up on the realised widget so that the injected
+        CSS always matches the active GTK theme without hardcoded values.
+        Falls back to Adwaita defaults when a color is not found.
+        """
+        ctx = self.get_style_context()
+        found_bg, bg = ctx.lookup_color("view_bg_color")
+        found_fg, fg = ctx.lookup_color("view_fg_color")
+        found_ac, ac = ctx.lookup_color("accent_color")
+        is_dark = self._is_dark()
+        self.bgcolor = (
+            self._rgba_to_hex(bg)
+            if found_bg
+            else ("#1d1d1d" if is_dark else "#fafafa")
         )
-        self.on_load_changed(self.webview, LoadEvent.FINISHED)
+        self.fgcolor = (
+            self._rgba_to_hex(fg)
+            if found_fg
+            else ("#ffffff" if is_dark else "#2e2e2e")
+        )
+        self.linkcolor = (
+            self._rgba_to_hex(ac) if found_ac else self.fgcolor
+        )
+
+    @staticmethod
+    def _is_dark():
+        """Return True if dark mode is active.
+
+        Checks both Adwaita StyleManager and the GTK theme name so that
+        the renderer updates regardless of whether the user switches via
+        GNOME Settings (color-scheme) or GNOME Tweaks (gtk-theme-name).
+        """
+        if Adw.StyleManager.get_default().get_dark():
+            return True
+        theme = Gtk.Settings.get_default().get_property("gtk-theme-name")
+        return "dark" in theme.lower()
+
+    def on_theme_changed(self, *_):
+        """Schedule a theme colour update after the CSS cascade settles."""
+        idle_add(self._apply_theme_and_render)
+
+    def _apply_theme_and_render(self):
+        """Read current theme colours and re-render the preview.
+
+        Called via idle_add so the GTK/libadwaita CSS cascade has finished
+        recalculating before lookup_color() is invoked.
+        """
+        self._read_theme_colors()
+        background = Gdk.RGBA()
+        background.parse(self.bgcolor)
+        self.webview.set_background_color(background)
+        self.do_render()
 
     @property
     def position(self):
@@ -354,9 +401,8 @@ class Renderer(Overlay):
         elif exists(file_path):
             Gtk.show_uri(None, "file://" + file_path, Gdk.CURRENT_TIME)
         else:
-            dialog = FileNotFoundDialog(self.__win, file_path)
-            run_dialog(dialog)
-            dialog.destroy()
+            dialog = FileNotFoundDialog(file_path)
+            run_alert_dialog(dialog, self.__win)
 
     def set_writer(self, writer):
         """Set renderer writer."""
@@ -459,6 +505,14 @@ class Renderer(Overlay):
         """Render the source, and show rendered output."""
         state, html, mime_type = self.render_output()
         if html and self.__win.runing:
+            if mime_type == "text/html" and "</head>" in html:
+                theme_css = (
+                    f"<style>body{{background-color:{self.bgcolor}"
+                    f"!important;color:{self.fgcolor}!important}}"
+                    f"a{{color:{self.linkcolor}!important}}"
+                    f"</style>"
+                )
+                html = html.replace("</head>", theme_css + "</head>", 1)
             file_name = self.file_name or get_home_dir()
             self.webview.load_bytes(
                 Bytes(html.encode("utf-8")),
