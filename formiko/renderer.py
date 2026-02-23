@@ -507,8 +507,9 @@ class Renderer(Overlay):
         if html and self.__win.runing:
             if mime_type == "text/html" and "</head>" in html:
                 theme_css = (
-                    f"<style>body{{background-color:{self.bgcolor}"
-                    f"!important;color:{self.fgcolor}!important}}"
+                    f"<style>"
+                    f"body,main{{background-color:{self.bgcolor}!important;"
+                    f"color:{self.fgcolor}!important}}"
                     f"a{{color:{self.linkcolor}!important}}"
                     f"</style>"
                 )
