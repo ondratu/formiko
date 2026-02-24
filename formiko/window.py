@@ -597,18 +597,19 @@ class AppWindow(Adw.ApplicationWindow):
 
         self.pref_menu = Preferences(self.preferences)
 
-        btn = Gtk.MenuButton(popover=self.pref_menu)
-        icon = Gio.ThemedIcon(name="emblem-system-symbolic")
-        btn.set_child(Gtk.Image.new_from_gicon(icon))
-        btn.set_tooltip_text("Preferences")
-        headerbar.pack_end(btn)
-
         menu_btn = Gtk.MenuButton(
             icon_name="open-menu-symbolic",
             tooltip_text="Main Menu",
             menu_model=AppMenu(self.editor_type),
         )
         headerbar.pack_end(menu_btn)
+
+        btn = Gtk.MenuButton(
+            icon_name="emblem-system-symbolic",
+            tooltip_text="Preferences",
+            popover=self.pref_menu,
+        )
+        headerbar.pack_end(btn)
 
         headerbar.pack_end(
             IconButton(
