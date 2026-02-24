@@ -21,7 +21,7 @@ from gi.repository.GtkSource import (
 )
 
 from formiko.dialogs import (
-    LANGS,
+    LANG_BY_EXT,
     FileChangedDialog,
     FileSaveDialog,
     TraceBackDialog,
@@ -66,7 +66,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = Buffer.new_with_language(
-            LANGS["."+preferences.parser],
+            LANG_BY_EXT["."+preferences.parser],
         )
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
@@ -216,7 +216,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def change_mime_type(self, parser):
         """Change internal mime type for right syntax highlighting."""
-        language = LANGS.get("."+parser, LANGS[".rst"])
+        language = LANG_BY_EXT.get("."+parser, LANG_BY_EXT[".rst"])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
 
@@ -400,7 +400,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def do_file_type(self, ext):
         """Set file type for right syntax highlighting."""
         if ext:
-            language = LANGS.get(ext, LANGS[".rst"])
+            language = LANG_BY_EXT.get(ext, LANG_BY_EXT[".rst"])
             if self.text_buffer.get_language() != language:
                 self.text_buffer.set_language(language)
 
