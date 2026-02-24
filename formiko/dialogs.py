@@ -8,7 +8,7 @@ from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 from formiko import __author__, __comment__, __copyright__, __version__
 
 default_manager = LanguageManager.get_default()
-LANGS = {
+LANG_BY_EXT = {
     ".rst": default_manager.get_language("rst"),
     ".md": default_manager.get_language("markdown"),
     ".m2r": default_manager.get_language("markdown"),  # parser compatibility
@@ -174,11 +174,11 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
     def add_filter_rst(self, current=False):
         """Add filter for reStructuredText."""
-        self.add_filter_lang(LANGS[".rst"], ".rst", current)
+        self.add_filter_lang(LANG_BY_EXT[".rst"], ".rst", current)
 
     def add_filter_md(self, current=False):
         """Add filter for MarkDown."""
-        self.add_filter_lang(LANGS[".md"], ".md", current)
+        self.add_filter_lang(LANG_BY_EXT[".md"], ".md", current)
 
     def add_filter_plain(self, current=False):
         """Add plain text filter."""
@@ -193,11 +193,11 @@ class FileChooserDialog(Gtk.FileChooserDialog):
 
     def add_filter_html(self, current=False):
         """Add filter for HTML files."""
-        self.add_filter_lang(LANGS[".html"], ".html", current)
+        self.add_filter_lang(LANG_BY_EXT[".html"], ".html", current)
 
     def add_filter_json(self, current=False):
         """Add filter for JSON files."""
-        self.add_filter_lang(LANGS[".json"], ".json", current)
+        self.add_filter_lang(LANG_BY_EXT[".json"], ".json", current)
 
     def add_filter_all(self, current=False):
         """Add filter for all files type."""

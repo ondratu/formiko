@@ -35,7 +35,7 @@ from gi.repository.WebKit import (
 
 from formiko.dialogs import FileNotFoundDialog, run_alert_dialog
 from formiko.json_preview import JSONPreview
-from formiko.sourceview import LANGS
+from formiko.sourceview import LANG_BY_EXT
 from formiko.utils import Undefined
 
 try:
@@ -391,12 +391,12 @@ class Renderer(Overlay):
         """Find file on disk and open it."""
         ext = splitext(file_path)[1]
         if not ext:
-            for ext in LANGS:
+            for ext in LANG_BY_EXT:
                 tmp = file_path + ext
                 if exists(tmp):
                     file_path = tmp
                     break
-        if ext in LANGS:
+        if ext in LANG_BY_EXT:
             self.__win.open_document(file_path)
         elif exists(file_path):
             Gtk.show_uri(None, "file://" + file_path, Gdk.CURRENT_TIME)

@@ -361,7 +361,10 @@ class AppWindow(Adw.ApplicationWindow):
     def on_file_type(self, widget, ext):
         """'file-type' event handler."""
         parser = EXTS.get(ext, self.preferences.parser)
-        self.pref_menu.set_parser(parser)
+        self.renderer.set_parser(parser)
+        action = self.lookup_action("change-parser")
+        if action:
+            action.set_state(GLib.Variant("s", parser))
 
         self.json_box.set_visible(parser == "json")
 
