@@ -3,7 +3,7 @@
 import re
 from enum import Enum
 from os import stat
-from os.path import splitext
+from os.path import dirname, splitext
 from traceback import print_exc
 
 from gi import get_required_version
@@ -18,6 +18,7 @@ from formiko.dialogs import (
 )
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
+from formiko.filebrowser import FileBrowser
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.renderer import EXTS, Renderer
@@ -185,6 +186,12 @@ class AppWindow(Adw.ApplicationWindow):
             pref.style,
             self.on_change_style,
         )
+        if self.editor_type != EditorType.PREVIEW:
+            self.create_toggle_action(
+                "toggle-sidebar",
+                False,
+                self.on_toggle_sidebar,
+            )
 
     def create_stateful_action(self, name, _type, default_value, method):
         """Support method for creating stateful action."""
@@ -367,6 +374,21 @@ class AppWindow(Adw.ApplicationWindow):
             action.set_state(GLib.Variant("s", parser))
 
         self.json_box.set_visible(parser == "json")
+
+        if hasattr(self, "file_browser"):
+            directory = dirname(self.editor.file_path)
+            if directory:
+                self.file_browser.set_directory(directory)
+
+    def _on_browser_file_activated(self, _browser, file_path):
+        """Open a file selected in the file browser."""
+        self.open_document(file_path)
+
+    def on_toggle_sidebar(self, action, *_):
+        """'toggle-sidebar' action handler."""
+        new_state = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant("b", new_state))
+        self.overlay_split.set_show_sidebar(new_state)
 
     def on_scroll_changed(self, widget, position):
         """'scroll-changed' event handler."""
@@ -558,6 +580,14 @@ class AppWindow(Adw.ApplicationWindow):
         """Create main window header bar."""
         headerbar = Adw.HeaderBar()
 
+        if self.editor_type != EditorType.PREVIEW:
+            sidebar_btn = Gtk.ToggleButton(
+                icon_name="sidebar-show-symbolic",
+                tooltip_text="Show File Browser",
+                action_name="win.toggle-sidebar",
+            )
+            headerbar.pack_start(sidebar_btn)
+
         headerbar.pack_start(
             IconButton(
                 symbol="document-new-symbolic",
@@ -724,7 +754,21 @@ class AppWindow(Adw.ApplicationWindow):
                 orientation=self.preferences.preview,
                 position=self.cache.paned,
             )
-            overlay.set_child(self.paned)
+            self.file_browser = FileBrowser()
+            self.file_browser.connect(
+                "file-activated",
+                self._on_browser_file_activated,
+            )
+            self.overlay_split = Adw.OverlaySplitView(
+                collapsed=True,
+                show_sidebar=False,
+                sidebar=self.file_browser,
+                content=self.paned,
+                sidebar_width_unit=Adw.LengthUnit.SP,
+                min_sidebar_width=220,
+                max_sidebar_width=220,
+            )
+            overlay.set_child(self.overlay_split)
             self.fill_panned(file_name)
         else:
             self.__file_name = file_name

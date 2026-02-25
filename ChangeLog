@@ -19,6 +19,8 @@ Version 1.6.0dev
     - GtkSpell replaced by libspelling 1
     - VTE 2.91 (GTK3) replaced by VTE 3.91 (GTK4)
   * fix #53 - replace unmaintained m2r with m2r2
+  * Folder list on the left side is now toggled by an icon in the top-left
+    corner #34
 
 
 Version 1.5.0
