@@ -3,15 +3,15 @@ Formiko
 
 :author: Ondřej Tůma <mcbig@zeropage.cz>
 
-Formiko is reStructuredText and MarkDown editor and live previewer. It is
-written in Python with Gtk4, GtkSourceView and WebKit. Use Docutils and
-MarkDown to reStructuredText convertor. If you want to **donate** development,
-you can do by `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
+Formiko is a reStructuredText and MarkDown editor and live previewer. It is
+written in Python with Gtk4, GtkSourceView and WebKit. It uses Docutils and a
+MarkDown-to-reStructuredText converter. If you want to **donate** to the
+development, you can do so via the `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
 
 Features:
 ---------
 * GtkSourceView based editor with syntax highlighting
-* possible use Vim editor
+* optional Vim editor support
 * vertical or horizontal window splitting
 * preview mode with auto scroll
 * periodic save file
@@ -19,7 +19,7 @@ Features:
 * spell check
 * linked file opening
 
-It support these parsers and writers:
+It supports these parsers and writers:
 
 * Docutils reStructuredText parser - https://www.docutils.org
 * MarkDown to reStructuredText convertor (M2R2) -
@@ -30,36 +30,34 @@ It support these parsers and writers:
 
 Vim support
 ~~~~~~~~~~~
-Formiko have Neovim editor support aka ``formiko-vim`` command. This run `Neovim
+Formiko has Neovim editor support aka ``formiko-vim`` command. This runs `Neovim
 <https://neovim.io/>`_ editor in Vte.Terminal.
 
 Requirements:
 -------------
-* python 3
+* Python 3
 * GTK 4
 * gobject-introspection
 * PyGObject
-* WebKitGTK 6.x (``gir1.2-webkit-6.0``)
-* GtkSourceView 5.x (``gir1.2-gtksource-5``)
-* libspelling 1.x (``gir1.2-spelling-1``)
+* WebKitGTK 6.x
+* GtkSourceView 5.x
+* libspelling 1.x
 * gir files for all Gtk libraries
 * vte - neovim support
-* docutils - reStrucured support
+* docutils - reStructuredText support
+* jsonpath-ng - JSON Search path support
 
 recommended:
 ~~~~~~~~~~~~
 * m2r2 - converting MarkDown to reStructuredText
 * Pygments - syntax color in html output code blocks
+* docutils-tinyhtmlwriter - Tiny HTML Writer
 
-optionally:
-~~~~~~~~~~~
-**Python**:
+**formiko-vim**:
 
-* docutils-tinyhtmlwriter
-
-**System**:
-
-* neovim and pynvim for ``formiko-vim``
+* vte - Terminal emulator widget
+* neovim - heavily refactored vim fork
+* pynvim - Python3 library for scripting Neovim processes
 
 development:
 ~~~~~~~~~~~~
@@ -71,7 +69,7 @@ Installation
 
 Flatpak
 ~~~~~~~
-Formiko exist in Flathub repository as cz.zeropage.Formiko. If you are new with
+Formiko exists in the Flathub repository as cz.zeropage.Formiko. If you are new with
 Flatpak, see `setup guide <https://flatpak.org/setup/>`_.
 
 .. code:: sh
@@ -87,34 +85,33 @@ Flatpak, see `setup guide <https://flatpak.org/setup/>`_.
 
 Debian based
 ~~~~~~~~~~~~
-Debian based distributions use sometimes versions in package names. Here are
-example for Debian Stretch version. If you use different version, your
-gtksource or webkit2 could have another version name.
+Debian-based distributions sometimes use versions in package names. Here is an
+example for the Debian Forky version. If you use a different version, your
+gtksource or webkit2 may have a different version name.
 
 .. code:: sh
 
-    # python3, gtk4, librsvg etc are in dependencies
-    apt install python3-pip python3-gi python3-docutils gir1.2-gtksource-5 \
-                gir1.2-webkit-6.0 gir1.2-spelling-1 gir1.2-vte-3.91
+    # python3, gtk4 etc are in dependencies
+    apt install python3-pip python3-gi python3-docutils python3-jsonpath-ng \
+                python3-pygments gir1.2-gtksource-5 gir1.2-webkit-6.0 \
+                gir1.2-spelling-1 gir1.2-adw
 
     pip3 install formiko --break-system-packages
 
-    # optionally
-    apt install neovim python3-pynvim
-    pip3 install m2r2 docutils-tinyhtmlwriter jsonpath-ng
+**Optionally**
 
-**Formiko is in Debian and Ubuntu repository**. So you can install it standard
-way.
+    # languages
+    apt install hunspell-en-us  # or other language you want
+
+    # neovim
+    apt install gir1.2-vte-3.91 neovim python3-pynvim
 
 NetBSD
 ~~~~~~
-**Broken at this moment - not tested with GTK4**
-
-There is not GtkSpell3 on NetBSD, which is need for next 1.3.x version. So you
-must use 1.2.x bug fix release.
+**Broken at this moment - the WebKit with GTK4 and the libspelling packages are not available at this moment**
 
 Installation process can be different for each BSD releases. It's about which
-Python release is default. By this, you can change ``pyXX`` to your right
+Python release is default. By this, you can change ``py313`` to your right
 version.
 
 NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
@@ -123,34 +120,43 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
 
 .. code:: sh
 
-    # python3.6 is in dependencies as like gtk3
-    pkgin install py36-pip py36-gobject3 py36-docutils gtksourceview4 \
-                  librsvg webkit-gtk py36-pygments
-    pip3.6 install m2r2 formiko
+    # python3.13 is in dependencies, as is gtk4
+    pkgin install py313-pip py313-gobject3 py313-docutils gtksourceview5 \
+                  libadwaita librsvg webkit-gtk
+    pip3.6 install jsonpath-ng formiko
 
     # optionally
     pkgin install neovim pynvim
-    pip3.6 install docutils-tinyhtmlwriter jsonpath-ng
+    pip3.6 install m2r2 docutils-tinyhtmlwriter
 
 FreeBSD
 ~~~~~~~
-**Broken at this moment - not tested with GTK4**
 
 Installation process can be different for each BSD releases. It's about which
-Python release is default. By this, you can change ``pyXX`` to your right
+Python release is default. By this, you can change ``py311`` to your right
 version.
 
 On FreeBSD you must install all these packages:
 
 .. code:: sh
 
-    pkg install py37-gobject3 py37-docutils py37-pygments py37-pip \
-        gtksourceview4 webkit2-gtk3 gtkspell3 gobject-introspection \
-        librsvg2 adwaita-icon-theme
+    pkg install py311-pygobject py311-docutils py311-pygments py311-pip \
+        gtksourceview5 webkit2-gtk_60 libspelling py311-jsonpath-ng \
+        libadwaita
 
-**Optionaly**
+    pip-3.11 install formiko
+
+
+
+**Optionally**
 
 .. code:: sh
 
+    # MarkDown, and tiny writer support
+    pip-3.11 install m2r2 docutils-tinyhtmlwriter
+
+    # languages
     pkg install en-hunspell  # or other language you want
-    pip-3.7 install docutils-tinyhtmlwriter m2r2 jsonpath-ng
+
+    # neovim
+    pkg install vte3 neovim py311-pynvim py311-typing-extensions
