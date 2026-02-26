@@ -29,6 +29,7 @@ from gi.repository.Gtk import (
 )
 from gi.repository.WebKit import (
     FindOptions,
+    LoadEvent,
     PrintOperation,
     WebView,
 )
@@ -237,7 +238,8 @@ class Renderer(Overlay):
         style_manager = Adw.StyleManager.get_default()
         style_manager.connect("notify::dark", self.on_theme_changed)
         Gtk.Settings.get_default().connect(
-            "notify::gtk-theme-name", self.on_theme_changed,
+            "notify::gtk-theme-name",
+            self.on_theme_changed,
         )
         self.connect("realize", lambda _w: self.on_theme_changed())
 
@@ -303,9 +305,7 @@ class Renderer(Overlay):
             if found_fg
             else ("#ffffff" if is_dark else "#2e2e2e")
         )
-        self.linkcolor = (
-            self._rgba_to_hex(ac) if found_ac else self.fgcolor
-        )
+        self.linkcolor = self._rgba_to_hex(ac) if found_ac else self.fgcolor
 
     @staticmethod
     def _is_dark():
@@ -341,7 +341,11 @@ class Renderer(Overlay):
         """Return cursor position."""
         self.__position = -1
         self.webview.evaluate_javascript(
-            JS_POSITION, -1, None, None, None,
+            JS_POSITION,
+            -1,
+            None,
+            None,
+            None,
             self.on_position_callback,
         )
         while self.__position < 0:
@@ -546,12 +550,22 @@ class Renderer(Overlay):
             error.message,
         )
 
-    def on_load_changed(self, *_):
-        """Set foreground color when object while object is loading."""
+    def on_load_changed(self, _webview, load_event):
+        """On page load handler.
+
+        Set foreground color and restore scroll when page finishes loading.
+        """
+        if load_event != LoadEvent.FINISHED:
+            return
         self.webview.evaluate_javascript(
             f"document.fgColor='{self.fgcolor}'",
-            -1, None, None, None, None,
+            -1,
+            None,
+            None,
+            None,
+            None,
         )
+        self.scroll_to_position(None)
 
     def do_next_match(self, text):
         """Find next metch."""
@@ -608,5 +622,10 @@ class Renderer(Overlay):
             position = self.pos
 
         self.webview.evaluate_javascript(
-            JS_SCROLL % position, -1, None, None, None, None,
+            JS_SCROLL % position,
+            -1,
+            None,
+            None,
+            None,
+            None,
         )
