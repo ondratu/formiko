@@ -4,6 +4,7 @@ Name=Formiko
 Comment=reStructuredText and MarkDown editor and live html previewer
 Exec=formiko %f
 Icon=formiko
+StartupWMClass=cz.zeropage.Formiko
 Terminal=false
 MimeType=text/plain;text/html;text/x-markdown;text/x-rst;application/json;text/json;
 Categories=Office;WordProcessor;GNOME;GTK;
