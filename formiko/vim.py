@@ -27,14 +27,20 @@ class VimEditor(Vte.Terminal):
         })
 
     nvim: pynvim.Nvim
+    _nvim_alive: bool = False
 
     def __init__(self, app_window, file_name=""):
         super().__init__()
         self.__win = app_window
         self.__file_name = file_name
         self._uuid = "/tmp/.formiko."+str(uuid4())  # noqa: S108
+        self.connect("child-exited", self._on_nvim_exited)
         self.connect("child-exited", app_window.destroy_from_vim)
         self.connect("realize", self.start_server)
+
+    def _on_nvim_exited(self, *_):
+        """Mark the Neovim connection as dead when the process exits."""
+        self._nvim_alive = False
 
     def start_server(self, *_):
         """Start neovim server and put it into terminal."""
@@ -65,16 +71,27 @@ class VimEditor(Vte.Terminal):
         while not exists(self._uuid):
             sleep(0.1)
         self.nvim = pynvim.attach("socket", path=self._uuid)
+        self._nvim_alive = True
         if file_type:
             self.vim_remote_send(":set filetype="+file_type)
 
+    def _nvim_call(self, fn, *args, default=None):
+        """Call a pynvim function; return *default* if Neovim has exited."""
+        if not self._nvim_alive:
+            return default
+        try:
+            return fn(*args)
+        except EOFError:
+            self._nvim_alive = False
+            return default
+
     def vim_remote_expr(self, command):
         """Do expresion on vim server and return value."""
-        return self.nvim.eval(command)
+        return self._nvim_call(self.nvim.eval, command)
 
     def vim_remote_send(self, command):
         """Call command on vim server."""
-        self.nvim.command(command)
+        self._nvim_call(self.nvim.command, command)
 
     def get_vim_changes(self):
         """Retun number of changes in vim."""
@@ -109,7 +126,7 @@ class VimEditor(Vte.Terminal):
 
     def vim_quit(self):
         """Quit the vim."""
-        self.nvim.quit()
+        self._nvim_call(self.nvim.quit)
 
     @property
     def is_modified(self):
