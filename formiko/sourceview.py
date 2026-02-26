@@ -276,6 +276,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         This function is called from GLib.timeout_add
         """
         if not self.__file_name:
+            timeout_add(200, self.check_in_thread)
             return
         if not self.__win.get_realized():
             return  # window was closed, stop the loop
@@ -287,20 +288,26 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             if last_ctime > self.__last_ctime:
                 self.__pause_period = True
                 dialog = FileChangedDialog(self.__file_name)
-                if run_alert_dialog(dialog, self.__win) == "yes":
-                    cursor = self.text_buffer.get_insert()
-                    offset = self.text_buffer.get_iter_at_mark(
-                        cursor,
-                    ).get_offset()
-
-                    self.read_from_file(self.__file_name, offset)
-                else:
-                    self.__last_ctime = last_ctime
-
-                dialog.destroy()
-                self.__pause_period = False
+                dialog.connect(
+                    "response",
+                    self._on_file_changed_response,
+                    last_ctime,
+                )
+                dialog.present(self.__win)
+                return  # loop restarted in _on_file_changed_response
         except OSError:
             pass  # file switching when modify by another software
+        timeout_add(200, self.check_in_thread)
+
+    def _on_file_changed_response(self, _dialog, response, last_ctime):
+        """Handle response from the file-changed dialog."""
+        if response == "yes":
+            cursor = self.text_buffer.get_insert()
+            offset = self.text_buffer.get_iter_at_mark(cursor).get_offset()
+            self.read_from_file(self.__file_name, offset)
+        else:
+            self.__last_ctime = last_ctime
+        self.__pause_period = False
         timeout_add(200, self.check_in_thread)
 
     def period_save_thread(self):
@@ -342,6 +349,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                 rename(self.__file_name, self.__file_name+"~")
             with open(self.__file_name, "w", encoding="utf-8") as src:
                 src.write(self.text)
+                src.flush()
                 self.__last_ctime = fstat(src.fileno()).st_ctime
             self.text_buffer.set_modified(False)
         except Exception:
