@@ -1,5 +1,8 @@
 """Formiko dialog widgets."""
+
+from importlib.resources import files
 from os.path import splitext
+from traceback import print_exc
 
 from gi.repository import Adw, GLib, Gtk
 from gi.repository.GtkSource import LanguageManager
@@ -16,6 +19,28 @@ LANG_BY_EXT = {
     ".htm": default_manager.get_language("html"),
     ".json": default_manager.get_language("json"),
 }
+
+
+def load_authors():
+    """Parse formiko/AUTHORS and return a dict of section → list of entries."""
+    sections = {}
+    current = None
+    try:
+        content = (
+            files("formiko.data")
+            .joinpath("AUTHORS")
+            .read_text(encoding="utf-8")
+        )
+        for line in content.splitlines():
+            _line = line.strip()
+            if _line.startswith("[") and line.endswith("]"):
+                current = line[1:-1]
+                sections[current] = []
+            elif _line and current is not None:
+                sections[current].append(line)
+    except Exception:  # pylint: disable=broad-exception-caught
+        print_exc()
+    return sections
 
 
 def run_dialog(dialog):
@@ -50,8 +75,9 @@ def run_alert_dialog(dialog, parent):
     return result[0]
 
 
-def AboutDialog():  # noqa: N802
+def about_dialog():
     """Create About Formiko dialog."""
+    authors = load_authors()
     return Adw.AboutDialog(
         application_name="Formiko",
         application_icon="formiko",
@@ -60,9 +86,9 @@ def AboutDialog():  # noqa: N802
         comments=__comment__,
         website="https://github.com/ondratu/formiko",
         license_type=Gtk.License.BSD_3,
-        developer_name=__author__,
-        developers=[__author__],
-        artists=["Petr Šimčík <petrsimi.org@gmail.com>"],
+        developer_name=__author__.split(" <", maxsplit=1)[0],
+        developers=authors.get("developers", [__author__]),
+        artists=authors.get("artists", []),
     )
 
 

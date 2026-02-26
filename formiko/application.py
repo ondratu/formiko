@@ -15,7 +15,7 @@ from gi.repository.GLib import (
 )
 from gi.repository.Gtk import Application as GtkApplication  # noqa: F401
 
-from formiko.dialogs import AboutDialog, TraceBackDialog
+from formiko.dialogs import TraceBackDialog, about_dialog
 from formiko.editor import EditorType
 from formiko.shortcuts import ShortcutsWindow
 from formiko.window import AppWindow
@@ -127,8 +127,10 @@ class Application(Adw.Application):
             self.set_accels()
 
         if options.contains("preview") and last and last != "-":
-            self.new_window(EditorType.PREVIEW,
-                            join(command_line.get_cwd(), last))
+            self.new_window(
+                EditorType.PREVIEW,
+                join(command_line.get_cwd(), last),
+            )
         elif last and last[0] != "-":
             self.new_window(editor_type, join(command_line.get_cwd(), last))
         else:
@@ -143,22 +145,28 @@ class Application(Adw.Application):
     def on_new_window(self, action, *params):
         """'new-window' action handler."""
         self.new_window(
-            getattr(self.get_active_window(),
-                    "editor_type", EditorType.SOURCE),
+            getattr(
+                self.get_active_window(),
+                "editor_type",
+                EditorType.SOURCE,
+            ),
         )
 
     def on_shortcuts(self, action, param):
         """'shortcuts' action handler."""
         win = ShortcutsWindow(
-            getattr(self.get_active_window(),
-                    "editor_type", EditorType.SOURCE),
+            getattr(
+                self.get_active_window(),
+                "editor_type",
+                EditorType.SOURCE,
+            ),
         )
         self.add_window(win)
         win.present()
 
     def on_about(self, action, param):
         """'about' action handler."""
-        dialog = AboutDialog()
+        dialog = about_dialog()
         dialog.present(self.get_active_window())
 
     def on_traceback(self, action, param):
