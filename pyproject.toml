@@ -53,4 +53,4 @@ readme = {file = "README.rst"}
 include = ["formiko*"]
 
 [tool.setuptools.package-data]
-"formiko.data" = ["*.js", "*.css"]
+"formiko.data" = ["*.js", "*.css", "AUTHORS"]
