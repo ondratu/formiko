@@ -1,6 +1,7 @@
 """Webkit based renderer."""
 
 from io import StringIO
+from json import dumps
 from os.path import exists, splitext
 from traceback import format_exc
 
@@ -271,6 +272,7 @@ class Renderer(Overlay):
         self.tab_width = 8
         self.__position = -1
         self.file_name = None
+        self._loaded_context = None  # (file_name, mime_type) of last full load
         self.pos = 0
         self.src = ""
 
@@ -505,6 +507,18 @@ class Renderer(Overlay):
             # output to file or html preview
             return False, html, "text/html"
 
+    @staticmethod
+    def _extract_body(html):
+        """Extract the innerHTML of <body> from an HTML string, or None."""
+        start = html.find("<body")
+        end = html.rfind("</body>")
+        if start < 0 or end < 0:
+            return None
+        tag_end = html.find(">", start)
+        if tag_end < 0:
+            return None
+        return html[tag_end + 1: end]
+
     def do_render(self):
         """Render the source, and show rendered output."""
         state, html, mime_type = self.render_output()
@@ -518,7 +532,29 @@ class Renderer(Overlay):
                     f"</style>"
                 )
                 html = html.replace("</head>", theme_css + "</head>", 1)
+                context = (self.file_name, mime_type)
+                if self._loaded_context == context:
+                    body_html = self._extract_body(html)
+                    if body_html is not None:
+                        fgcolor = dumps(self.fgcolor)
+                        body_html = dumps(body_html)
+                        self.webview.evaluate_javascript(
+                            (
+                                f"document.fgColor={fgcolor};"
+                                f"document.body.innerHTML={body_html};"
+                            ),
+                            - 1,
+                            None,
+                            None,
+                            None,
+                            None,
+                        )
+                        if hasattr(self.parser_instance, "inject_fold_js"):
+                            self.parser_instance.inject_fold_js(self.webview)
+                        self.scroll_to_position(self.pos)
+                        return
             file_name = self.file_name or get_home_dir()
+            self._loaded_context = (self.file_name, mime_type)
             self.webview.load_bytes(
                 Bytes(html.encode("utf-8")),
                 mime_type,

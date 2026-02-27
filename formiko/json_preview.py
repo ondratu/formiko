@@ -135,14 +135,14 @@ class JSONPreview:
         return self._generate_html(self._json_data)
 
     def inject_fold_js(self, webview: WebView) -> None:
-        """Inject jsonfold.js into the current page via run_javascript.
+        """Inject jsonfold.js into the current page via evaluate_javascript.
 
         Called from ``load-changed`` handlers instead of relying on the
         inline ``<script>`` tag, which is blocked by the XSS protection
         setting ``enable-javascript-markup = False``.
         """
         _, js = self._resources()
-        webview.run_javascript(js, None, None, None)
+        webview.evaluate_javascript(js, -1, None, None, None, None)
 
     def _schedule_fold_injection(self) -> None:
         """Register a one-shot load-changed handler on the webview.
@@ -335,8 +335,6 @@ class JSONPreview:
                         "__HIGHLIGHTS__",
                         dumps(highlights),
                     ).replace("__EXPANDS__", dumps(list(expands)))
-                    webview.run_javascript(js, None, None, None)
-                else:
                     webview.evaluate_javascript(js, -1, None, None, None, None)
 
                 if hasattr(webview, "highlight_handler_id"):
