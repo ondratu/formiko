@@ -1,6 +1,7 @@
 """Gtk.ApplicationWindow implementation."""
 
 import re
+import threading
 from enum import Enum
 from os import stat
 from os.path import dirname, splitext
@@ -75,6 +76,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.layout(file_name)
 
         self.__last_changes = 0
+        self._vim_title = ""
         if self.editor_type is EditorType.PREVIEW:
             _, ext = splitext(file_name)
             self.on_file_type(None, ext)
@@ -828,7 +830,11 @@ class AppWindow(Adw.ApplicationWindow):
         """Check file state in thread."""
         if self.runing:
             if self.editor_type == EditorType.VIM:
-                GLib.idle_add(self.refresh_from_vim, force)
+                threading.Thread(
+                    target=self.refresh_from_vim,
+                    args=(force,),
+                    daemon=True,
+                ).start()
             elif self.editor_type == EditorType.SOURCE:
                 GLib.idle_add(self.refresh_from_source, force)
             else:  # self.editor = None
@@ -840,13 +846,14 @@ class AppWindow(Adw.ApplicationWindow):
             raise SystemExit(0)
 
     def refresh_from_vim(self, force):
-        """Refresh file from vim."""
+        """Refresh file from vim (runs in background thread)."""
         another_file = False
         try:
             star = "*" if self.editor.is_modified else ""
             self.not_running()
             title = star + (self.editor.file_name or NOT_SAVED_NAME)
-            if title != self.get_title():
+            if title != self._vim_title:
+                self._vim_title = title
                 GLib.idle_add(self.set_title, title)
                 another_file = True
             self.not_running()
@@ -859,15 +866,9 @@ class AppWindow(Adw.ApplicationWindow):
                 self.not_running()
                 buff = self.editor.get_vim_get_buffer(lines)
                 self.not_running()
-                row, col = self.editor.get_vim_pos()
-                pos = 0
-                for _i in range(row - 1):
-                    new_line = buff.find("\n", pos)
-                    if new_line < 0:
-                        break
-                    pos = new_line + 1
-                pos += col
-                self.renderer.render(buff, self.editor.file_path, pos)
+                pos = self.editor.get_vim_scroll_pos(lines)
+                file_path = self.editor.file_path
+                self.renderer.render(buff, file_path, pos)
             GLib.timeout_add(100, self.check_in_thread)
         except SystemExit:
             return
