@@ -3,6 +3,7 @@
 This widget is deprecated, and it not work well on new platform. Modern
 solution have to be based on nvim and it's protocol.
 """
+
 from logging import error
 from os.path import exists, splitext
 from time import sleep
@@ -21,10 +22,16 @@ VIM_PATH = "/usr/bin"
 class VimEditor(Vte.Terminal):
     """NeoVim widget based on VTE."""
 
-    __gsignals__ = ImutableDict({
-        "file-type": (SIGNAL_RUN_FIRST, None, (str,)),
-        "scroll-changed": (SIGNAL_RUN_LAST, None, (float,)),  # not implemented
-        })
+    __gsignals__ = ImutableDict(
+        {
+            "file-type": (SIGNAL_RUN_FIRST, None, (str,)),
+            "scroll-changed": (
+                SIGNAL_RUN_LAST,
+                None,
+                (float,),
+            ),  # not implemented
+        },
+    )
 
     nvim: pynvim.Nvim
     _nvim_alive: bool = False
@@ -33,7 +40,7 @@ class VimEditor(Vte.Terminal):
         super().__init__()
         self.__win = app_window
         self.__file_name = file_name
-        self._uuid = "/tmp/.formiko."+str(uuid4())  # noqa: S108
+        self._uuid = "/tmp/.formiko." + str(uuid4())  # noqa: S108
         self.connect("child-exited", self._on_nvim_exited)
         self.connect("child-exited", app_window.destroy_from_vim)
         self.connect("realize", self.start_server)
@@ -51,7 +58,7 @@ class VimEditor(Vte.Terminal):
         else:
             file_type = "rst"
 
-        args = [VIM_PATH+"/nvim", "--listen", self._uuid]
+        args = [VIM_PATH + "/nvim", "--listen", self._uuid]
         if self.__file_name:
             args.append(self.__file_name)
 
@@ -73,25 +80,25 @@ class VimEditor(Vte.Terminal):
         self.nvim = pynvim.attach("socket", path=self._uuid)
         self._nvim_alive = True
         if file_type:
-            self.vim_remote_send(":set filetype="+file_type)
+            self.vim_remote_send(":set filetype=" + file_type)
 
-    def _nvim_call(self, fn, *args, default=None):
-        """Call a pynvim function; return *default* if Neovim has exited."""
+    def _nvim_call(self, fn, default=None):
+        """Call a pynvim callable; return *default* if Neovim has exited."""
         if not self._nvim_alive:
             return default
         try:
-            return fn(*args)
+            return fn()
         except EOFError:
             self._nvim_alive = False
             return default
 
     def vim_remote_expr(self, command):
         """Do expresion on vim server and return value."""
-        return self._nvim_call(self.nvim.eval, command)
+        return self._nvim_call(lambda: self.nvim.eval(command))
 
     def vim_remote_send(self, command):
         """Call command on vim server."""
-        self._nvim_call(self.nvim.command, command)
+        self._nvim_call(lambda: self.nvim.command(command))
 
     def get_vim_changes(self):
         """Retun number of changes in vim."""
@@ -112,9 +119,18 @@ class VimEditor(Vte.Terminal):
         buff, row, col, off = pos
         return row, col
 
+    def get_vim_scroll_pos(self, total_lines):
+        """Return scroll position based on cursor row as a fraction (0.0-1.0).
+
+        Uses the cursor row so the preview tracks vertical position in the
+        document without flickering on each keystroke within a line.
+        """
+        row, _ = self.get_vim_pos()
+        return (row - 1) / max(total_lines - 1, 1)
+
     def get_vim_file_path(self):
         """Return file path from vim."""
-        return self.vim_remote_expr("expand('%:p')")
+        return self.vim_remote_expr("expand('%:p')") or self.__file_name
 
     def get_vim_encoding(self):
         """Return vim encoding."""
@@ -126,7 +142,7 @@ class VimEditor(Vte.Terminal):
 
     def vim_quit(self):
         """Quit the vim."""
-        self._nvim_call(self.nvim.quit)
+        self._nvim_call(lambda: self.nvim.quit())
 
     @property
     def is_modified(self):
@@ -151,9 +167,12 @@ class VimEditor(Vte.Terminal):
     def do_file_type(self, ext):
         """Do nothing - just compatible interface."""
 
-    def read_from_file(self, _):
-        """Log error, read_from_file is not supported."""
-        error("Not supported call read_from_file in VimEditor")
+    def read_from_file(self, file_name):
+        """Open a file in Neovim."""
+        self.__file_name = file_name
+        _, ext = splitext(file_name)
+        self.emit("file-type", ext)
+        self._nvim_call(lambda: self.nvim.command("e " + file_name))
 
     def save(self, _):
         """Log error, save is not supported."""
