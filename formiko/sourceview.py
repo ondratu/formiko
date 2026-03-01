@@ -724,26 +724,24 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def toggle_bullet(
         self, before, after, all_block_variants, needs_blank,
-        strip_leading_whitespace=False, strip_ordered=False,
+        strip_ordered=False,
     ):
         """Toggle bullet-list formatting on the current line."""
         self._toggle_list_item(
             compute_toggle_bullet, needs_blank,
             before=before, after=after,
             all_block_variants=all_block_variants,
-            strip_leading_whitespace=strip_leading_whitespace,
             strip_ordered=strip_ordered,
         )
 
     def toggle_ordered(
         self, all_block_variants, needs_blank,
-        strip_leading_whitespace=False, auto_number=False,
+        auto_number=False,
     ):
         """Toggle ordered (numbered) list on the current line."""
         self._toggle_list_item(
             compute_toggle_ordered, needs_blank,
             all_block_variants=all_block_variants,
-            strip_leading_whitespace=strip_leading_whitespace,
             auto_number=auto_number,
         )
 

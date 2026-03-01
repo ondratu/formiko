@@ -355,7 +355,6 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
         if parser == "rst":
             self._editor.toggle_bullet(
                 "- ", "", (), needs_blank=True,
-                strip_leading_whitespace=True,
                 strip_ordered=True,
             )
         elif parser == "m2r":
@@ -376,7 +375,6 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
             self._editor.toggle_ordered(
                 all_block_variants=(("- ", ""),),
                 needs_blank=True,
-                strip_leading_whitespace=True,
                 auto_number=True,
             )
         elif parser == "m2r":
