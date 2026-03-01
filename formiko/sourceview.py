@@ -1,10 +1,11 @@
 """SourceView based editor widget.."""
+import re
 from os import fstat, rename, stat
 from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import Adw, Gio, GObject, Gtk, GtkSource
+from gi.repository import Adw, Gdk, Gio, GObject, Gtk, GtkSource
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -46,6 +47,27 @@ except ImportError:
 
 PERIOD_SAVE_TIME = 300  # 5min
 
+# Matches ordered-list prefix with at least one content char: "  2. x"
+_RE_ORDERED_CONT = re.compile(r"^(\s*)(\d+)\. \S")
+# Matches bullet-list prefix with at least one content char: "  - x"
+_RE_BULLET_CONT = re.compile(r"^(\s*)([-*] )\S")
+
+
+def _is_list_line(line_text: str) -> bool:
+    """Return True if the line begins with a list marker (after any indent)."""
+    return bool(re.match(r"^\s*([-*] |\d+\. )", line_text))
+
+
+def _list_continuation_marker(line_text: str) -> "str | None":
+    """Return the list marker to insert on the next line, or ``None``."""
+    m = _RE_ORDERED_CONT.match(line_text)
+    if m:
+        return f"{m.group(1)}{int(m.group(2)) + 1}. "
+    m = _RE_BULLET_CONT.match(line_text)
+    if m:
+        return f"{m.group(1)}{m.group(2)}"
+    return None
+
 
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
     """Widget containted SourceView."""
@@ -78,6 +100,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         )
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
+        self.setup_list_features()
 
         adj = self.get_vadjustment()
         adj.connect("value-changed", self.on_scroll_changed)
@@ -240,6 +263,79 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def on_scroll_changed(self, *_):
         """Emit scroll event."""
         self.emit("scroll-changed", self.position)
+
+    def setup_list_features(self):
+        """Set up list auto-continuation and Tab-indent (initially disabled).
+
+        Call :meth:`set_list_features_enabled` to activate/deactivate.
+        Both features share :func:`_is_list_line` for bullet detection.
+        """
+        self._list_handler_id = None
+        self._tab_key_ctrl = Gtk.EventControllerKey.new()
+        self._tab_key_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
+        self._tab_key_ctrl.connect("key-pressed", self._on_tab_key_pressed)
+
+    def set_list_features_enabled(self, enabled):
+        """Enable or disable list auto-continuation and Tab-indent."""
+        active = self._list_handler_id is not None
+        if enabled == active:
+            return
+        if enabled:
+            self._list_handler_id = self.text_buffer.connect(
+                "insert-text", self._on_list_insert_text,
+            )
+            self.source_view.add_controller(self._tab_key_ctrl)
+        else:
+            self.text_buffer.disconnect(self._list_handler_id)
+            self._list_handler_id = None
+            self.source_view.remove_controller(self._tab_key_ctrl)
+
+    def _on_list_insert_text(self, buf, location, text, _length):
+        """Auto-continue list item marker after pressing Enter."""
+        if "\n" not in text:
+            return
+        line_start = location.copy()
+        line_start.set_line_offset(0)
+        line_text = buf.get_text(line_start, location, False)
+        marker = _list_continuation_marker(line_text)
+        if not marker:
+            return
+
+        def _insert():
+            cur = buf.get_iter_at_mark(buf.get_insert())
+            new_line_start = cur.copy()
+            new_line_start.set_line_offset(0)
+            already = buf.get_text(new_line_start, cur, False)
+            if marker.startswith(already):
+                rest = marker[len(already):]
+                if rest:
+                    buf.insert_at_cursor(rest)
+            return False
+
+        idle_add(_insert)
+
+    def _on_tab_key_pressed(self, _ctrl, keyval, _keycode, state):
+        """Indent the current list-item line on Tab (no selection)."""
+        if keyval != Gdk.KEY_Tab:
+            return False
+        if state & (Gdk.ModifierType.CONTROL_MASK
+                    | Gdk.ModifierType.SHIFT_MASK
+                    | Gdk.ModifierType.ALT_MASK):
+            return False
+        buf = self.text_buffer
+        if buf.get_has_selection():
+            return False
+        ins = buf.get_iter_at_mark(buf.get_insert())
+        line_start = ins.copy()
+        line_start.set_line_offset(0)
+        line_end = line_start.copy()
+        if not line_end.ends_line():
+            line_end.forward_to_line_end()
+        line_text = buf.get_text(line_start, line_end, False)
+        if not _is_list_line(line_text):
+            return False
+        self.source_view.indent_lines(line_start, line_end)
+        return True
 
     def set_period_save(self, save):
         """Set period save and start save thread."""

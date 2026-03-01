@@ -370,6 +370,8 @@ class AppWindow(Adw.ApplicationWindow):
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
+            self.editor.set_list_features_enabled(
+                parser in ("rst", "md", "m2r"))
 
     def on_file_type(self, widget, ext):
         """'file-type' event handler."""
@@ -383,6 +385,8 @@ class AppWindow(Adw.ApplicationWindow):
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
+            self.editor.set_list_features_enabled(
+                parser in ("rst", "md", "m2r"))
 
         if hasattr(self, "file_browser"):
             directory = dirname(self.editor.file_path)
@@ -746,7 +750,9 @@ class AppWindow(Adw.ApplicationWindow):
 
         self.editor.connect("file-type", self.on_file_type)
         self.editor.connect("scroll-changed", self.on_scroll_changed)
-
+        if self.editor_type == EditorType.SOURCE:
+            self.editor.set_list_features_enabled(
+                self.preferences.parser in ("rst", "md", "m2r"))
         if file_name:
             self.editor.read_from_file(file_name)
 
