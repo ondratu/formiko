@@ -51,8 +51,8 @@ class ActionHelper:
 class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):
     """Gtk.SpinButton with action support."""
 
-    action_name = GObject.property(type=str)
-    action_target = GObject.property(type=GObject.TYPE_VARIANT)
+    action_name = GObject.Property(type=str)
+    action_target = GObject.Property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, action_name=None, **kwargs):
         Gtk.SpinButton.__init__(self, **kwargs)

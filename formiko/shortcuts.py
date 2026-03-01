@@ -170,6 +170,52 @@ class GeneralGroup(ShortcutsGroup):
         )
 
 
+class FormattingGroup(ShortcutsGroup):
+    """Shortcuts group for formatting actions."""
+
+    def __init__(self):
+        super().__init__(title="Formatting")
+
+        self.append(
+            ShortcutsShortcut(accelerator="<Control>b", title="Bold"),
+        )
+        self.append(
+            ShortcutsShortcut(accelerator="<Control>i", title="Italic"),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>c", title="Inline Code",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Control>k", title="Insert Link",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>q", title="Blockquote",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>b", title="Bullet List",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>n", title="Numbered List",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Control>1 <Control>2 <Control>3 "
+                            "<Control>4 <Control>5 <Control>6",
+                title="Header 1-6",
+            ),
+        )
+
+
 class ShortcutsWindow(Gtk.ShortcutsWindow):
     """Shortcuts window widget."""
 
@@ -184,6 +230,7 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
 
         if editor_type == EditorType.SOURCE:
             sec.add_group(SourceGroup())
+            sec.add_group(FormattingGroup())
 
         elif editor_type == EditorType.VIM:
             sec.add_group(VimGroup())

@@ -53,7 +53,7 @@ class VimEditor(Vte.Terminal):
         """Start neovim server and put it into terminal."""
         file_type = ""
         if self.__file_name:
-            name, ext = splitext(self.__file_name)
+            _, ext = splitext(self.__file_name)
             self.emit("file-type", ext)
         else:
             file_type = "rst"
@@ -63,7 +63,7 @@ class VimEditor(Vte.Terminal):
             args.append(self.__file_name)
 
         try:
-            success, pid = self.spawn_sync(
+            _, _pid = self.spawn_sync(
                 Vte.PtyFlags.DEFAULT,
                 None,
                 args,
@@ -110,13 +110,13 @@ class VimEditor(Vte.Terminal):
 
     def get_vim_get_buffer(self, count):
         """Retun text from vim."""
-        buff = self.vim_remote_expr("getline(0, %d)" % count)
+        buff = self.vim_remote_expr(f"getline(0, {count})")
         return "\n".join(buff)
 
     def get_vim_pos(self):
         """Return cursor position in vim."""
         pos = self.vim_remote_expr("getpos('.')") or [0, 0, 0, 0]
-        buff, row, col, off = pos
+        _buff, row, col, _off = pos
         return row, col
 
     def get_vim_scroll_pos(self, total_lines):

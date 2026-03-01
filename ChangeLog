@@ -21,6 +21,7 @@ Version 1.6.0dev
   * fix #53 - replace unmaintained m2r with m2r2
   * Folder list on the left side is now toggled by an icon in the top-left
     corner #34
+  * Formatting Toolbox #16
 
 
 Version 1.5.0

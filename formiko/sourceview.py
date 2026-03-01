@@ -28,6 +28,14 @@ from formiko.dialogs import (
     run_alert_dialog,
     run_dialog,
 )
+from formiko.format_utils import (
+    compute_toggle_bullet,
+    compute_toggle_format,
+    compute_toggle_line_exclusive,
+    compute_toggle_line_format,
+    compute_toggle_ordered,
+    compute_toggle_rst_header,
+)
 from formiko.widgets import ActionHelper, ImutableDict
 
 try:
@@ -48,12 +56,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __pause_period = False
 
     __gsignals__ = ImutableDict({
-        "file-type": (GObject.SIGNAL_RUN_FIRST, None, (str,)),
-        "scroll-changed": (GObject.SIGNAL_RUN_LAST, None, (float,)),
+        "file-type": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
+        "scroll-changed": (GObject.SignalFlags.RUN_LAST, None, (float,)),
     })
 
-    action_name = GObject.property(type=str)
-    action_target = GObject.property(type=GObject.TYPE_VARIANT)
+    action_name = GObject.Property(type=str)
+    action_target = GObject.Property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, win, preferences, action_name=None):
         GtkSource.init()
@@ -454,6 +462,290 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.scroll_to_iter(search_iter, 0, 1, 1, 1)
         self.text_buffer.place_cursor(search_iter)
         return True
+
+    def get_selected_text(self) -> str:
+        """Return the currently selected text, or an empty string."""
+        bounds = self.text_buffer.get_selection_bounds()
+        if not bounds:
+            return ""
+        return self.text_buffer.get_text(bounds[0], bounds[1], False)
+
+    def get_selection_offsets(self) -> "tuple[int, int]":
+        """Return ``(start, end)`` character offsets of the current selection.
+
+        When nothing is selected both values equal the cursor offset.
+        """
+        bounds = self.text_buffer.get_selection_bounds()
+        if bounds:
+            return bounds[0].get_offset(), bounds[1].get_offset()
+        cursor = self.text_buffer.get_iter_at_mark(
+            self.text_buffer.get_insert(),
+        )
+        off = cursor.get_offset()
+        return off, off
+
+    def _replace_range(
+        self, start_off: int, end_off: int, new_text: str,
+    ) -> None:
+        """Replace buffer content between offsets and select *new_text*.
+
+        This is the single low-level primitive used by all formatting
+        methods that modify a character range.  The replacement text is
+        selected so the user can see what changed.
+
+        Must be called inside ``begin_user_action / end_user_action``
+        or wraps its own pair when called standalone.
+        """
+        buf = self.text_buffer
+        start = buf.get_iter_at_offset(start_off)
+        end = buf.get_iter_at_offset(end_off)
+        buf.delete(start, end)
+        ins = buf.get_iter_at_offset(start_off)
+        buf.insert(ins, new_text)
+        sel_s = buf.get_iter_at_offset(start_off)
+        sel_e = buf.get_iter_at_offset(start_off + len(new_text))
+        buf.select_range(sel_s, sel_e)
+
+    def toggle_format(self, before, after, known_formats):
+        """Toggle formatting markers around selected text.
+
+        Expands the selection to cover any adjacent known formatting markers,
+        strips the detected format, then applies the requested format — or
+        removes it when the selection is already wrapped with it.  The
+        original (inner) text remains selected after the operation.
+
+        ``known_formats`` is a list of (before, after) tuples for the current
+        file type.  Longer markers are tested first so that ``**`` is never
+        mis-detected as a pair of ``*`` markers.
+        """
+        bounds = self.text_buffer.get_selection_bounds()
+        if not bounds:
+            return
+        buf_text = self.text_buffer.props.text
+        sel_start = bounds[0].get_offset()
+        sel_end = bounds[1].get_offset()
+
+        eff_start, eff_end, result, inner_start, inner_end = (
+            compute_toggle_format(
+                buf_text, sel_start, sel_end, before, after, known_formats,
+            )
+        )
+
+        self.text_buffer.begin_user_action()
+        self._replace_range(eff_start, eff_end, result)
+        # Restore selection over the inner (content) text only
+        sel_iter = self.text_buffer.get_iter_at_offset(
+            eff_start + inner_start,
+        )
+        sel_end_iter = self.text_buffer.get_iter_at_offset(
+            eff_start + inner_end,
+        )
+        self.text_buffer.select_range(sel_iter, sel_end_iter)
+        self.text_buffer.end_user_action()
+
+    def insert_link_text(
+        self, link_text: str, start_off: int, end_off: int,
+    ) -> None:
+        """Insert *link_text* at the given buffer offsets and select it.
+
+        When *start_off == end_off* (no prior selection), the text is
+        inserted at that position with padding spaces added as needed.
+        Otherwise the range ``[start_off, end_off)`` is replaced.
+
+        The inserted link text is selected after the operation so the
+        user can see what was inserted.
+        """
+        buf = self.text_buffer
+        buf.begin_user_action()
+        if start_off != end_off:
+            self._replace_range(start_off, end_off, link_text)
+        else:
+            full = buf.props.text
+            off = start_off
+            prefix = (
+                "" if off == 0 or full[off - 1] in (" ", "\n") else " "
+            )
+            suffix = (
+                "" if off >= len(full) or full[off] in (" ", "\n") else " "
+            )
+            padded = prefix + link_text + suffix
+            self._replace_range(off, off, padded)
+            # Re-select only the link text (not padding)
+            ins_start = off + len(prefix)
+            sel_s = buf.get_iter_at_offset(ins_start)
+            sel_e = buf.get_iter_at_offset(ins_start + len(link_text))
+            buf.select_range(sel_s, sel_e)
+        buf.end_user_action()
+
+    # ------------------------------------------------------------------
+    # Line-level formatting helpers
+    # ------------------------------------------------------------------
+
+    def _get_current_line(self):
+        """Return ``(line_num, start_iter, end_iter, text)`` for cursor."""
+        buf = self.text_buffer
+        cursor = buf.get_iter_at_mark(buf.get_insert())
+        line_num = cursor.get_line()
+        start = cursor.copy()
+        start.set_line_offset(0)
+        end = cursor.copy()
+        if not end.ends_line():
+            end.forward_to_line_end()
+        return line_num, start, end, buf.get_text(start, end, True)
+
+    def _get_line_text(self, line_num):
+        """Return the text of *line_num*, or ``None`` if invalid."""
+        if line_num < 0:
+            return None
+        buf = self.text_buffer
+        _, start = buf.get_iter_at_line(line_num)
+        end = start.copy()
+        if not end.ends_line():
+            end.forward_to_line_end()
+        return buf.get_text(start, end, True)
+
+    def _replace_line(self, line_start, line_end, old_text, new_text):
+        """Replace *old_text* with *new_text* between the two iters."""
+        if new_text != old_text:
+            buf = self.text_buffer
+            buf.begin_user_action()
+            buf.delete(line_start, line_end)
+            buf.insert(line_start, new_text)
+            buf.end_user_action()
+
+    # ------------------------------------------------------------------
+    # Public line-level formatting methods
+    # ------------------------------------------------------------------
+
+    def toggle_line_format(
+        self, before, after="", all_block_variants=(),
+        strip_ordered=False,
+    ):
+        """Toggle block formatting for the line at the cursor."""
+        _, start, end, text = self._get_current_line()
+        new = compute_toggle_line_format(
+            text, before, after,
+            all_block_variants=all_block_variants,
+            strip_ordered=strip_ordered,
+        )
+        self._replace_line(start, end, text, new)
+
+    def toggle_line_exclusive(
+        self, before, after, all_variants,
+        extra_strip_variants=(), strip_ordered=False,
+    ):
+        """Toggle an exclusive block format on the current line."""
+        _, start, end, text = self._get_current_line()
+        new = compute_toggle_line_exclusive(
+            text, before, after, all_variants,
+            extra_strip_variants=extra_strip_variants,
+            strip_ordered=strip_ordered,
+        )
+        self._replace_line(start, end, text, new)
+
+    def toggle_rst_header(self, underline_char):
+        """Toggle an RST heading underline on the current line."""
+        buf = self.text_buffer
+        line_num, _, line_end, line_text = (
+            self._get_current_line()
+        )
+
+        # Next line (if any)
+        next_start = line_end.copy()
+        next_start.forward_char()
+        next_line_text = None
+        next_line_end = None
+        if next_start.get_line() > line_num:
+            next_line_end = next_start.copy()
+            if not next_line_end.ends_line():
+                next_line_end.forward_to_line_end()
+            next_line_text = buf.get_text(
+                next_start, next_line_end, True,
+            )
+
+        new_underline, had_underline = compute_toggle_rst_header(
+            line_text, next_line_text, underline_char,
+        )
+
+        if new_underline is None and not had_underline:
+            return
+
+        buf.begin_user_action()
+
+        if had_underline and next_line_end is not None:
+            buf.delete(line_end, next_line_end)
+
+        if new_underline is not None:
+            _, cur_end = buf.get_iter_at_line(line_num)
+            if not cur_end.ends_line():
+                cur_end.forward_to_line_end()
+            buf.insert(cur_end, "\n" + new_underline)
+
+        buf.end_user_action()
+
+    def _toggle_list_item(self, compute_fn, needs_blank, **kwargs):
+        """Shared implementation for bullet and ordered list toggle.
+
+        Calls *compute_fn* with the current and (optionally) previous
+        line texts plus any extra *kwargs*.  Handles blank-line
+        insertion and line replacement.
+        """
+        buf = self.text_buffer
+        line_num, line_start, line_end, line_text = (
+            self._get_current_line()
+        )
+
+        prev = (
+            self._get_line_text(line_num - 1)
+            if needs_blank else None
+        )
+
+        new_text, insert_blank = compute_fn(
+            line_text, prev, **kwargs,
+        )
+
+        if new_text == line_text and not insert_blank:
+            return
+
+        buf.begin_user_action()
+
+        if insert_blank:
+            buf.insert(line_start, "\n")
+            _, line_start = buf.get_iter_at_line(line_num + 1)
+            line_end = line_start.copy()
+            if not line_end.ends_line():
+                line_end.forward_to_line_end()
+
+        if new_text != line_text:
+            buf.delete(line_start, line_end)
+            buf.insert(line_start, new_text)
+
+        buf.end_user_action()
+
+    def toggle_bullet(
+        self, before, after, all_block_variants, needs_blank,
+        strip_leading_whitespace=False, strip_ordered=False,
+    ):
+        """Toggle bullet-list formatting on the current line."""
+        self._toggle_list_item(
+            compute_toggle_bullet, needs_blank,
+            before=before, after=after,
+            all_block_variants=all_block_variants,
+            strip_leading_whitespace=strip_leading_whitespace,
+            strip_ordered=strip_ordered,
+        )
+
+    def toggle_ordered(
+        self, all_block_variants, needs_blank,
+        strip_leading_whitespace=False, auto_number=False,
+    ):
+        """Toggle ordered (numbered) list on the current line."""
+        self._toggle_list_item(
+            compute_toggle_ordered, needs_blank,
+            all_block_variants=all_block_variants,
+            strip_leading_whitespace=strip_leading_whitespace,
+            auto_number=auto_number,
+        )
 
     def stop_search(self):
         """Stop searching."""
