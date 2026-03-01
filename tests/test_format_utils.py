@@ -1082,35 +1082,28 @@ class TestToggleBullet:
         assert not blank
 
     # -------------------------------------------------------------------
-    # RST: strip leading whitespace
+    # Nested lists: leading indentation is preserved
     # -------------------------------------------------------------------
 
-    def test_rst_strips_indent_4spaces(self):
-        text, _ = compute_toggle_bullet(
-            "    Text",
-            None,
-            "- ",
-            strip_leading_whitespace=True,
-        )
-        assert text == "- Text"
+    def test_nested_toggle_on_preserves_indent(self):
+        text, _ = compute_toggle_bullet("    Text", None, "- ")
+        assert text == "    - Text"
 
-    def test_rst_strips_tab(self):
-        text, _ = compute_toggle_bullet(
-            "\tText",
-            None,
-            "- ",
-            strip_leading_whitespace=True,
-        )
-        assert text == "- Text"
+    def test_nested_tab_indent_preserved(self):
+        text, _ = compute_toggle_bullet("\tText", None, "- ")
+        assert text == "\t- Text"
 
-    def test_rst_blank_line_with_prev_text(self):
-        _, blank = compute_toggle_bullet(
-            "Text",
-            "Previous",
-            "- ",
-            strip_leading_whitespace=True,
-        )
+    def test_nested_toggle_off_preserves_indent(self):
+        text, _ = compute_toggle_bullet("  - Item", None, "- ")
+        assert text == "  Item"
+
+    def test_nested_blank_line_with_prev_text(self):
+        _, blank = compute_toggle_bullet("Text", "Previous", "- ")
         assert blank
+
+    def test_nested_no_blank_if_prev_is_indented_bullet(self):
+        _, blank = compute_toggle_bullet("  Text", "  - Prev", "- ")
+        assert not blank
 
 
 # ---------------------------------------------------------------------------
@@ -1146,7 +1139,6 @@ class TestToggleOrdered:
         text, blank = compute_toggle_ordered(
             "2. Next item",
             None,
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert text == "Next item"
@@ -1194,12 +1186,7 @@ class TestToggleOrdered:
     # ------- toggle-on — RST -------------------------------------------------
 
     def test_rst_toggle_on_plain(self):
-        text, blank = compute_toggle_ordered(
-            "Item",
-            None,
-            strip_leading_whitespace=True,
-            auto_number=True,
-        )
+        text, blank = compute_toggle_ordered("Item", None, auto_number=True)
         assert text == "1. Item"
         assert not blank
 
@@ -1207,45 +1194,32 @@ class TestToggleOrdered:
         text, blank = compute_toggle_ordered(
             "Next",
             "1. Previous",
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert text == "2. Next"
         assert not blank
 
     def test_rst_toggle_on_prev_ordered_high_number(self):
-        text, _ = compute_toggle_ordered(
-            "Item",
-            "9. Last",
-            strip_leading_whitespace=True,
-            auto_number=True,
-        )
+        text, _ = compute_toggle_ordered("Item", "9. Last", auto_number=True)
         assert text == "10. Item"
 
     def test_rst_toggle_on_prev_not_ordered_uses_one(self):
         text, blank = compute_toggle_ordered(
             "Item",
             "Some text",
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert text == "1. Item"
         assert blank
 
-    def test_rst_toggle_on_strips_leading_whitespace(self):
-        text, _ = compute_toggle_ordered(
-            "   Indented",
-            None,
-            strip_leading_whitespace=True,
-            auto_number=True,
-        )
-        assert text == "1. Indented"
+    def test_rst_nested_toggle_on_preserves_indent(self):
+        text, _ = compute_toggle_ordered("   Indented", None, auto_number=True)
+        assert text == "   1. Indented"
 
     def test_rst_toggle_off_no_blank(self):
         _, blank = compute_toggle_ordered(
             "4. Item",
             "3. Prev",
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert not blank
@@ -1263,13 +1237,11 @@ class TestToggleOrdered:
         toggled_on, _ = compute_toggle_ordered(
             original,
             None,
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         toggled_off, _ = compute_toggle_ordered(
             toggled_on,
             None,
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert toggled_off == original
@@ -1403,21 +1375,15 @@ class TestCrossBlockStripping:
         )
         assert text == "- Item"
 
-    def test_bullet_strips_whitespace_rst(self):
-        text, _ = compute_toggle_bullet(
-            "   Indented",
-            None,
-            "- ",
-            strip_leading_whitespace=True,
-        )
-        assert text == "- Indented"
+    def test_bullet_nested_preserves_indent(self):
+        text, _ = compute_toggle_bullet("   Indented", None, "- ")
+        assert text == "   - Indented"
 
     def test_bullet_strips_ordered_rst(self):
         text, _ = compute_toggle_bullet(
             "3. Item",
             None,
             "- ",
-            strip_leading_whitespace=True,
             strip_ordered=True,
         )
         assert text == "- Item"
@@ -1453,23 +1419,53 @@ class TestCrossBlockStripping:
             "- Item",
             None,
             all_block_variants=(("- ", ""),),
-            strip_leading_whitespace=True,
             auto_number=True,
         )
         assert text == "1. Item"
 
-    def test_ordered_strips_whitespace_rst(self):
+    def test_ordered_nested_preserves_indent(self):
         text, _ = compute_toggle_ordered(
             "   Indented",
             None,
             all_block_variants=(("- ", ""),),
-            strip_leading_whitespace=True,
             auto_number=True,
         )
-        assert text == "1. Indented"
+        assert text == "   1. Indented"
 
+    def test_nested_bullet_to_ordered(self):
+        # indented bullet → indented ordered
+        text, _ = compute_toggle_ordered(
+            "  - Item",
+            None,
+            all_block_variants=(("- ", ""),),
+            auto_number=True,
+        )
+        assert text == "  1. Item"
 
-class TestComputeLink:
+    def test_nested_ordered_to_bullet(self):
+        # indented ordered → indented bullet
+        text, _ = compute_toggle_bullet(
+            "  1. Item",
+            None,
+            "- ",
+            all_block_variants=(("- ", ""),),
+            strip_ordered=True,
+        )
+        assert text == "  - Item"
+
+    def test_nested_ordered_toggle_off_preserves_indent(self):
+        text, _ = compute_toggle_ordered("  3. Item", None, auto_number=True)
+        assert text == "  Item"
+
+    def test_nested_auto_number_from_indented_prev(self):
+        # previous line is also indented
+        text, _ = compute_toggle_ordered(
+            "  Item",
+            "  2. Prev",
+            auto_number=True,
+        )
+        assert text == "  3. Item"
+
     def test_md_with_text(self):
         from formiko.format_utils import compute_link
 

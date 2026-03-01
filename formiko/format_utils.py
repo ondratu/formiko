@@ -44,6 +44,12 @@ _RE_ORDERED_ITEM = _re.compile(r"^(\d+)\. ")
 # Building blocks
 # ===================================================================
 
+def _split_indent(text: str) -> "tuple[str, str]":
+    """Split *text* into ``(indent, rest)`` where *indent* is leading space."""
+    rest = text.lstrip(" \t")
+    return text[: len(text) - len(rest)], rest
+
+
 def _strip_markers(
     text: str, before: str, after: str,
 ) -> "tuple[str, bool]":
@@ -73,18 +79,14 @@ def _strip_other_block(
     text: str,
     variants: "tuple | list" = (),
     strip_ordered: bool = False,
-    strip_whitespace: bool = False,
 ) -> str:
     r"""Strip the first matching block-level marker from *text*.
 
     Processing order (first match wins):
 
-    1. Leading whitespace (when *strip_whitespace* is ``True``).
-    2. Ordered-list regex ``\d+. `` (when *strip_ordered*).
-    3. Each ``(before, after)`` pair in *variants*.
+    1. Ordered-list regex ``\d+. `` (when *strip_ordered*).
+    2. Each ``(before, after)`` pair in *variants*.
     """
-    if strip_whitespace:
-        text = text.lstrip()
     if strip_ordered:
         m = _RE_ORDERED_ITEM.match(text)
         if m:
@@ -308,42 +310,46 @@ def compute_toggle_bullet(
     before: str,
     after: str = "",
     all_block_variants: "tuple | list" = (),
-    strip_leading_whitespace: bool = False,
     strip_ordered: bool = False,
 ) -> "tuple[str, bool]":
     r"""Toggle bullet-list formatting on a single line.
 
-    * **Toggle off** — if the line already has *before*/*after*, strip.
-    * **Toggle on** — strip conflicting block formats, then prepend the
-      bullet marker.  A blank separator line is requested when this is
-      the first item in a new list.
+    Leading indentation is always preserved so that nested lists work
+    correctly.  RST blockquote indentation is therefore **not** removed.
+
+    * **Toggle off** — if the line (after its indent) starts with
+      *before*/*after*, strip those markers; keep indent.
+    * **Toggle on** — strip conflicting block formats from the non-indent
+      portion, then prepend the bullet marker after the indent.
+      A blank separator line is requested when this is the first item
+      in a new list.
 
     :param line_text: Current line text (no trailing newline).
     :param prev_line_text: Previous line text, or ``None``.
     :param before: Prefix marker (e.g. ``"- "``).
     :param after: Suffix marker (e.g. ``"</li>"``).
     :param all_block_variants: Block markers to strip on toggle-on.
-    :param strip_leading_whitespace: Strip leading whitespace (RST).
     :param strip_ordered: Also strip ``\d+. `` prefix.
     :returns: ``(new_line_text, insert_blank_before)``.
     """
+    indent, rest = _split_indent(line_text)
+
     # Toggle off
-    stripped, had = _strip_markers(line_text, before, after)
+    stripped_rest, had = _strip_markers(rest, before, after)
     if had:
-        return stripped, False
+        return indent + stripped_rest, False
 
     # Toggle on
     current = _strip_other_block(
-        line_text, all_block_variants,
-        strip_ordered=strip_ordered,
-        strip_whitespace=strip_leading_whitespace,
+        rest, all_block_variants, strip_ordered=strip_ordered,
     )
-    new_text = _wrap_markers(current, before, after)
+    new_text = indent + _wrap_markers(current, before, after)
 
+    _, prev_rest = _split_indent(prev_line_text or "")
     insert_blank = (
         prev_line_text is not None
         and bool(prev_line_text.strip())
-        and not prev_line_text.startswith(before)
+        and not prev_rest.startswith(before)
     )
     return new_text, insert_blank
 
@@ -353,13 +359,15 @@ def compute_toggle_ordered(
     prev_line_text: "str | None",
     after: str = "",
     all_block_variants: "tuple | list" = (),
-    strip_leading_whitespace: bool = False,
     auto_number: bool = False,
 ) -> "tuple[str, bool]":
     r"""Toggle ordered (numbered) list item formatting.
 
-    Toggle-off is detected by the ``\d+\.\s`` regex.  On toggle-on
-    the item number is derived from the previous line when
+    Leading indentation is always preserved so that nested lists work
+    correctly.
+
+    Toggle-off is detected by the ``\d+\.\s`` regex (after the indent).
+    On toggle-on the item number is derived from the previous line when
     *auto_number* is ``True`` (RST), otherwise ``1`` is used (MD).
 
     For HTML, reuse :func:`compute_toggle_bullet` with ``<li>``
@@ -369,35 +377,35 @@ def compute_toggle_ordered(
     :param prev_line_text: Previous line text, or ``None``.
     :param after: Suffix marker (empty for MD/RST).
     :param all_block_variants: Block markers to strip on toggle-on.
-    :param strip_leading_whitespace: Strip leading whitespace (RST).
     :param auto_number: Derive number from previous line (RST).
     :returns: ``(new_line_text, insert_blank_before)``.
     """
+    indent, rest = _split_indent(line_text)
+
     # Toggle off
-    m = _RE_ORDERED_ITEM.match(line_text)
+    m = _RE_ORDERED_ITEM.match(rest)
     if m:
-        stripped = line_text[m.end():]
+        stripped = rest[m.end():]
         if after and stripped.endswith(after):
             stripped = stripped[: len(stripped) - len(after)]
-        return stripped, False
+        return indent + stripped, False
 
     # Toggle on
-    current = _strip_other_block(
-        line_text, all_block_variants,
-        strip_whitespace=strip_leading_whitespace,
-    )
+    current = _strip_other_block(rest, all_block_variants)
 
     number = 1
     if auto_number and prev_line_text:
-        pm = _RE_ORDERED_ITEM.match(prev_line_text)
+        _, prev_rest = _split_indent(prev_line_text)
+        pm = _RE_ORDERED_ITEM.match(prev_rest)
         if pm:
             number = int(pm.group(1)) + 1
 
     before = f"{number}. "
-    new_text = _wrap_markers(current, before, after)
+    new_text = indent + _wrap_markers(current, before, after)
 
+    _, prev_rest = _split_indent(prev_line_text or "")
     prev_is_ordered = bool(
-        prev_line_text and _RE_ORDERED_ITEM.match(prev_line_text),
+        prev_line_text and _RE_ORDERED_ITEM.match(prev_rest),
     )
     insert_blank = (
         prev_line_text is not None
