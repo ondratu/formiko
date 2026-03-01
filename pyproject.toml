@@ -54,3 +54,6 @@ include = ["formiko*"]
 
 [tool.setuptools.package-data]
 "formiko.data" = ["*.js", "*.css", "AUTHORS"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

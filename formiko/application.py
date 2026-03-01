@@ -207,3 +207,17 @@ class Application(Adw.Application):
             ["<Shift><Control>g"],
         )
         self.set_accels_for_action("win.refresh-preview", ["<Control>r"])
+
+        # Formatting actions (SOURCE editor only)
+        self.set_accels_for_action("fmt.bold-text", ["<Control>b"])
+        self.set_accels_for_action("fmt.italic-text", ["<Control>i"])
+        self.set_accels_for_action("fmt.insert-link", ["<Control>k"])
+        self.set_accels_for_action("fmt.code-text", ["<Shift><Control>c"])
+        self.set_accels_for_action("fmt.blockquote", ["<Shift><Control>q"])
+        self.set_accels_for_action("fmt.bullet", ["<Shift><Control>b"])
+        self.set_accels_for_action("fmt.ordered", ["<Shift><Control>n"])
+        for _level in range(1, 7):
+            self.set_accels_for_action(
+                f"fmt.header-{_level}",
+                [f"<Control>{_level}"],
+            )

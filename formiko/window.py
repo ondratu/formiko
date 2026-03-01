@@ -20,6 +20,7 @@ from formiko.dialogs import (
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
 from formiko.filebrowser import FileBrowser
+from formiko.formatting_actions import FormattingActionGroup
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
 from formiko.renderer import EXTS, Renderer
@@ -366,6 +367,9 @@ class AppWindow(Adw.ApplicationWindow):
         self.preferences.save()
 
         self.json_box.set_visible(parser == "json")
+        if self.editor_type == EditorType.SOURCE:
+            self.fmt_bar.set_visible(parser != "json")
+            self.get_action_group("fmt").set_parser(parser)
 
     def on_file_type(self, widget, ext):
         """'file-type' event handler."""
@@ -376,6 +380,9 @@ class AppWindow(Adw.ApplicationWindow):
             action.set_state(GLib.Variant("s", parser))
 
         self.json_box.set_visible(parser == "json")
+        if self.editor_type == EditorType.SOURCE:
+            self.fmt_bar.set_visible(parser != "json")
+            self.get_action_group("fmt").set_parser(parser)
 
         if hasattr(self, "file_browser"):
             directory = dirname(self.editor.file_path)
@@ -613,6 +620,9 @@ class AppWindow(Adw.ApplicationWindow):
                     action_name="win.save-document",
                 ),
             )
+            self.fmt_bar = FormattingActionGroup.create_bar()
+            self.fmt_bar.set_visible(self.preferences.parser != "json")
+            headerbar.pack_start(self.fmt_bar)
 
         self.path_entry = Gtk.SearchEntry(placeholder_text="JSONPath filter…")
         self.path_entry.set_width_chars(50)
@@ -627,7 +637,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.path_entry.set_hexpand(True)
         self.json_box.append(self.path_entry)
         self.json_box.append(filter_btn)
-        self.json_box.set_visible(False)
+        self.json_box.set_visible(self.preferences.parser == "json")
         headerbar.pack_start(self.json_box)
 
         self.pref_menu = Preferences(self.preferences)
@@ -716,6 +726,20 @@ class AppWindow(Adw.ApplicationWindow):
                 EditorActionGroup(
                     self.editor,
                     self.renderer,
+                    self.preferences,
+                ),
+            )
+
+        if self.editor_type == EditorType.SOURCE:
+            self.insert_action_group(
+                "fmt",
+                FormattingActionGroup(
+                    self.editor,
+                    self.renderer,
+                    EXTS.get(
+                        splitext(file_name)[1] if file_name else "",
+                        self.preferences.parser,
+                    ),
                     self.preferences,
                 ),
             )

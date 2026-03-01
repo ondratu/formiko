@@ -9,6 +9,7 @@ from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
 from formiko import __author__, __comment__, __copyright__, __version__
+from formiko.format_utils import parse_link
 
 default_manager = LanguageManager.get_default()
 LANG_BY_EXT = {
@@ -252,3 +253,78 @@ class FileSaveDialog(FileChooserDialog):
             parent,
             Gtk.FileChooserAction.SAVE,
         )
+
+
+class InsertLinkDialog(Adw.Dialog):
+    """Two-field dialog for inserting a hyperlink.
+
+    *selected_text* and *parser* are used to pre-fill the fields via
+    :func:`~formiko.format_utils.parse_link`.  For HTML, the Text row is
+    hidden because the inner text is always the URL itself.
+
+    Pressing Enter in the URL entry or clicking *Insert* calls
+    *on_insert(text, url)*.  Closing / cancelling does nothing.
+    """
+
+    def __init__(self, on_insert, selected_text: str = "", parser: str = ""):
+        super().__init__(title="Insert Link")
+        self._on_insert = on_insert
+        self._parser = parser
+        self.set_content_width(400)
+
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        box.append(Adw.HeaderBar())
+
+        content = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=12,
+            margin_top=12,
+            margin_bottom=12,
+            margin_start=12,
+            margin_end=12,
+        )
+
+        group = Adw.PreferencesGroup()
+
+        self._text_row = Adw.EntryRow(title="Text")
+        group.add(self._text_row)
+
+        self._url_row = Adw.EntryRow(title="URL")
+        self._url_row.connect("entry-activated", self._confirm)
+        group.add(self._url_row)
+
+        content.append(group)
+
+        btn_box = Gtk.Box(
+            orientation=Gtk.Orientation.HORIZONTAL,
+            spacing=6,
+            halign=Gtk.Align.END,
+        )
+        cancel_btn = Gtk.Button(label="Cancel")
+        cancel_btn.connect("clicked", lambda _: self.close())
+        insert_btn = Gtk.Button(label="Insert")
+        insert_btn.add_css_class("suggested-action")
+        insert_btn.connect("clicked", self._confirm)
+        btn_box.append(cancel_btn)
+        btn_box.append(insert_btn)
+        content.append(btn_box)
+
+        box.append(content)
+        self.set_child(box)
+
+        # Pre-fill from selection (detect existing link markup)
+        link_text, url = parse_link(selected_text, parser)
+        self._text_row.set_text(link_text)
+        self._url_row.set_text(url)
+
+    def _confirm(self, *_):
+        url = self._url_row.get_text().strip()
+        if not url:
+            return
+        self._on_insert(self._text_row.get_text(), url)
+        self.close()
+
+    def present_and_focus(self, parent):
+        """Present the dialog focused on the URL entry."""
+        self.present(parent)
+        self._url_row.grab_focus()
