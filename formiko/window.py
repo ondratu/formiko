@@ -4,7 +4,7 @@ import re
 import threading
 from enum import Enum
 from os import stat
-from os.path import dirname, splitext
+from os.path import basename, dirname, expanduser, splitext
 from traceback import print_exc
 
 from gi import get_required_version
@@ -371,7 +371,8 @@ class AppWindow(Adw.ApplicationWindow):
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
             self.editor.set_list_features_enabled(
-                parser in ("rst", "md", "m2r"))
+                parser in ("rst", "md", "m2r"),
+            )
 
     def on_file_type(self, widget, ext):
         """'file-type' event handler."""
@@ -386,7 +387,8 @@ class AppWindow(Adw.ApplicationWindow):
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
             self.editor.set_list_features_enabled(
-                parser in ("rst", "md", "m2r"))
+                parser in ("rst", "md", "m2r"),
+            )
 
         if hasattr(self, "file_browser"):
             directory = dirname(self.editor.file_path)
@@ -592,9 +594,31 @@ class AppWindow(Adw.ApplicationWindow):
         self.cache.is_maximized = self.is_maximized()
         self.cache.save()
 
+    def _update_title(self, file_name, file_path, modified=False):
+        """Update window title and headerbar title/subtitle."""
+        star = "*" if modified else ""
+        name = file_name or NOT_SAVED_NAME
+        if file_path:
+            raw_dir = dirname(file_path)
+            home = expanduser("~")
+            subtitle = (
+                "~" + raw_dir[len(home):]
+                if raw_dir.startswith(home)
+                else raw_dir
+            )
+            wm_title = f"{star}{name} ({subtitle})"
+        else:
+            subtitle = "Draft"
+            wm_title = f"{star}{name}"
+        self._window_title.set_title(f"{star}{name}")
+        self._window_title.set_subtitle(subtitle)
+        self.set_title(wm_title)
+
     def create_headerbar(self):
         """Create main window header bar."""
         headerbar = Adw.HeaderBar()
+        self._window_title = Adw.WindowTitle()
+        headerbar.set_title_widget(self._window_title)
 
         if self.editor_type != EditorType.PREVIEW:
             sidebar_btn = Gtk.ToggleButton(
@@ -755,7 +779,8 @@ class AppWindow(Adw.ApplicationWindow):
         self.editor.connect("scroll-changed", self.on_scroll_changed)
         if self.editor_type == EditorType.SOURCE:
             self.editor.set_list_features_enabled(
-                self.preferences.parser in ("rst", "md", "m2r"))
+                self.preferences.parser in ("rst", "md", "m2r"),
+            )
         if file_name:
             self.editor.read_from_file(file_name)
 
@@ -807,7 +832,7 @@ class AppWindow(Adw.ApplicationWindow):
             self.fill_panned(file_name)
         else:
             self.__file_name = file_name
-            self.set_title(file_name)
+            self._update_title(basename(file_name), file_name)
             overlay.set_child(self.renderer)
 
         if self.cache.is_maximized:
@@ -882,12 +907,18 @@ class AppWindow(Adw.ApplicationWindow):
         """Refresh file from vim (runs in background thread)."""
         another_file = False
         try:
-            star = "*" if self.editor.is_modified else ""
+            file_name = self.editor.file_name
+            file_path = self.editor.file_path
+            modified = self.editor.is_modified
             self.not_running()
-            title = star + (self.editor.file_name or NOT_SAVED_NAME)
-            if title != self._vim_title:
-                self._vim_title = title
-                GLib.idle_add(self.set_title, title)
+            if file_name != self._vim_title:
+                self._vim_title = file_name
+                GLib.idle_add(
+                    self._update_title,
+                    file_name,
+                    file_path,
+                    modified,
+                )
                 another_file = True
             self.not_running()
             last_changes = self.editor.get_vim_changes()
@@ -915,11 +946,11 @@ class AppWindow(Adw.ApplicationWindow):
             action = self.lookup_action("save-document")
             if action:  # sometimes when closing window action is None
                 action.set_enabled(modified)
-
-            star = "*" if modified else ""
-            title = star + (self.editor.file_name or NOT_SAVED_NAME)
-            if title != self.get_title():
-                self.set_title(title)
+            self._update_title(
+                self.editor.file_name,
+                self.editor.file_path,
+                modified,
+            )
 
             last_changes = self.editor.changes
             if force or last_changes > self.__last_changes:
