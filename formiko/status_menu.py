@@ -231,6 +231,18 @@ class Statusbar(Gtk.Box):
         )
         box.append(spell_btn)
 
+        auto_bullet_btn = Gtk.CheckButton(
+            label="Auto bullet completion",
+            action_name="editor.auto-bullet-toggle",
+        )
+        box.append(auto_bullet_btn)
+
+        tab_indent_btn = Gtk.CheckButton(
+            label="Tab key indents bullets",
+            action_name="editor.tab-indent-bullet-toggle",
+        )
+        box.append(tab_indent_btn)
+
         return pop
 
     def create_info_bar(self):
