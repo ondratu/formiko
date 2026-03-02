@@ -22,7 +22,8 @@ Version 1.6.0dev
   * Folder list on the left side is now toggled by an icon in the top-left
     corner #34
   * Formatting Toolbox #16
-  * Automatic list continuation and indentation via Tab
+  * Auto bullet completion with settings
+  * Tab Key indents bullets with settings
 
 
 Version 1.5.0

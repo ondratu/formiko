@@ -74,6 +74,8 @@ class EditorPreferences:
     current_line = False
     text_wrapping = True
     white_chars = False
+    auto_bullet = True
+    tab_indent_bullet = True
 
 
 class UserPreferences:
@@ -127,6 +129,8 @@ class UserPreferences:
         cp.smart_get(self.editor, "current_line", smart_bool, "editor")
         cp.smart_get(self.editor, "text_wrapping", smart_bool, "editor")
         cp.smart_get(self.editor, "white_chars", smart_bool, "editor")
+        cp.smart_get(self.editor, "auto_bullet", smart_bool, "editor")
+        cp.smart_get(self.editor, "tab_indent_bullet", smart_bool, "editor")
 
     def save(self):
         """Set settings to user config."""
@@ -153,6 +157,8 @@ class UserPreferences:
         cp.smart_set(self.editor, "current_line", "editor")
         cp.smart_set(self.editor, "text_wrapping", "editor")
         cp.smart_set(self.editor, "white_chars", "editor")
+        cp.smart_set(self.editor, "auto_bullet", "editor")
+        cp.smart_set(self.editor, "tab_indent_bullet", "editor")
 
         directory = get_user_config_dir()
         if not exists(directory):

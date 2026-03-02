@@ -24,6 +24,16 @@ class EditorActionGroup(SimpleActionGroup):
             self.editor_pref.check_spelling,
             self.on_check_spelling,
         )
+        self.create_toggle_action(
+            "auto-bullet-toggle",
+            self.editor_pref.auto_bullet,
+            self.on_auto_bullet,
+        )
+        self.create_toggle_action(
+            "tab-indent-bullet-toggle",
+            self.editor_pref.tab_indent_bullet,
+            self.on_tab_indent_bullet,
+        )
 
         action = SimpleAction.new("spell-lang", VariantType("s"))
         action.connect("activate", self.on_spell_lang)
@@ -114,6 +124,22 @@ class EditorActionGroup(SimpleActionGroup):
             check_spelling,
             self.editor_pref.spell_lang,
         )
+        self.preferences.save()
+
+    def on_auto_bullet(self, action, _):
+        """Save auto bullet completion preferences."""
+        auto_bullet = not action.get_state().get_boolean()
+        action.set_state(Variant("b", auto_bullet))
+        self.editor_pref.auto_bullet = auto_bullet
+        self.editor.set_auto_bullet(auto_bullet)
+        self.preferences.save()
+
+    def on_tab_indent_bullet(self, action, _):
+        """Save Tab key indentation for bullets preferences."""
+        tab_indent_bullet = not action.get_state().get_boolean()
+        action.set_state(Variant("b", tab_indent_bullet))
+        self.editor_pref.tab_indent_bullet = tab_indent_bullet
+        self.editor.set_tab_indent_bullet(tab_indent_bullet)
         self.preferences.save()
 
     def on_spell_lang(self, _, param):

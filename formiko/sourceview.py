@@ -163,6 +163,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view.set_highlight_current_line(editor_pref.current_line)
         self.set_text_wrapping(editor_pref.text_wrapping)
         self.set_white_chars(editor_pref.white_chars)
+        self._auto_bullet_pref = editor_pref.auto_bullet
+        self._tab_indent_pref = editor_pref.tab_indent_bullet
 
         self.search_settings = SearchSettings(wrap_around=True)
         self.search_context = SearchContext.new(
@@ -271,24 +273,55 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         Both features share :func:`_is_list_line` for bullet detection.
         """
         self._list_handler_id = None
+        self._tab_key_ctrl_active = False
+        self._parser_supports_lists = False
+        self._auto_bullet_pref = True
+        self._tab_indent_pref = True
         self._tab_key_ctrl = Gtk.EventControllerKey.new()
         self._tab_key_ctrl.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         self._tab_key_ctrl.connect("key-pressed", self._on_tab_key_pressed)
 
     def set_list_features_enabled(self, enabled):
-        """Enable or disable list auto-continuation and Tab-indent."""
+        """Enable or disable list features based on parser support."""
+        self._parser_supports_lists = enabled
+        self._apply_auto_bullet()
+        self._apply_tab_indent_bullet()
+
+    def _apply_auto_bullet(self):
+        """Apply auto-bullet state based on parser support and user pref."""
+        should = self._parser_supports_lists and self._auto_bullet_pref
         active = self._list_handler_id is not None
-        if enabled == active:
+        if should == active:
             return
-        if enabled:
+        if should:
             self._list_handler_id = self.text_buffer.connect(
                 "insert-text", self._on_list_insert_text,
             )
-            self.source_view.add_controller(self._tab_key_ctrl)
         else:
             self.text_buffer.disconnect(self._list_handler_id)
             self._list_handler_id = None
+
+    def _apply_tab_indent_bullet(self):
+        """Apply Tab-indent state based on parser support and user pref."""
+        should = self._parser_supports_lists and self._tab_indent_pref
+        if should == self._tab_key_ctrl_active:
+            return
+        if should:
+            self.source_view.add_controller(self._tab_key_ctrl)
+        else:
             self.source_view.remove_controller(self._tab_key_ctrl)
+        self._tab_key_ctrl_active = should
+        self.source_view.set_indent_on_tab(should)
+
+    def set_auto_bullet(self, enabled):
+        """Set auto bullet continuation user preference."""
+        self._auto_bullet_pref = enabled
+        self._apply_auto_bullet()
+
+    def set_tab_indent_bullet(self, enabled):
+        """Set Tab key indentation for bullets user preference."""
+        self._tab_indent_pref = enabled
+        self._apply_tab_indent_bullet()
 
     def _on_list_insert_text(self, buf, location, text, _length):
         """Auto-continue list item marker after pressing Enter."""
