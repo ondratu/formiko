@@ -396,6 +396,9 @@ class AppWindow(Adw.ApplicationWindow):
     def _on_browser_file_activated(self, _browser, file_path):
         """Open a file selected in the file browser."""
         self.open_document(file_path)
+        action = self.lookup_action("toggle-sidebar")
+        if action and action.get_state().get_boolean():
+            action.activate(None)
 
     def on_toggle_sidebar(self, action, *_):
         """'toggle-sidebar' action handler."""
