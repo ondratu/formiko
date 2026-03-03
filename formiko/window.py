@@ -155,6 +155,19 @@ class AppWindow(Adw.ApplicationWindow):
             self.cache.view,
             self.on_switch_view_toggle,
         )
+        for name, view in (
+            ("show-editor", View.EDITOR),
+            ("show-preview", View.PREVIEW),
+            ("show-both", View.BOTH),
+        ):
+            action = Gio.SimpleAction.new(name, None)
+            action.connect(
+                "activate",
+                lambda _a, _p, v=view: self.change_action_state(
+                    "switch-view-toggle", GLib.Variant("q", v),
+                ),
+            )
+            self.add_action(action)
         self.create_stateful_action(
             "change-preview",
             "q",
@@ -700,8 +713,7 @@ class AppWindow(Adw.ApplicationWindow):
             btn_box.add_css_class("linked")
 
             self.editor_toggle_btn = Gtk.ToggleButton(
-                label="_Editor",
-                use_underline=True,
+                icon_name="text-editor-symbolic",
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant("q", View.EDITOR),
             )
@@ -709,8 +721,7 @@ class AppWindow(Adw.ApplicationWindow):
             btn_box.append(self.editor_toggle_btn)
 
             self.preview_toggle_btn = Gtk.ToggleButton(
-                label="_Preview",
-                use_underline=True,
+                icon_name="view-reveal-symbolic",
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant("q", View.PREVIEW),
             )
@@ -718,8 +729,7 @@ class AppWindow(Adw.ApplicationWindow):
             btn_box.append(self.preview_toggle_btn)
 
             self.both_toggle_btn = Gtk.ToggleButton(
-                label="_Both",
-                use_underline=True,
+                icon_name="view-dual-symbolic",
                 action_name="win.switch-view-toggle",
                 action_target=GLib.Variant("q", View.BOTH),
             )
