@@ -212,7 +212,6 @@ class FileChooserDialog(Gtk.FileChooserDialog):
         filter_ = Gtk.FileFilter()
         filter_.set_name("Plain text")
         filter_.add_pattern("*.txt")
-        filter_.add_mime_type("text/plain")
         filter_.default = ".txt"
         self.add_filter(filter_)
         if current:
