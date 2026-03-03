@@ -207,6 +207,9 @@ class Application(Adw.Application):
             ["<Shift><Control>g"],
         )
         self.set_accels_for_action("win.refresh-preview", ["<Control>r"])
+        self.set_accels_for_action("win.show-editor", ["<Alt>e"])
+        self.set_accels_for_action("win.show-preview", ["<Alt>p"])
+        self.set_accels_for_action("win.show-both", ["<Alt>b"])
 
         # Formatting actions (SOURCE editor only)
         self.set_accels_for_action("fmt.bold-text", ["<Control>b"])
