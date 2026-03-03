@@ -41,6 +41,12 @@ document.querySelectorAll('.jblock').forEach(
 );
 """
 
+JS_COLLAPSE_ALL = """
+document.querySelectorAll('.jblock:not([data-jpath=""])').forEach(
+  el => el.classList.add('collapsed')
+);
+"""
+
 _EXECUTOR = ThreadPoolExecutor(max_workers=2)
 
 
@@ -105,7 +111,7 @@ class JSONPreview:
     Provides a collapsible and highlighted HTML preview.
     """
 
-    def __init__(self, collapse_lines: int = 100) -> None:
+    def __init__(self, collapse_lines: int | None = None) -> None:
         self.collapse_lines = collapse_lines
         self._css: str | None = None
         self._js: str | None = None
@@ -143,6 +149,20 @@ class JSONPreview:
         """
         _, js = self._resources()
         webview.evaluate_javascript(js, -1, None, None, None, None)
+
+    def expand_all(self) -> None:
+        """Expand all collapsed elements."""
+        if self.webview:
+            self.webview.evaluate_javascript(
+                JS_EXPAND_ALL, -1, None, None, None, None,
+            )
+
+    def collapse_all(self) -> None:
+        """Collapse all elements except root."""
+        if self.webview:
+            self.webview.evaluate_javascript(
+                JS_COLLAPSE_ALL, -1, None, None, None, None,
+            )
 
     def _schedule_fold_injection(self) -> None:
         """Register a one-shot load-changed handler on the webview.
@@ -218,7 +238,10 @@ class JSONPreview:
             ensure_ascii=False,
         )
         line_count = pretty.count("\n") + 1
-        collapse = line_count > self.collapse_lines
+        collapse = (
+            self.collapse_lines is not None
+            and line_count > self.collapse_lines
+        )
         body = self._value_to_html(data, collapse, 0, "")
         css, _ = self._resources()
         return (

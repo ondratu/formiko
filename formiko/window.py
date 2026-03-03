@@ -98,6 +98,14 @@ class AppWindow(Adw.ApplicationWindow):
 
     def actions(self):
         """Set window actions."""
+        self._register_document_actions()
+        self._register_search_actions()
+        self._register_view_actions()
+        self._register_renderer_actions()
+        self._register_json_actions()
+
+    def _register_document_actions(self):
+        """Register file document actions."""
         action = Gio.SimpleAction.new("open-document", None)
         action.connect("activate", self.on_open_document)
         self.add_action(action)
@@ -125,6 +133,8 @@ class AppWindow(Adw.ApplicationWindow):
         action.connect("activate", self.on_close_window)
         self.add_action(action)
 
+    def _register_search_actions(self):
+        """Register find/search actions."""
         action = Gio.SimpleAction.new("find-in-document", None)
         action.connect("activate", self.on_find_in_document)
         self.add_action(action)
@@ -137,6 +147,8 @@ class AppWindow(Adw.ApplicationWindow):
         action.connect("activate", self.on_find_previous_match)
         self.add_action(action)
 
+    def _register_view_actions(self):
+        """Register view layout and preview actions."""
         self.refresh_preview_action = Gio.SimpleAction.new(
             "refresh-preview",
             None,
@@ -146,8 +158,6 @@ class AppWindow(Adw.ApplicationWindow):
             self.on_refresh_preview,
         )
         self.add_action(self.refresh_preview_action)
-
-        pref = self.preferences
 
         self.create_stateful_action(
             "switch-view-toggle",
@@ -164,21 +174,33 @@ class AppWindow(Adw.ApplicationWindow):
             action.connect(
                 "activate",
                 lambda _a, _p, v=view: self.change_action_state(
-                    "switch-view-toggle", GLib.Variant("q", v),
+                    "switch-view-toggle",
+                    GLib.Variant("q", v),
                 ),
             )
             self.add_action(action)
+
         self.create_stateful_action(
             "change-preview",
             "q",
-            pref.preview,
+            self.preferences.preview,
             self.on_change_preview,
         )
         self.create_toggle_action(
             "auto-scroll-toggle",
-            pref.auto_scroll,
+            self.preferences.auto_scroll,
             self.on_auto_scroll_toggle,
         )
+        if self.editor_type != EditorType.PREVIEW:
+            self.create_toggle_action(
+                "toggle-sidebar",
+                False,
+                self.on_toggle_sidebar,
+            )
+
+    def _register_renderer_actions(self):
+        """Register renderer parser and style actions."""
+        pref = self.preferences
         self.create_stateful_action(
             "change-writer",
             "s",
@@ -202,12 +224,19 @@ class AppWindow(Adw.ApplicationWindow):
             pref.style,
             self.on_change_style,
         )
-        if self.editor_type != EditorType.PREVIEW:
-            self.create_toggle_action(
-                "toggle-sidebar",
-                False,
-                self.on_toggle_sidebar,
-            )
+
+    def _register_json_actions(self):
+        """Register JSON fold/expand actions."""
+        action = Gio.SimpleAction.new("json-expand-all", None)
+        action.connect("activate", lambda *_: self.renderer.json_expand_all())
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("json-collapse-all", None)
+        action.connect(
+            "activate",
+            lambda *_: self.renderer.json_collapse_all(),
+        )
+        self.add_action(action)
 
     def create_stateful_action(self, name, _type, default_value, method):
         """Support method for creating stateful action."""
@@ -256,6 +285,7 @@ class AppWindow(Adw.ApplicationWindow):
         dialog.add_filter_rst()
         dialog.add_filter_md()
         dialog.add_filter_html()
+        dialog.add_filter_json()
         dialog.add_filter_all()
 
         if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
@@ -380,6 +410,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.preferences.save()
 
         self.json_box.set_visible(parser == "json")
+        self.json_fold_box.set_visible(parser == "json")
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
@@ -396,6 +427,7 @@ class AppWindow(Adw.ApplicationWindow):
             action.set_state(GLib.Variant("s", parser))
 
         self.json_box.set_visible(parser == "json")
+        self.json_fold_box.set_visible(parser == "json")
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
             self.get_action_group("fmt").set_parser(parser)
@@ -632,44 +664,73 @@ class AppWindow(Adw.ApplicationWindow):
         headerbar = Adw.HeaderBar()
         self._window_title = Adw.WindowTitle()
         headerbar.set_title_widget(self._window_title)
+        self._headerbar_pack_start(headerbar)
+        self._headerbar_pack_end(headerbar)
+        return headerbar
 
+    def _headerbar_pack_start(self, headerbar):
+        """Pack left-side buttons into the header bar."""
         if self.editor_type != EditorType.PREVIEW:
-            sidebar_btn = Gtk.ToggleButton(
+            headerbar.pack_start(Gtk.ToggleButton(
                 icon_name="sidebar-show-symbolic",
                 tooltip_text="Show File Browser",
                 action_name="win.toggle-sidebar",
-            )
-            headerbar.pack_start(sidebar_btn)
+            ))
 
-        headerbar.pack_start(
-            IconButton(
-                symbol="document-new-symbolic",
-                tooltip="New Document",
-                action_name="app.new-window",
-            ),
-        )
-        headerbar.pack_start(
-            IconButton(
-                symbol="document-open-symbolic",
-                tooltip="Open Document",
-                action_name="win.open-document",
-            ),
-        )
+        headerbar.pack_start(IconButton(
+            symbol="document-new-symbolic",
+            tooltip="New Document",
+            action_name="app.new-window",
+        ))
+        headerbar.pack_start(IconButton(
+            symbol="document-open-symbolic",
+            tooltip="Open Document",
+            action_name="win.open-document",
+        ))
 
         if self.editor_type == EditorType.SOURCE:
-            headerbar.pack_start(
-                IconButton(
-                    symbol="document-save-symbolic",
-                    tooltip="Save Document",
-                    action_name="win.save-document",
-                ),
-            )
+            headerbar.pack_start(IconButton(
+                symbol="document-save-symbolic",
+                tooltip="Save Document",
+                action_name="win.save-document",
+            ))
             self.fmt_bar = FormattingActionGroup.create_bar()
             self.fmt_bar.set_visible(self.preferences.parser != "json")
             headerbar.pack_start(self.fmt_bar)
 
+        headerbar.pack_start(self._create_json_filter_box())
+
+    def _headerbar_pack_end(self, headerbar):
+        """Pack right-side buttons into the header bar."""
+        headerbar.pack_end(Gtk.MenuButton(
+            icon_name="open-menu-symbolic",
+            tooltip_text="Main Menu",
+            menu_model=AppMenu(self.editor_type),
+        ))
+
+        self.pref_menu = Preferences(self.preferences)
+        headerbar.pack_end(Gtk.MenuButton(
+            icon_name="emblem-system-symbolic",
+            tooltip_text="Preferences",
+            popover=self.pref_menu,
+        ))
+
+        headerbar.pack_end(IconButton(
+            symbol="view-refresh-symbolic",
+            tooltip="Refresh preview",
+            action_name="win.refresh-preview",
+        ))
+
+        headerbar.pack_end(self._create_json_fold_box())
+
+        if self.editor_type != EditorType.PREVIEW:
+            headerbar.pack_end(self._create_view_toggle_box())
+
+    def _create_json_filter_box(self):
+        """Create the JSONPath filter entry and button box."""
         self.path_entry = Gtk.SearchEntry(placeholder_text="JSONPath filter…")
         self.path_entry.set_width_chars(50)
+        self.path_entry.set_hexpand(True)
         self.path_entry.connect("activate", self._on_filter_activate)
 
         filter_btn = Gtk.Button.new_from_icon_name("system-search-symbolic")
@@ -678,68 +739,58 @@ class AppWindow(Adw.ApplicationWindow):
 
         self.json_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.json_box.add_css_class("linked")
-        self.path_entry.set_hexpand(True)
         self.json_box.append(self.path_entry)
         self.json_box.append(filter_btn)
         self.json_box.set_visible(self.preferences.parser == "json")
-        headerbar.pack_start(self.json_box)
+        return self.json_box
 
-        self.pref_menu = Preferences(self.preferences)
+    def _create_json_fold_box(self):
+        """Create the JSON expand/collapse buttons box."""
+        self.json_fold_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.json_fold_box.add_css_class("linked")
+        self.json_fold_box.append(IconButton(
+            symbol="format-indent-more-symbolic",
+            tooltip="Expand All",
+            action_name="win.json-expand-all",
+        ))
+        self.json_fold_box.append(IconButton(
+            symbol="format-indent-less-symbolic",
+            tooltip="Collapse All",
+            action_name="win.json-collapse-all",
+        ))
+        self.json_fold_box.set_visible(self.preferences.parser == "json")
+        return self.json_fold_box
 
-        menu_btn = Gtk.MenuButton(
-            icon_name="open-menu-symbolic",
-            tooltip_text="Main Menu",
-            menu_model=AppMenu(self.editor_type),
+    def _create_view_toggle_box(self):
+        """Create the editor/preview/both toggle button group."""
+        btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        btn_box.add_css_class("linked")
+
+        self.editor_toggle_btn = Gtk.ToggleButton(
+            icon_name="text-editor-symbolic",
+            action_name="win.switch-view-toggle",
+            action_target=GLib.Variant("q", View.EDITOR),
         )
-        headerbar.pack_end(menu_btn)
+        self.editor_toggle_btn.set_tooltip_text("Show Editor")
+        btn_box.append(self.editor_toggle_btn)
 
-        btn = Gtk.MenuButton(
-            icon_name="emblem-system-symbolic",
-            tooltip_text="Preferences",
-            popover=self.pref_menu,
+        self.preview_toggle_btn = Gtk.ToggleButton(
+            icon_name="view-reveal-symbolic",
+            action_name="win.switch-view-toggle",
+            action_target=GLib.Variant("q", View.PREVIEW),
         )
-        headerbar.pack_end(btn)
+        self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
+        btn_box.append(self.preview_toggle_btn)
 
-        headerbar.pack_end(
-            IconButton(
-                symbol="view-refresh-symbolic",
-                tooltip="Refresh preview",
-                action_name="win.refresh-preview",
-            ),
+        self.both_toggle_btn = Gtk.ToggleButton(
+            icon_name="view-dual-symbolic",
+            action_name="win.switch-view-toggle",
+            action_target=GLib.Variant("q", View.BOTH),
         )
+        self.both_toggle_btn.set_tooltip_text("Show Editor and Web Preview")
+        btn_box.append(self.both_toggle_btn)
 
-        if self.editor_type != EditorType.PREVIEW:
-            btn_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-            btn_box.add_css_class("linked")
-
-            self.editor_toggle_btn = Gtk.ToggleButton(
-                icon_name="text-editor-symbolic",
-                action_name="win.switch-view-toggle",
-                action_target=GLib.Variant("q", View.EDITOR),
-            )
-            self.editor_toggle_btn.set_tooltip_text("Show Editor")
-            btn_box.append(self.editor_toggle_btn)
-
-            self.preview_toggle_btn = Gtk.ToggleButton(
-                icon_name="view-reveal-symbolic",
-                action_name="win.switch-view-toggle",
-                action_target=GLib.Variant("q", View.PREVIEW),
-            )
-            self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
-            btn_box.append(self.preview_toggle_btn)
-
-            self.both_toggle_btn = Gtk.ToggleButton(
-                icon_name="view-dual-symbolic",
-                action_name="win.switch-view-toggle",
-                action_target=GLib.Variant("q", View.BOTH),
-            )
-            self.both_toggle_btn.set_tooltip_text(
-                "Show Editor and Web Preview",
-            )
-            btn_box.append(self.both_toggle_btn)
-
-            headerbar.pack_end(btn_box)
-        return headerbar
+        return btn_box
 
     def create_renderer(self):
         """Create and set renderer."""

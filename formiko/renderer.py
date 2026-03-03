@@ -437,6 +437,16 @@ class Renderer(Overlay):
         """Return renderer parser."""
         return self.__parser["key"]
 
+    def json_expand_all(self):
+        """Expand all collapsed JSON elements."""
+        if isinstance(self.parser_instance, JSONPreview):
+            self.parser_instance.expand_all()
+
+    def json_collapse_all(self):
+        """Collapse all expanded JSON elements."""
+        if isinstance(self.parser_instance, JSONPreview):
+            self.parser_instance.collapse_all()
+
     def set_style(self, style):
         """Set style for webview."""
         self.style = style
