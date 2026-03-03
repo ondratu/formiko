@@ -2,6 +2,7 @@ Formiko
 =======
 
 :author: Ondřej Tůma <mcbig@zeropage.cz>
+:contributors: `The Formiko Team <https://github.com/ondratu/formiko/blob/master/formiko/data/AUTHORS>`_
 
 Formiko is a reStructuredText and MarkDown editor and live previewer. It is
 written in Python with Gtk4, GtkSourceView and WebKit. It uses Docutils and a
