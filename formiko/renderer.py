@@ -450,6 +450,9 @@ class Renderer(Overlay):
     def set_style(self, style):
         """Set style for webview."""
         self.style = style
+        self._loaded_context = (
+            None  # force full page reload to apply new stylesheet
+        )
         idle_add(self.do_render)
 
     def get_style(self):
@@ -534,14 +537,16 @@ class Renderer(Overlay):
         state, html, mime_type = self.render_output()
         if html and self.__win.runing:
             if mime_type == "text/html" and "</head>" in html:
-                theme_css = (
-                    f"<style>"
-                    f"body,main{{background-color:{self.bgcolor}!important;"
-                    f"color:{self.fgcolor}!important}}"
-                    f"a{{color:{self.linkcolor}!important}}"
-                    f"</style>"
-                )
-                html = html.replace("</head>", theme_css + "</head>", 1)
+                if not self.style:
+                    theme_css = (
+                        f"<style>"
+                        f"body,main{{background-color:"
+                        f"{self.bgcolor}!important;"
+                        f"color:{self.fgcolor}!important}}"
+                        f"a{{color:{self.linkcolor}!important}}"
+                        f"</style>"
+                    )
+                    html = html.replace("</head>", theme_css + "</head>", 1)
                 context = (self.file_name, mime_type)
                 if self._loaded_context == context:
                     body_html = self._extract_body(html)
@@ -553,7 +558,7 @@ class Renderer(Overlay):
                                 f"document.fgColor={fgcolor};"
                                 f"document.body.innerHTML={body_html};"
                             ),
-                            - 1,
+                            -1,
                             None,
                             None,
                             None,

@@ -1,11 +1,11 @@
 """Preferences widget."""
+
 from os.path import commonprefix
 from sys import argv
 
-from gi.repository import GLib, GObject, Gtk
+from gi.repository import Gio, GLib, GObject, Gtk
 from gi.repository.GLib import Variant
 
-from formiko.dialogs import run_dialog
 from formiko.renderer import PARSERS, WRITERS
 from formiko.widgets import ActionHelper
 
@@ -33,8 +33,11 @@ class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
     action_target = GObject.property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, action_name=None, filename="", **kwargs):
-        Gtk.Button.__init__(self, label=filename or "Select stylesheet…",
-                            **kwargs)
+        Gtk.Button.__init__(
+            self,
+            label=filename or "Select stylesheet…",
+            **kwargs,
+        )
         self._filename = filename
         if action_name:
             self.action_name = action_name
@@ -76,39 +79,48 @@ class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
 
     def _on_clicked(self, _btn):
         """Open file chooser dialog."""
-        root = self.get_root()
-        dialog = Gtk.FileChooserDialog(
-            title="Select custom stylesheet",
-            transient_for=root,
-            action=Gtk.FileChooserAction.OPEN,
-        )
-        dialog.add_button("_Cancel", Gtk.ResponseType.CANCEL)
-        dialog.add_button("_Open", Gtk.ResponseType.ACCEPT)
-
         css_filter = Gtk.FileFilter()
-        css_filter.set_name("Stylesheet file")
+        css_filter.set_name("Stylesheet file (*.css)")
         css_filter.add_mime_type("text/css")
-        dialog.add_filter(css_filter)
+        css_filter.add_pattern("*.css")
 
         all_filter = Gtk.FileFilter()
-        all_filter.set_name("all files")
+        all_filter.set_name("All files")
         all_filter.add_pattern("*")
-        dialog.add_filter(all_filter)
+
+        filters = Gio.ListStore.new(Gtk.FileFilter)
+        filters.append(css_filter)
+        filters.append(all_filter)
+
+        dialog = Gtk.FileDialog(
+            title="Select custom stylesheet",
+            filters=filters,
+            default_filter=css_filter,
+        )
 
         if self._filename:
-            dialog.set_current_folder(
-                GLib.get_dirname(self._filename) or GLib.get_home_dir(),
+            dialog.set_initial_folder(
+                Gio.File.new_for_path(
+                    GLib.path_get_dirname(self._filename)
+                    or GLib.get_home_dir(),
+                ),
             )
 
-        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
-            gfile = dialog.get_file()
-            fname = gfile.get_path() if gfile else ""
+        dialog.open(self.get_root(), None, self._on_file_chosen)
+
+    def _on_file_chosen(self, dialog, result):
+        """Handle file selection result."""
+        try:
+            gfile = dialog.open_finish(result)
+        except GLib.Error:
+            return  # cancelled or error
+        if gfile:
+            fname = gfile.get_path() or ""
             self._set_filename(fname)
             self.action_target = Variant("s", fname)
             action, go = self.get_action_owner()
             if go:
                 go.activate_action(action, self.action_target)
-        dialog.destroy()
 
 
 class Preferences(Gtk.Popover):
@@ -212,9 +224,14 @@ class Preferences(Gtk.Popover):
             if getattr(btn, "parser", None) == parser:
                 btn.set_active(True)
                 break
-            btn = btn.get_next_in_group() if hasattr(
-                btn, "get_next_in_group",
-            ) else None
+            btn = (
+                btn.get_next_in_group()
+                if hasattr(
+                    btn,
+                    "get_next_in_group",
+                )
+                else None
+            )
 
     def on_custom_style_toggle(self, widget):
         """Set sensitive for own style."""

@@ -245,7 +245,7 @@ class AppWindow(Adw.ApplicationWindow):
             GLib.VariantType.new(_type),
             GLib.Variant(_type, default_value),
         )
-        action.connect("change-state", method)
+        action.connect("activate", method)
         self.add_action(action)
 
     def create_toggle_action(self, name, default_value, method):
@@ -498,13 +498,15 @@ class AppWindow(Adw.ApplicationWindow):
 
     def on_change_style(self, action, param):
         """'change-style' action handler."""
-        style = param.get_string()
-        self.preferences.style = style
-        if self.preferences.custom_style and style:
-            self.renderer.set_style(self.preferences.style)
-        else:
-            self.renderer.set_style("")
-        self.preferences.save()
+        if action.get_state() != param:
+            action.set_state(param)
+            style = param.get_string()
+            self.preferences.style = style
+            if self.preferences.custom_style and style:
+                self.renderer.set_style(self.preferences.style)
+            else:
+                self.renderer.set_style("")
+            self.preferences.save()
 
     def on_find_in_document(self, action, *param):
         """'find-in-document' action handler."""
