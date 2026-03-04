@@ -1,19 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Copyright 2024 Ondřej Tůma -->
+<!-- Copyright 2026 Ondřej Tůma -->
 <component type="desktop-application">
     <id>cz.zeropage.Formiko</id>
     <name>Formiko</name>
-    <summary>reStructuredText and MarkDown editor</summary>
+    <summary>reStructuredText and Markdown editor</summary>
     <provides>
         <mediatype>text/plain</mediatype>
         <mediatype>text/html</mediatype>
-        <mediatype>text/x-mardown</mediatype>
+        <mediatype>text/x-markdown</mediatype>
         <mediatype>text/x-rst</mediatype>
         <mediatype>application/json</mediatype>
         <mediatype>text/json</mediatype>
     </provides>
     <content_rating type="oars-1.1"/>
+    <requires>
+        <id version="47" compare="ge">org.gnome.Platform</id>
+    </requires>
     <releases>
+        <release version="2.0.0b1" type="development" date="2026-03-03">
+            <url>https://github.com/ondratu/formiko/tree/master</url>
+        </release>
         <release version="1.5.0" type="stable" date="2024-11-14">
             <url>https://github.com/ondratu/formiko/releases/tag/1.5.0</url>
         </release>
@@ -34,26 +40,31 @@
     <metadata_license>MIT</metadata_license>
     <project_license>BSD-3-Clause</project_license>
     <description>
-        <p>Formiko is reStructuredText and MarkDown editor and live previewer.
-        It is written in Python with Gtk3, GtkSourceView and Webkit2. Use
-        Docutils and recommonmark Common Mark parser.</p>
+        <p>Formiko is a reStructuredText and Markdown editor and live previewer.
+        It is written in Python with GTK4, libadwaita, GtkSourceView and WebKit. Uses
+        Docutils and m2r2 Markdown parser.</p>
         <p>Features:</p>
         <ul>
             <li>GtkSourceView based editor with syntax highlighting</li>
-            <li>Possible use Vim editor</li>
+            <li>Optional Vim editor support</li>
             <li>Vertical or horizontal window splitting</li>
             <li>Preview mode with auto scroll</li>
-            <li>Periodic save file</li>
-            <li>Json and html preview</li>
+            <li>Periodic file save</li>
+            <li>JSON and HTML preview</li>
             <li>Spell check</li>
             <li>Linked file opening</li>
         </ul>
     </description>
     <screenshots>
-      <screenshot type="default" width="1024" height="647">
-        <caption>The Formiko main window with editore and preview.</caption>
-        <image>https://raw.githubusercontent.com/ondratu/formiko/master/screenshot_1024.png</image>
+      <screenshot type="default" width="1000" height="700">
+        <caption>Main window showing the editor and live preview side by side.</caption>
+        <image>http://formiko.zeropage.cz/assets/gtk4.png</image>
       </screenshot>
+      <screenshot width="1260" height="700">
+        <caption>JSON file rendered in the built-in preview.</caption>
+        <image>http://formiko.zeropage.cz/assets/json.png</image>
+      </screenshot>
+
     </screenshots>
     <branding>
       <color type="primary" scheme_preference="light">#ebebeb</color>

@@ -7,7 +7,7 @@ Formiko
 Formiko is a reStructuredText and MarkDown editor and live previewer. It is
 written in Python with Gtk4, GtkSourceView and WebKit. It uses Docutils and a
 MarkDown-to-reStructuredText converter. If you want to **donate** to the
-development, you can do so via the `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&source=url>`_.
+development, you can do so via the `paypal link <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&amount=5&source=url>`_.
 
 Features:
 ---------
