@@ -1,0 +1,344 @@
+/* Formiko landing page — stylesheet for docutils html5 output */
+
+/* ── Reset & variables ──────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --accent:  #3584e4;
+  --green:   #26a269;
+  --dark:    #1e2530;
+  --bg:      #fff;
+  --bg-alt:  #f4f6f8;
+  --text:    #2c2c2c;
+  --muted:   #5a6070;
+  --border:  #dde2e8;
+  --radius:  8px;
+  --shadow:  0 4px 20px rgba(0,0,0,.10);
+  --sans:    system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono:    "JetBrains Mono","Fira Code","Cascadia Code",monospace;
+  --font-sm: 0.85rem;   /* 17px — minimum, used for captions, footer, meta */
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--sans);
+  font-size: 20px;
+  line-height: 1.7;
+  color: var(--text);
+  background: var(--bg);
+  overflow-x: hidden;
+}
+
+/* docutils html5 wraps content in <main> */
+main {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ── Typography ─────────────────────────────────────────────── */
+h2, h3 { line-height: 1.25; font-weight: 700; }
+p      { margin-bottom: .9rem; }
+p:last-child { margin-bottom: 0; }
+a      { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+code   { font-family: var(--mono); font-size: var(--font-sm);
+         background: #e8ecf1; padding: .1em .4em; border-radius: 4px; }
+pre    { font-family: var(--mono); font-size: var(--font-sm);
+         background: var(--dark); color: #cdd6e0;
+         padding: 1.1rem 1.3rem; border-radius: var(--radius);
+         overflow-x: auto; margin: .8rem 0; }
+pre code { background: none; padding: 0; }
+
+/* ── Full-width breakout (hero + even sections) ─────────────── */
+/* Centers 960px of content regardless of viewport width         */
+main > section:first-of-type,
+main > section:nth-of-type(even) {
+  position: relative;
+  width: 100vw;
+  left: 50%;
+  transform: translateX(-50%);
+  padding-left:  max(1.5rem, calc(50vw - 480px));
+  padding-right: max(1.5rem, calc(50vw - 480px));
+}
+
+/* ── All sections: vertical padding ────────────────────────── */
+section { padding: 4rem 0; }
+
+main > section:nth-of-type(even) {
+  background: var(--bg-alt);
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+}
+
+/* ── Section title (h2) ─────────────────────────────────────── */
+section > h2 {
+  font-size: 2rem;
+  text-align: center;
+  color: var(--dark);
+  margin-bottom: 2.2rem;
+}
+
+section > h2::after {
+  content: '';
+  display: block;
+  width: 44px; height: 3px;
+  background: var(--accent);
+  border-radius: 2px;
+  margin: .5rem auto 0;
+}
+
+/* ── Subsection titles (Debian, FreeBSD etc.) ───────────────── */
+section > section > h3 {
+  font-size: 1.1rem;
+  margin: 2.2rem 0 .6rem;
+  color: var(--dark);
+}
+
+/* ── Hero (#formiko) ────────────────────────────────────────── */
+#formiko {
+  background: linear-gradient(145deg, #0d1b2a 0%, #1a2f4a 55%, #0f3460 100%);
+  color: #f0f4f8;
+  padding-top: 5rem;
+  padding-bottom: 0;
+  text-align: center;
+}
+
+#formiko > h2 {
+  font-size: clamp(2.2rem, 6vw, 3.6rem);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.02em;
+  margin-bottom: .4rem;
+}
+
+/* Suppress underline on hero title */
+#formiko > h2::after { display: none; }
+
+#formiko > p {
+  font-size: 1.3rem;
+  color: #9ab8d0;
+  max-width: 660px;
+  margin: 0 auto 2rem;
+}
+
+/* CTA bullet list → flex row of styled buttons */
+#formiko > ul.simple {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: .7rem;
+  justify-content: center;
+  margin: 0 0 3rem;
+  padding: 0;
+}
+
+#formiko > ul.simple li > p { margin: 0; }
+
+#formiko > ul.simple li > p > a {
+  display: inline-block;
+  padding: .65rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  transition: filter .15s, transform .1s;
+}
+#formiko > ul.simple li > p > a:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+/* Button colors by position */
+#formiko > ul.simple li:nth-child(1) > p > a { background: var(--accent); color: #fff; }
+#formiko > ul.simple li:nth-child(2) > p > a { background: #24292e;       color: #fff; }
+#formiko > ul.simple li:nth-child(3) > p > a {
+  background: rgba(255,255,255,.12); color: #ddeeff;
+  border: 1px solid rgba(255,255,255,.3);
+}
+
+/* Hero screenshot */
+figure.hero-screenshot { margin: 0; }
+figure.hero-screenshot img {
+  max-width: min(900px, 100%);
+  display: block;
+  margin: 0 auto;
+  border-radius: var(--radius) var(--radius) 0 0;
+  box-shadow: 0 -4px 40px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.1);
+  border-bottom: none;
+}
+figure.hero-screenshot figcaption {
+  background: rgba(0,0,0,.35);
+  color: #8aaccc;
+  font-size: var(--font-sm);
+  padding: .45rem 1rem;
+  text-align: center;
+}
+figure.hero-screenshot figcaption p { margin: 0; }
+
+/* ── Features grid (#features) ──────────────────────────────── */
+/* Each feature is a <section> child — styled as a card         */
+#features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+  gap: 1.1rem;
+  align-items: start;
+}
+
+/* Title and intro span all columns */
+#features > h2,
+#features > p { grid-column: 1 / -1; }
+
+#features > p {
+  text-align: center;
+  color: var(--muted);
+  max-width: 600px;
+  margin: -1.5rem auto 1.5rem;
+}
+
+/* Feature cards */
+#features > section {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.05);
+  transition: box-shadow .2s, transform .15s;
+}
+#features > section:hover {
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+#features > section > h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 .4rem;
+  color: var(--dark);
+}
+#features > section > p { font-size: 1rem; color: var(--muted); margin: 0; }
+
+/* ── JSON Preview screenshot ─────────────────────────────────── */
+figure.screenshot-wide { text-align: center; }
+figure.screenshot-wide img {
+  max-width: 100%;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+}
+figure.screenshot-wide figcaption { color: var(--muted); font-size: var(--font-sm); margin-top: .65rem; }
+figure.screenshot-wide figcaption p { margin: 0; }
+
+/* ── Parsers & Writers grid (#parsers-writers) ───────────────── */
+#parsers-writers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: .9rem;
+  align-items: start;
+}
+
+#parsers-writers > h2,
+#parsers-writers > p { grid-column: 1 / -1; }
+
+#parsers-writers > p {
+  text-align: center;
+  color: var(--muted);
+  max-width: 600px;
+  margin: -1.5rem auto 1.5rem;
+}
+
+#parsers-writers > section {
+  border-left: 3px solid var(--accent);
+  padding: .8rem 1rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--bg);
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+}
+#parsers-writers > section > h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dark);
+  margin: 0 0 .2rem;
+}
+#parsers-writers > section > p { font-size: 1rem; color: var(--muted); margin: 0; }
+
+/* ── Installation ────────────────────────────────────────────── */
+#installation > a { display: inline-block; margin-bottom: .8rem; }
+#installation > a img { height: 56px; display: block; }
+
+/* Remove extra padding from Debian/FreeBSD subsections */
+#installation > section { padding: 0; }
+#installation > section > h3 { margin-top: 1.4rem; }
+
+/* ── Callout boxes (admonitions with custom classes) ────────── */
+/* docutils html5 renders admonitions as <aside>, not <div>     */
+.admonition {
+  border-radius: var(--radius);
+  padding: 1.6rem 1.8rem;
+  margin: 1rem 0;
+}
+.admonition p.admonition-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: .65rem;
+  font-style: normal;
+}
+.admonition p { font-size: 1rem; }
+/* Last paragraph contains the action link — render as a button row */
+.admonition p:last-child {
+  margin-top: 1rem;
+  margin-bottom: 0;
+}
+.admonition p:last-child > a {
+  display: inline-block;
+  padding: .65rem 1.5rem;
+  border-radius: var(--radius);
+  font-weight: 600;
+  font-size: 1rem;
+  text-decoration: none;
+  color: #fff;
+  transition: filter .15s, transform .1s;
+}
+.admonition p:last-child > a:hover {
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+
+.callout-bug  { background: #fff8f0; border: 1px solid #f0b060; }
+.callout-bug  p.admonition-title { color: #bf4000; }
+.callout-bug  p:last-child > a   { background: var(--accent); }
+
+.callout-donate { background: #f0faf2; border: 1px solid #90d4a0; }
+.callout-donate p.admonition-title { color: #1a5e28; }
+.callout-donate p:last-child > a   { background: var(--green); }
+
+/* ── Footer ──────────────────────────────────────────────────── */
+footer {
+  position: relative;
+  width: 100vw;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--dark);
+  color: #7a8fa0;
+  text-align: center;
+  padding: 2rem 1.5rem;
+  font-size: var(--font-sm);
+  margin-top: 4rem;
+}
+footer p { margin-bottom: .3rem; }
+footer a { color: #9ab8cc; }
+footer a:hover { color: #fff; text-decoration: none; }
+
+/* ── Responsive ──────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  main { padding: 0 1rem 3rem; }
+  #formiko { padding-top: 3rem; }
+  #formiko > h2 { font-size: 2.2rem; }
+  #formiko > ul.simple { flex-direction: column; align-items: center; }
+  main > section:nth-of-type(even) { padding-top: 3rem; padding-bottom: 3rem; }
+  #features { grid-template-columns: 1fr; }
+  #parsers-writers { grid-template-columns: 1fr 1fr; }
+}

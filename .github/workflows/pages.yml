@@ -1,0 +1,55 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [gh-pages]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: pip install docutils pygments
+
+      - name: Build HTML from RST
+        run: |
+          rst2html5 \
+            --stylesheet=_static/style.css \
+            --link-stylesheet \
+            --title="Formiko — RST & Markdown editor" \
+            --no-doc-title \
+            index.rst index.html
+          # Inject favicon links after <head>
+          sed -i 's|<head>|<head>\n<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">\n<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon-16.png">|' index.html
+
+      - uses: actions/configure-pages@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: "."
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

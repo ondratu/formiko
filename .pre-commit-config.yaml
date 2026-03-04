@@ -1,0 +1,25 @@
+repos:
+  # Validate reStructuredText syntax
+  - repo: https://github.com/rstcheck/rstcheck
+    rev: v6.2.5
+    hooks:
+      - id: rstcheck
+        additional_dependencies: [docutils]
+        args: ["--ignore-directives=class,footer"]
+
+  # Validate CSS brace balance and structure
+  - repo: local
+    hooks:
+      - id: css-validate
+        name: CSS syntax check
+        language: system
+        entry: python3 check_css.py
+        types: [css]
+
+      # Verify the RST builds successfully with rst2html5
+      - id: rst-build
+        name: RST → HTML5 build check
+        language: system
+        entry: bash -c 'rst2html5 --no-doc-title --stylesheet=_static/style.css --link-stylesheet --title="Formiko" index.rst /dev/null'
+        pass_filenames: false
+        files: ^(index\.rst|_static/style\.css)$
