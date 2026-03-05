@@ -1,11 +1,12 @@
 """SourceView based editor widget.."""
+
 import re
 from os import fstat, rename, stat
 from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import Adw, Gdk, Gio, GObject, Gtk, GtkSource
+from gi.repository import Adw, Gdk, GObject, Gtk, GtkSource
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -24,10 +25,10 @@ from gi.repository.GtkSource import (
 from formiko.dialogs import (
     LANG_BY_EXT,
     FileChangedDialog,
-    FileSaveDialog,
     TraceBackDialog,
+    build_save_filters,
     run_alert_dialog,
-    run_dialog,
+    save_file_dialog,
 )
 from formiko.format_utils import (
     compute_toggle_bullet,
@@ -41,6 +42,7 @@ from formiko.widgets import ActionHelper, ImutableDict
 
 try:
     from gi.repository import Spelling
+
     _SPELLING_AVAILABLE = True
 except ImportError:
     _SPELLING_AVAILABLE = False
@@ -77,10 +79,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __last_ctime = 0
     __pause_period = False
 
-    __gsignals__ = ImutableDict({
-        "file-type": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
-        "scroll-changed": (GObject.SignalFlags.RUN_LAST, None, (float,)),
-    })
+    __gsignals__ = ImutableDict(
+        {
+            "file-type": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
+            "scroll-changed": (GObject.SignalFlags.RUN_LAST, None, (float,)),
+        },
+    )
 
     action_name = GObject.Property(type=str)
     action_target = GObject.Property(type=GObject.TYPE_VARIANT)
@@ -96,7 +100,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.text_buffer = Buffer.new_with_language(
-            LANG_BY_EXT["."+preferences.parser],
+            LANG_BY_EXT["." + preferences.parser],
         )
         self.text_buffer.connect("changed", self.inc_changes)
         self.source_view = View.new_with_buffer(self.text_buffer)
@@ -109,7 +113,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         css = Gtk.CssProvider()
         css.load_from_string("textview { font-family: Monospace; }")
         self.source_view.get_style_context().add_provider(
-            css, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+            css,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
 
         self.set_child(self.source_view)
@@ -117,10 +122,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         # Follow Adwaita dark/light mode for syntax highlighting scheme
         self._apply_color_scheme(self._is_dark())
         Adw.StyleManager.get_default().connect(
-            "notify::dark", self.on_style_scheme_changed,
+            "notify::dark",
+            self.on_style_scheme_changed,
         )
         Gtk.Settings.get_default().connect(
-            "notify::gtk-theme-name", self.on_style_scheme_changed,
+            "notify::gtk-theme-name",
+            self.on_style_scheme_changed,
         )
 
         # Initialize spell checker
@@ -129,11 +136,13 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         if _SPELLING_AVAILABLE:
             self.checker = Spelling.Checker.get_default()
             self.spell_adapter = Spelling.TextBufferAdapter.new(
-                self.text_buffer, self.checker,
+                self.text_buffer,
+                self.checker,
             )
             self.spell_adapter.set_enabled(False)  # off until user enables
             self.source_view.insert_action_group(
-                "spelling", self.spell_adapter,
+                "spelling",
+                self.spell_adapter,
             )
             self.source_view.set_extra_menu(
                 self.spell_adapter.get_menu_model(),
@@ -249,7 +258,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
     def change_mime_type(self, parser):
         """Change internal mime type for right syntax highlighting."""
-        language = LANG_BY_EXT.get("."+parser, LANG_BY_EXT[".rst"])
+        language = LANG_BY_EXT.get("." + parser, LANG_BY_EXT[".rst"])
         if self.text_buffer.get_language() != language:
             self.text_buffer.set_language(language)
 
@@ -295,7 +304,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             return
         if should:
             self._list_handler_id = self.text_buffer.connect(
-                "insert-text", self._on_list_insert_text,
+                "insert-text",
+                self._on_list_insert_text,
             )
         else:
             self.text_buffer.disconnect(self._list_handler_id)
@@ -351,9 +361,11 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         """Indent the current list-item line on Tab (no selection)."""
         if keyval != Gdk.KEY_Tab:
             return False
-        if state & (Gdk.ModifierType.CONTROL_MASK
-                    | Gdk.ModifierType.SHIFT_MASK
-                    | Gdk.ModifierType.ALT_MASK):
+        if state & (
+            Gdk.ModifierType.CONTROL_MASK
+            | Gdk.ModifierType.SHIFT_MASK
+            | Gdk.ModifierType.ALT_MASK
+        ):
             return False
         buf = self.text_buffer
         if buf.get_has_selection():
@@ -483,7 +495,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         """Save text to file."""
         try:
             if exists(self.__file_name):
-                rename(self.__file_name, self.__file_name+"~")
+                rename(self.__file_name, self.__file_name + "~")
             with open(self.__file_name, "w", encoding="utf-8") as src:
                 src.write(self.text)
                 src.flush()
@@ -500,47 +512,44 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def save(self):
         """Save the file."""
         if not self.__file_name:
-            self.__file_name = self.get_new_file_name()
-            self.emit("file_type", self.file_ext)
-        if self.__file_name:
+            self._open_save_dialog(self._after_save_dialog)
+        else:
             self.save_to_file()
 
     def save_as(self):
         """Save the file as another."""
-        new_file_name = self.get_new_file_name()
-        if new_file_name:
-            self.__file_name = new_file_name
+        self._open_save_dialog(self._after_save_dialog)
+
+    def _after_save_dialog(self, file_name):
+        """Apply new file name and save."""
+        if file_name:
+            self.__file_name = file_name
             self.emit("file_type", self.file_ext)
             self.save_to_file()
 
-    def get_new_file_name(self):
-        """Get new file name and destionation."""
+    def _open_save_dialog(self, callback):
+        """Open Gtk.FileDialog for saving and call *callback(file_name)*."""
         lang = self.text_buffer.get_language()
-        dialog = FileSaveDialog(self.__win)
-        dialog.add_filter_rst(lang.get_id() == "rst")
-        dialog.add_filter_md(lang.get_id() == "markdown")
-        dialog.add_filter_html(lang.get_id() == "html")
-        dialog.add_filter_json(lang.get_id() == "json")
-        dialog.add_filter_plain(lang.get_id() == "text")
-
-        if not self.__file_name:
-            dialog.set_current_folder(
-                Gio.File.new_for_path(
-                    get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS),
-                ),
-            )
-            dialog.set_current_name("Untitled document")
+        filters, default_filter, suffix, filter_suffixes = build_save_filters(
+            lang.get_id(),
+        )
+        if self.__file_name:
+            folder = dirname(self.file_path)
+            name, _ = splitext(self.file_name)
         else:
-            dialog.set_current_folder(
-                Gio.File.new_for_path(dirname(self.file_path)),
-            )
-            dialog.set_current_name(self.file_name)
-
-        file_name = ""
-        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
-            file_name = dialog.get_filename_with_ext()
-        dialog.destroy()
-        return file_name
+            folder = get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS)
+            name = "Untitled document"
+        save_file_dialog(
+            self.__win,
+            "Save Document",
+            filters,
+            default_filter,
+            default_suffix=suffix,
+            filter_suffixes=filter_suffixes,
+            initial_folder=folder,
+            initial_name=name,
+            callback=callback,
+        )
 
     def do_file_type(self, ext):
         """Set file type for right syntax highlighting."""
@@ -614,7 +623,10 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         return off, off
 
     def _replace_range(
-        self, start_off: int, end_off: int, new_text: str,
+        self,
+        start_off: int,
+        end_off: int,
+        new_text: str,
     ) -> None:
         """Replace buffer content between offsets and select *new_text*.
 
@@ -656,7 +668,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
         eff_start, eff_end, result, inner_start, inner_end = (
             compute_toggle_format(
-                buf_text, sel_start, sel_end, before, after, known_formats,
+                buf_text,
+                sel_start,
+                sel_end,
+                before,
+                after,
+                known_formats,
             )
         )
 
@@ -673,7 +690,10 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.text_buffer.end_user_action()
 
     def insert_link_text(
-        self, link_text: str, start_off: int, end_off: int,
+        self,
+        link_text: str,
+        start_off: int,
+        end_off: int,
     ) -> None:
         """Insert *link_text* at the given buffer offsets and select it.
 
@@ -691,9 +711,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             full = buf.props.text
             off = start_off
-            prefix = (
-                "" if off == 0 or full[off - 1] in (" ", "\n") else " "
-            )
+            prefix = "" if off == 0 or full[off - 1] in (" ", "\n") else " "
             suffix = (
                 "" if off >= len(full) or full[off] in (" ", "\n") else " "
             )
@@ -747,26 +765,38 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     # ------------------------------------------------------------------
 
     def toggle_line_format(
-        self, before, after="", all_block_variants=(),
+        self,
+        before,
+        after="",
+        all_block_variants=(),
         strip_ordered=False,
     ):
         """Toggle block formatting for the line at the cursor."""
         _, start, end, text = self._get_current_line()
         new = compute_toggle_line_format(
-            text, before, after,
+            text,
+            before,
+            after,
             all_block_variants=all_block_variants,
             strip_ordered=strip_ordered,
         )
         self._replace_line(start, end, text, new)
 
     def toggle_line_exclusive(
-        self, before, after, all_variants,
-        extra_strip_variants=(), strip_ordered=False,
+        self,
+        before,
+        after,
+        all_variants,
+        extra_strip_variants=(),
+        strip_ordered=False,
     ):
         """Toggle an exclusive block format on the current line."""
         _, start, end, text = self._get_current_line()
         new = compute_toggle_line_exclusive(
-            text, before, after, all_variants,
+            text,
+            before,
+            after,
+            all_variants,
             extra_strip_variants=extra_strip_variants,
             strip_ordered=strip_ordered,
         )
@@ -775,9 +805,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def toggle_rst_header(self, underline_char):
         """Toggle an RST heading underline on the current line."""
         buf = self.text_buffer
-        line_num, _, line_end, line_text = (
-            self._get_current_line()
-        )
+        line_num, _, line_end, line_text = self._get_current_line()
 
         # Next line (if any)
         next_start = line_end.copy()
@@ -789,11 +817,15 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             if not next_line_end.ends_line():
                 next_line_end.forward_to_line_end()
             next_line_text = buf.get_text(
-                next_start, next_line_end, True,
+                next_start,
+                next_line_end,
+                True,
             )
 
         new_underline, had_underline = compute_toggle_rst_header(
-            line_text, next_line_text, underline_char,
+            line_text,
+            next_line_text,
+            underline_char,
         )
 
         if new_underline is None and not had_underline:
@@ -820,17 +852,14 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         insertion and line replacement.
         """
         buf = self.text_buffer
-        line_num, line_start, line_end, line_text = (
-            self._get_current_line()
-        )
+        line_num, line_start, line_end, line_text = self._get_current_line()
 
-        prev = (
-            self._get_line_text(line_num - 1)
-            if needs_blank else None
-        )
+        prev = self._get_line_text(line_num - 1) if needs_blank else None
 
         new_text, insert_blank = compute_fn(
-            line_text, prev, **kwargs,
+            line_text,
+            prev,
+            **kwargs,
         )
 
         if new_text == line_text and not insert_blank:
@@ -852,24 +881,33 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         buf.end_user_action()
 
     def toggle_bullet(
-        self, before, after, all_block_variants, needs_blank,
+        self,
+        before,
+        after,
+        all_block_variants,
+        needs_blank,
         strip_ordered=False,
     ):
         """Toggle bullet-list formatting on the current line."""
         self._toggle_list_item(
-            compute_toggle_bullet, needs_blank,
-            before=before, after=after,
+            compute_toggle_bullet,
+            needs_blank,
+            before=before,
+            after=after,
             all_block_variants=all_block_variants,
             strip_ordered=strip_ordered,
         )
 
     def toggle_ordered(
-        self, all_block_variants, needs_blank,
+        self,
+        all_block_variants,
+        needs_blank,
         auto_number=False,
     ):
         """Toggle ordered (numbered) list on the current line."""
         self._toggle_list_item(
-            compute_toggle_ordered, needs_blank,
+            compute_toggle_ordered,
+            needs_blank,
             all_block_variants=all_block_variants,
             auto_number=auto_number,
         )

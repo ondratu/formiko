@@ -3,9 +3,10 @@
 from os.path import commonprefix
 from sys import argv
 
-from gi.repository import Gio, GLib, GObject, Gtk
+from gi.repository import GLib, GObject, Gtk
 from gi.repository.GLib import Variant
 
+from formiko.dialogs import build_css_filters, open_file_dialog
 from formiko.renderer import PARSERS, WRITERS
 from formiko.widgets import ActionHelper
 
@@ -79,48 +80,26 @@ class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
 
     def _on_clicked(self, _btn):
         """Open file chooser dialog."""
-        css_filter = Gtk.FileFilter()
-        css_filter.set_name("Stylesheet file (*.css)")
-        css_filter.add_mime_type("text/css")
-        css_filter.add_pattern("*.css")
-
-        all_filter = Gtk.FileFilter()
-        all_filter.set_name("All files")
-        all_filter.add_pattern("*")
-
-        filters = Gio.ListStore.new(Gtk.FileFilter)
-        filters.append(css_filter)
-        filters.append(all_filter)
-
-        dialog = Gtk.FileDialog(
-            title="Select custom stylesheet",
-            filters=filters,
-            default_filter=css_filter,
+        filters, css_filter = build_css_filters()
+        initial_folder = (
+            GLib.path_get_dirname(self._filename) or GLib.get_home_dir()
+            if self._filename else None
+        )
+        open_file_dialog(
+            self.get_root(),
+            "Select custom stylesheet",
+            filters, css_filter,
+            initial_folder=initial_folder,
+            callback=self._apply_stylesheet,
         )
 
-        if self._filename:
-            dialog.set_initial_folder(
-                Gio.File.new_for_path(
-                    GLib.path_get_dirname(self._filename)
-                    or GLib.get_home_dir(),
-                ),
-            )
-
-        dialog.open(self.get_root(), None, self._on_file_chosen)
-
-    def _on_file_chosen(self, dialog, result):
-        """Handle file selection result."""
-        try:
-            gfile = dialog.open_finish(result)
-        except GLib.Error:
-            return  # cancelled or error
-        if gfile:
-            fname = gfile.get_path() or ""
-            self._set_filename(fname)
-            self.action_target = Variant("s", fname)
-            action, go = self.get_action_owner()
-            if go:
-                go.activate_action(action, self.action_target)
+    def _apply_stylesheet(self, fname):
+        """Apply selected stylesheet path."""
+        self._set_filename(fname)
+        self.action_target = Variant("s", fname)
+        action, go = self.get_action_owner()
+        if go:
+            go.activate_action(action, self.action_target)
 
 
 class Preferences(Gtk.Popover):

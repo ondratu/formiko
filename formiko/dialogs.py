@@ -1,10 +1,9 @@
 """Formiko dialog widgets."""
 
 from importlib.resources import files
-from os.path import splitext
 from traceback import print_exc
 
-from gi.repository import Adw, GLib, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
@@ -158,100 +157,266 @@ class FileChangedDialog(Adw.AlertDialog):
         self.set_close_response("no")
 
 
-class FileChooserDialog(Gtk.FileChooserDialog):
-    """File chooser dialog."""
+def open_file_dialog(
+    parent,
+    title,
+    filters,
+    default_filter,
+    initial_folder=None,
+    callback=None,
+):
+    """Open Gtk.FileDialog for selecting a file.
 
-    def __init__(self, title, parent, action):
-        super().__init__(title=title, transient_for=parent, action=action)
-        self.add_button("_Cancel", Gtk.ResponseType.CANCEL)
-        if action == Gtk.FileChooserAction.SAVE:
-            self.add_button("_Save", Gtk.ResponseType.ACCEPT)
-        else:
-            self.add_button("_Open", Gtk.ResponseType.ACCEPT)
+    Call *callback(path)* on accept.
+    """
+    dialog = Gtk.FileDialog(
+        title=title,
+        filters=filters,
+        default_filter=default_filter,
+    )
+    if initial_folder:
+        dialog.set_initial_folder(Gio.File.new_for_path(initial_folder))
 
-    def get_filename_with_ext(self):
-        """Return filename with right extension."""
-        gfile = self.get_file()
-        if gfile is None:
-            return ""
-        file_name = gfile.get_path()
-        _, ext = splitext(file_name)
-        if ext:
-            return file_name
+    def _finish(d, result):
+        try:
+            gfile = d.open_finish(result)
+        except GLib.Error:
+            return
+        if gfile and callback:
+            callback(gfile.get_path() or "")
 
-        filter_ = self.get_filter()
-        for extension in getattr(filter_, "extensions", ()):
-            if file_name.lower().endswith(extension):
-                return file_name
-        return file_name + filter_.default
-
-    def add_filter_lang(self, lang, default, current=False):
-        """Add filter for supported extensions."""
-        filter_ = Gtk.FileFilter()
-        filter_.set_name(lang.get_name())
-        for pattern in lang.get_globs():
-            filter_.add_pattern(pattern)
-        for mime_type in lang.get_mime_types():
-            filter_.add_mime_type(mime_type)
-        filter_.extensions = tuple(it[1:] for it in lang.get_globs())
-        filter_.default = default
-        self.add_filter(filter_)
-        if current:
-            self.set_filter(filter_)
-
-    def add_filter_rst(self, current=False):
-        """Add filter for reStructuredText."""
-        self.add_filter_lang(LANG_BY_EXT[".rst"], ".rst", current)
-
-    def add_filter_md(self, current=False):
-        """Add filter for MarkDown."""
-        self.add_filter_lang(LANG_BY_EXT[".md"], ".md", current)
-
-    def add_filter_plain(self, current=False):
-        """Add plain text filter."""
-        filter_ = Gtk.FileFilter()
-        filter_.set_name("Plain text")
-        filter_.add_pattern("*.txt")
-        filter_.default = ".txt"
-        self.add_filter(filter_)
-        if current:
-            self.set_filter(filter_)
-
-    def add_filter_html(self, current=False):
-        """Add filter for HTML files."""
-        self.add_filter_lang(LANG_BY_EXT[".html"], ".html", current)
-
-    def add_filter_json(self, current=False):
-        """Add filter for JSON files."""
-        self.add_filter_lang(LANG_BY_EXT[".json"], ".json", current)
-
-    def add_filter_all(self, current=False):
-        """Add filter for all files type."""
-        filter_ = Gtk.FileFilter()
-        filter_.set_name("All File Types")
-        filter_.add_pattern("*")
-        filter_.default = ""
-        self.add_filter(filter_)
-        if current:
-            self.set_filter(filter_)
+    dialog.open(parent, None, _finish)
 
 
-class FileOpenDialog(FileChooserDialog):
-    """Open file dialog."""
+def _apply_initial_name(dialog, name, default_suffix):
+    """Set initial filename in a save dialog, appending suffix if missing."""
+    if name and default_suffix and "." not in name:
+        name = f"{name}.{default_suffix}"
+    if name:
+        dialog.set_current_name(name)
 
-    def __init__(self, parent):
-        super().__init__("Open Document", parent, Gtk.FileChooserAction.OPEN)
+
+def _connect_filter_extension_updater(dialog, filter_suffixes):
+    """Connect notify::filter to keep the filename extension in sync."""
+
+    def _on_filter_changed(d, _pspec):
+        f = d.get_filter()
+        if f is None:
+            return
+        new_suffix = filter_suffixes.get(f.get_name(), "")
+        current = d.get_current_name() or ""
+        if not current:
+            return
+        base = current.rsplit(".", 1)[0] if "." in current else current
+        d.set_current_name(f"{base}.{new_suffix}" if new_suffix else base)
+
+    dialog.connect("notify::filter", _on_filter_changed)
 
 
-class FileSaveDialog(FileChooserDialog):
-    """Save File As dialog."""
+def save_file_dialog(
+    parent,
+    title,
+    filters,
+    default_filter,
+    default_suffix=None,
+    filter_suffixes=None,
+    initial_folder=None,
+    initial_name=None,
+    callback=None,
+):
+    """Open a save dialog and call *callback(path)* on accept.
 
-    def __init__(self, parent):
-        super().__init__(
-            "Save As Document",
-            parent,
-            Gtk.FileChooserAction.SAVE,
+    *default_suffix* — extension appended when the saved name has none.
+    *filter_suffixes* — ``{filter_name: suffix}`` dict for live extension
+        updates.
+    """
+    dialog = Gtk.FileChooserDialog(
+        title=title,
+        transient_for=parent,
+        action=Gtk.FileChooserAction.SAVE,
+    )
+    dialog.add_button("_Cancel", Gtk.ResponseType.CANCEL)
+    dialog.add_button("_Save", Gtk.ResponseType.ACCEPT)
+    dialog.set_default_response(Gtk.ResponseType.ACCEPT)
+
+    for i in range(filters.get_n_items()):
+        dialog.add_filter(filters.get_item(i))
+    if default_filter:
+        dialog.set_filter(default_filter)
+    if initial_folder:
+        dialog.set_current_folder(Gio.File.new_for_path(initial_folder))
+    _apply_initial_name(dialog, initial_name or "", default_suffix)
+    if filter_suffixes:
+        _connect_filter_extension_updater(dialog, filter_suffixes)
+
+    def _on_response(d, response):
+        if response == Gtk.ResponseType.ACCEPT:
+            gfile = d.get_file()
+            if gfile and callback:
+                path = gfile.get_path() or ""
+                if (
+                    path
+                    and default_suffix
+                    and "." not in path.rsplit("/", 1)[-1]
+                ):
+                    path += "." + default_suffix
+                callback(path)
+        d.destroy()
+
+    dialog.connect("response", _on_response)
+    dialog.present()
+
+
+def make_filter_markup_text():
+    """Return Gtk.FileFilter for markup and plain-text documents."""
+    f = Gtk.FileFilter()
+    f.set_name("Markup & Text files")
+    for pattern in ("*.rst", "*.md", "*.markdown", "*.txt", "*.text"):
+        f.add_pattern(pattern)
+    for name in (
+        "INSTALL",
+        "AUTHORS",
+        "AUTHOR",
+        "LICENSE",
+        "LICENCE",
+        "COPYING",
+        "README",
+        "TODO",
+        "HOWTO",
+        "CHANGES",
+        "CHANGELOG",
+        "ChangeLog",
+        "NEWS",
+        "CONTRIBUTORS",
+        "NOTICE",
+        "CREDITS",
+        "BUGS",
+        "HACKING",
+    ):
+        f.add_pattern(name)
+    return f
+
+
+def make_filter_all():
+    """Return Gtk.FileFilter for all files."""
+    f = Gtk.FileFilter()
+    f.set_name("All File Types")
+    f.add_pattern("*")
+    return f
+
+
+def build_css_filters():
+    """Return (Gio.ListStore, default_filter) for CSS stylesheet picker."""
+    css = Gtk.FileFilter()
+    css.set_name("Stylesheet file (*.css)")
+    css.add_mime_type("text/css")
+    css.add_pattern("*.css")
+    store = Gio.ListStore.new(Gtk.FileFilter)
+    store.append(css)
+    store.append(make_filter_all())
+    return store, css
+
+
+def _make_lang_filter(lang_key):
+    """Return Gtk.FileFilter for a GtkSource language (open dialogs)."""
+    lang = LANG_BY_EXT[lang_key]
+    f = Gtk.FileFilter()
+    f.set_name(lang.get_name())
+    for p in lang.get_globs():
+        f.add_pattern(p)
+    return f
+
+
+def build_open_filters():
+    """Return (Gio.ListStore, default_filter) for Gtk.FileDialog open."""
+    markup = make_filter_markup_text()
+    txt = Gtk.FileFilter()
+    txt.set_name("Plain text")
+    txt.add_pattern("*.txt")
+
+    store = Gio.ListStore.new(Gtk.FileFilter)
+    for f in (
+        markup,
+        _make_lang_filter(".rst"),
+        _make_lang_filter(".md"),
+        txt,
+        _make_lang_filter(".html"),
+        _make_lang_filter(".json"),
+        make_filter_all(),
+    ):
+        store.append(f)
+    return store, markup
+
+
+def _make_save_filter(name, suffixes):
+    """Return Gtk.FileFilter with add_suffix()."""
+    f = Gtk.FileFilter()
+    f.set_name(name)
+    for s in suffixes:
+        f.add_suffix(s)
+    return f
+
+
+def build_save_filters(lang_id):
+    """Return (store, default_filter, default_suffix, filter_suffixes).
+
+    *lang_id* is the GtkSource language id (e.g. 'rst', 'markdown', 'html').
+    *filter_suffixes* maps filter name → primary suffix for live filename
+        updates.
+    """
+    rst_f = _make_save_filter(LANG_BY_EXT[".rst"].get_name(), ["rst"])
+    md_f = _make_save_filter(LANG_BY_EXT[".md"].get_name(), ["md", "markdown"])
+    html_f = _make_save_filter(
+        LANG_BY_EXT[".html"].get_name(),
+        ["html", "htm"],
+    )
+    json_f = _make_save_filter(LANG_BY_EXT[".json"].get_name(), ["json"])
+    txt_f = _make_save_filter("Plain text", ["txt"])
+
+    filter_suffixes = {
+        rst_f.get_name(): "rst",
+        md_f.get_name(): "md",
+        html_f.get_name(): "html",
+        json_f.get_name(): "json",
+        txt_f.get_name(): "txt",
+    }
+
+    lang_to_filter = {
+        "rst": (rst_f, "rst"),
+        "markdown": (md_f, "md"),
+        "html": (html_f, "html"),
+        "json": (json_f, "json"),
+        "text": (txt_f, "txt"),
+    }
+    default, suffix = lang_to_filter.get(lang_id, (rst_f, "rst"))
+
+    store = Gio.ListStore.new(Gtk.FileFilter)
+    for f in (rst_f, md_f, html_f, json_f, txt_f, make_filter_all()):
+        store.append(f)
+    return store, default, suffix, filter_suffixes
+
+
+def build_export_filters(parser):
+    """Return tuple for export.
+
+    Returns (store, default_filter, default_suffix, filter_suffixes)
+    """
+    if parser == "json":
+        default = _make_save_filter(LANG_BY_EXT[".json"].get_name(), ["json"])
+        suffix = "json"
+    else:
+        default = _make_save_filter(
+            LANG_BY_EXT[".html"].get_name(),
+            ["html", "htm"],
         )
+        suffix = "html"
+
+    filter_suffixes = {default.get_name(): suffix}
+
+    store = Gio.ListStore.new(Gtk.FileFilter)
+    store.append(default)
+    store.append(make_filter_all())
+    return store, default, suffix, filter_suffixes
 
 
 class InsertLinkDialog(Adw.Dialog):

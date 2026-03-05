@@ -11,11 +11,12 @@ from gi import get_required_version
 from gi.repository import Adw, Gio, GLib, Gtk
 
 from formiko.dialogs import (
-    FileOpenDialog,
-    FileSaveDialog,
     QuitDialogWithoutSave,
+    build_export_filters,
+    build_open_filters,
+    open_file_dialog,
     run_alert_dialog,
-    run_dialog,
+    save_file_dialog,
 )
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
@@ -280,19 +281,14 @@ class AppWindow(Adw.ApplicationWindow):
 
     def on_open_document(self, actions, *params):
         """'open-document' action handler."""
-        dialog = FileOpenDialog(self)
-        dialog.add_filter_plain()
-        dialog.add_filter_rst()
-        dialog.add_filter_md()
-        dialog.add_filter_html()
-        dialog.add_filter_json()
-        dialog.add_filter_all()
-
-        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
-            gfile = dialog.get_file()
-            if gfile:
-                self.open_document(gfile.get_path())
-        dialog.destroy()
+        filters, default_filter = build_open_filters()
+        open_file_dialog(
+            self,
+            "Open Document",
+            filters,
+            default_filter,
+            callback=self.open_document,
+        )
 
     def on_save_document(self, action, *params):
         """'save-document' action handler."""
@@ -307,28 +303,30 @@ class AppWindow(Adw.ApplicationWindow):
     def on_export_document_as(self, action, *params):
         """'export-document-as' action handler."""
         file_name = self.editor.file_name or None
-        dialog = FileSaveDialog(self)
-        if self.renderer.get_parser() == "json":
-            dialog.add_filter_json()
-        else:
-            dialog.add_filter_html()
-        dialog.add_filter_all()
-
-        if file_name is None:
-            dialog.set_current_folder(
-                Gio.File.new_for_path(GLib.get_home_dir()),
+        filters, default_filter, suffix, filter_suffixes = (
+            build_export_filters(
+                self.renderer.get_parser(),
             )
-        else:
-            name, _ = splitext(file_name)
-            dialog.set_current_name(name)
+        )
+        name, _ = splitext(file_name) if file_name else (None, None)
+        save_file_dialog(
+            self,
+            "Export Document As",
+            filters,
+            default_filter,
+            default_suffix=suffix,
+            filter_suffixes=filter_suffixes,
+            initial_folder=dirname(name) or GLib.get_home_dir()
+            if name
+            else GLib.get_home_dir(),
+            initial_name=basename(name) if name else None,
+            callback=self._write_export,
+        )
 
-        if run_dialog(dialog) == Gtk.ResponseType.ACCEPT:
-            file_name = dialog.get_filename_with_ext()
-
-            with open(file_name, "w+", encoding="utf-8") as output:
-                data = self.renderer.render_output()[1].strip()
-                output.write(data)
-        dialog.destroy()
+    def _write_export(self, file_name):
+        """Write rendered output to *file_name*."""
+        with open(file_name, "w+", encoding="utf-8") as output:
+            output.write(self.renderer.render_output()[1].strip())
 
     def on_print_document(self, action, *params):
         """'print-document' action handler."""
@@ -673,29 +671,37 @@ class AppWindow(Adw.ApplicationWindow):
     def _headerbar_pack_start(self, headerbar):
         """Pack left-side buttons into the header bar."""
         if self.editor_type != EditorType.PREVIEW:
-            headerbar.pack_start(Gtk.ToggleButton(
-                icon_name="sidebar-show-symbolic",
-                tooltip_text="Show File Browser",
-                action_name="win.toggle-sidebar",
-            ))
+            headerbar.pack_start(
+                Gtk.ToggleButton(
+                    icon_name="sidebar-show-symbolic",
+                    tooltip_text="Show File Browser",
+                    action_name="win.toggle-sidebar",
+                ),
+            )
 
-        headerbar.pack_start(IconButton(
-            symbol="document-new-symbolic",
-            tooltip="New Document",
-            action_name="app.new-window",
-        ))
-        headerbar.pack_start(IconButton(
-            symbol="document-open-symbolic",
-            tooltip="Open Document",
-            action_name="win.open-document",
-        ))
+        headerbar.pack_start(
+            IconButton(
+                symbol="document-new-symbolic",
+                tooltip="New Document",
+                action_name="app.new-window",
+            ),
+        )
+        headerbar.pack_start(
+            IconButton(
+                symbol="document-open-symbolic",
+                tooltip="Open Document",
+                action_name="win.open-document",
+            ),
+        )
 
         if self.editor_type == EditorType.SOURCE:
-            headerbar.pack_start(IconButton(
-                symbol="document-save-symbolic",
-                tooltip="Save Document",
-                action_name="win.save-document",
-            ))
+            headerbar.pack_start(
+                IconButton(
+                    symbol="document-save-symbolic",
+                    tooltip="Save Document",
+                    action_name="win.save-document",
+                ),
+            )
             self.fmt_bar = FormattingActionGroup.create_bar()
             self.fmt_bar.set_visible(self.preferences.parser != "json")
             headerbar.pack_start(self.fmt_bar)
@@ -704,24 +710,30 @@ class AppWindow(Adw.ApplicationWindow):
 
     def _headerbar_pack_end(self, headerbar):
         """Pack right-side buttons into the header bar."""
-        headerbar.pack_end(Gtk.MenuButton(
-            icon_name="open-menu-symbolic",
-            tooltip_text="Main Menu",
-            menu_model=AppMenu(self.editor_type),
-        ))
+        headerbar.pack_end(
+            Gtk.MenuButton(
+                icon_name="open-menu-symbolic",
+                tooltip_text="Main Menu",
+                menu_model=AppMenu(self.editor_type),
+            ),
+        )
 
         self.pref_menu = Preferences(self.preferences)
-        headerbar.pack_end(Gtk.MenuButton(
-            icon_name="emblem-system-symbolic",
-            tooltip_text="Preferences",
-            popover=self.pref_menu,
-        ))
+        headerbar.pack_end(
+            Gtk.MenuButton(
+                icon_name="emblem-system-symbolic",
+                tooltip_text="Preferences",
+                popover=self.pref_menu,
+            ),
+        )
 
-        headerbar.pack_end(IconButton(
-            symbol="view-refresh-symbolic",
-            tooltip="Refresh preview",
-            action_name="win.refresh-preview",
-        ))
+        headerbar.pack_end(
+            IconButton(
+                symbol="view-refresh-symbolic",
+                tooltip="Refresh preview",
+                action_name="win.refresh-preview",
+            ),
+        )
 
         headerbar.pack_end(self._create_json_fold_box())
 
@@ -750,16 +762,20 @@ class AppWindow(Adw.ApplicationWindow):
         """Create the JSON expand/collapse buttons box."""
         self.json_fold_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.json_fold_box.add_css_class("linked")
-        self.json_fold_box.append(IconButton(
-            symbol="format-indent-more-symbolic",
-            tooltip="Expand All",
-            action_name="win.json-expand-all",
-        ))
-        self.json_fold_box.append(IconButton(
-            symbol="format-indent-less-symbolic",
-            tooltip="Collapse All",
-            action_name="win.json-collapse-all",
-        ))
+        self.json_fold_box.append(
+            IconButton(
+                symbol="format-indent-more-symbolic",
+                tooltip="Expand All",
+                action_name="win.json-expand-all",
+            ),
+        )
+        self.json_fold_box.append(
+            IconButton(
+                symbol="format-indent-less-symbolic",
+                tooltip="Collapse All",
+                action_name="win.json-collapse-all",
+            ),
+        )
         self.json_fold_box.set_visible(self.preferences.parser == "json")
         return self.json_fold_box
 
