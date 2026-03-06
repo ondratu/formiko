@@ -39,7 +39,7 @@ extra = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ondratu/formiko"
+Homepage = "https://formiko.zeropage.cz"
 
 [project.gui-scripts]
 formiko = "formiko.__main__:main"

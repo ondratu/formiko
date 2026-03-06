@@ -7,7 +7,13 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
-from formiko import __author__, __comment__, __copyright__, __version__
+from formiko import (
+    __author__,
+    __comment__,
+    __copyright__,
+    __url__,
+    __version__,
+)
 from formiko.format_utils import parse_link
 
 default_manager = LanguageManager.get_default()
@@ -84,7 +90,7 @@ def about_dialog():
         version=__version__,
         copyright=__copyright__ + " The Formiko Team",
         comments=__comment__,
-        website="https://github.com/ondratu/formiko",
+        website=__url__,
         license_type=Gtk.License.BSD_3,
         developer_name=__author__.split(" <", maxsplit=1)[0],
         developers=authors.get("developers", [__author__]),

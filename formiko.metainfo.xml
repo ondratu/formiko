@@ -33,9 +33,9 @@
             <url>https://github.com/ondratu/formiko/releases/tag/1.4.0</url>
         </release>
     </releases>
-    <url type="homepage">https://github.com/ondratu/formiko</url>
+    <url type="homepage">https://formiko.zeropage.cz</url>
     <url type="bugtracker">https://github.com/ondratu/formiko/issues</url>
-    <url type="vcs-browser">https://github.com/ondratu/formiko</url>
+    <url type="vcs-browser">https://formiko.zeropage.cz</url>
     <launchable type="desktop-id">cz.zeropage.Formiko.desktop</launchable>
     <metadata_license>MIT</metadata_license>
     <project_license>BSD-3-Clause</project_license>
