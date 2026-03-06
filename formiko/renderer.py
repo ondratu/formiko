@@ -464,7 +464,7 @@ class Renderer(Overlay):
         self.tab_width = width
         idle_add(self.do_render)
 
-    def render_output(self):  # noqa: C901, PLR0911, PLR0912
+    def render_output(self):  # noqa: C901, PLR0911
         """Render source and return output."""
         if getattr(self, "src", None) is None:
             return False, "", "text/plain"
@@ -502,8 +502,6 @@ class Renderer(Overlay):
                     kwargs.pop("parser")  # pep is allways rst
                 html = publish_string(**kwargs).decode("utf-8")
                 return True, html, "text/html"
-            else:
-                html = self.src
 
         except DataError as e:
             return False, DATA_ERROR % ("Data", e), "text/html"
@@ -516,9 +514,8 @@ class Renderer(Overlay):
             exc_str = format_exc()
             return False, EXCEPTION_ERROR % exc_str, "text/html"
 
-        else:
-            # output to file or html preview
-            return False, html, "text/html"
+        # output to file or html preview
+        return False, self.src, "text/html"
 
     @staticmethod
     def _extract_body(html):

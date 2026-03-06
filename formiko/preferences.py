@@ -97,9 +97,9 @@ class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
         """Apply selected stylesheet path."""
         self._set_filename(fname)
         self.action_target = Variant("s", fname)
-        action, go = self.get_action_owner()
-        if go:
-            go.activate_action(action, self.action_target)
+        root = self.get_root()
+        if root:
+            root.activate_action(self.action_name, self.action_target)
 
 
 class Preferences(Gtk.Popover):

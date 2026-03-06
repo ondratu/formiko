@@ -183,7 +183,13 @@ def open_file_dialog(
         except GLib.Error:
             return
         if gfile and callback:
-            callback(gfile.get_path() or "")
+            path = gfile.get_path()
+            if not path:
+                try:
+                    path, _ = GLib.filename_from_uri(gfile.get_uri())
+                except (GLib.Error, TypeError):
+                    path = ""
+            callback(path or "")
 
     dialog.open(parent, None, _finish)
 

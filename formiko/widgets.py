@@ -90,6 +90,6 @@ class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):
     def do_value_changed(self):
         """Activate action if value was changed."""
         self.action_target = Variant("d", self.get_value() or 0.0)
-        action, top = self.get_action_owner()
-        if top:
-            top.activate_action(action, self.action_target)
+        root = self.get_root()
+        if root:
+            root.activate_action(self.action_name, self.action_target)
