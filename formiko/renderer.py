@@ -31,6 +31,8 @@ from gi.repository.Gtk import (
 from gi.repository.WebKit import (
     FindOptions,
     LoadEvent,
+    NavigationPolicyDecision,
+    NavigationType,
     PrintOperation,
     WebView,
 )
@@ -228,16 +230,12 @@ class Renderer(Overlay):
         self.webview.connect("mouse-target-changed", self.on_mouse)
         self.webview.connect("context-menu", self.on_context_menu)
         self.webview.connect("load-changed", self.on_load_changed)
+        self.webview.connect("decide-policy", self.on_decide_policy)
 
-        # Button release via GestureClick (GTK4)
-        gesture = Gtk.GestureClick.new()
-        gesture.set_button(0)  # all buttons
-        gesture.connect("released", self.on_button_release)
-        self.webview.add_controller(gesture)
-        self._gesture = gesture
-
-        style_manager = Adw.StyleManager.get_default()
-        style_manager.connect("notify::dark", self.on_theme_changed)
+        Adw.StyleManager.get_default().connect(
+            "notify::dark",
+            self.on_theme_changed,
+        )
         Gtk.Settings.get_default().connect(
             "notify::gtk-theme-name",
             self.on_theme_changed,
@@ -259,7 +257,6 @@ class Renderer(Overlay):
         self.label.set_valign(Align.END)
         self.add_overlay(self.label)
         self.link_uri = None
-        self.context_button = 3  # will be rewritten by real value
 
         # Window reference must be available before parser initialization
         self.__win = win
@@ -379,19 +376,50 @@ class Renderer(Overlay):
         self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
         self.label.show()
 
-    def on_context_menu(self, webview, menu, hit_test_result):
+    def on_context_menu(self, _webview, _menu, _hit_test_result):
         """No action on webkit context menu."""
-        self.context_button = self._gesture.get_current_button()
         return True  # disable context menu for now
 
-    def on_button_release(self, gesture, *_):
-        """Open links and let other clicks propagate."""
-        button = gesture.get_current_button()
-        if button != self.context_button and self.link_uri:
-            if self.link_uri.startswith("file://"):  # try to open source
-                self.find_and_opendocument(self.link_uri[7:].split("#")[0])
+    def on_decide_policy(self, _webview, decision, _decision_type):
+        """Intercept link navigation.
+
+        Open files internally, others externally.
+        Scroll to anchor for internal same-file links.
+        """
+        if not isinstance(decision, NavigationPolicyDecision):
+            return False
+        action = decision.get_navigation_action()
+        if action.get_navigation_type() != NavigationType.LINK_CLICKED:
+            return False
+        uri = action.get_request().get_uri()
+        decision.ignore()
+        if uri.startswith("file://"):
+            parts = uri[7:].split("#", 1)
+            file_path = parts[0]
+            anchor = parts[1] if len(parts) > 1 else None
+            if anchor and file_path == self.file_name:
+                self.scroll_to_anchor(anchor)
             else:
-                Gtk.show_uri(None, self.link_uri, Gdk.CURRENT_TIME)
+                self.find_and_opendocument(file_path)
+        else:
+            Gtk.show_uri(None, uri, Gdk.CURRENT_TIME)
+        return True
+
+    def scroll_to_anchor(self, anchor):
+        """Scroll to a named anchor in the current document."""
+        anchor_js = dumps(anchor)
+        self.webview.evaluate_javascript(
+            (
+                f"var el = document.getElementById({anchor_js})"
+                f" || document.querySelector('a[name={anchor_js}]');"
+                " if (el) el.scrollIntoView();"
+            ),
+            -1,
+            None,
+            None,
+            None,
+            None,
+        )
 
     def find_and_opendocument(self, file_path):
         """Find file on disk and open it."""

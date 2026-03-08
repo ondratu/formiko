@@ -27,6 +27,7 @@ Version 2.0.0b1
   * File directory in window title
   * Toggle buttons Editor/Preview/Both are icons now
   * JSON Folding button
+  * Scroll to anchor in document
 
 
 Version 1.5.0
