@@ -34,7 +34,7 @@ from formiko.user import UserCache, UserPreferences, View
 if get_required_version("Vte"):
     from formiko.vim import VimEditor
 
-from formiko.widgets import IconButton
+from formiko.widgets import IconButton, connect_accel_tooltip
 
 NOT_SAVED_NAME = "Untitled Document"
 RE_WORD = re.compile(r"([\w]+)", re.U)
@@ -671,13 +671,12 @@ class AppWindow(Adw.ApplicationWindow):
     def _headerbar_pack_start(self, headerbar):
         """Pack left-side buttons into the header bar."""
         if self.editor_type != EditorType.PREVIEW:
-            headerbar.pack_start(
-                Gtk.ToggleButton(
-                    icon_name="sidebar-show-symbolic",
-                    tooltip_text="Show File Browser",
-                    action_name="win.toggle-sidebar",
-                ),
+            sidebar_btn = Gtk.ToggleButton(
+                icon_name="sidebar-show-symbolic",
+                action_name="win.toggle-sidebar",
             )
+            connect_accel_tooltip(sidebar_btn, "Show File Browser")
+            headerbar.pack_start(sidebar_btn)
 
         headerbar.pack_start(
             IconButton(
@@ -715,6 +714,7 @@ class AppWindow(Adw.ApplicationWindow):
                 icon_name="open-menu-symbolic",
                 tooltip_text="Main Menu",
                 menu_model=AppMenu(self.editor_type),
+                primary=True,
             ),
         )
 
@@ -789,7 +789,9 @@ class AppWindow(Adw.ApplicationWindow):
             action_name="win.switch-view-toggle",
             action_target=GLib.Variant("q", View.EDITOR),
         )
-        self.editor_toggle_btn.set_tooltip_text("Show Editor")
+        connect_accel_tooltip(
+            self.editor_toggle_btn, "Show Editor", "win.show-editor",
+        )
         btn_box.append(self.editor_toggle_btn)
 
         self.preview_toggle_btn = Gtk.ToggleButton(
@@ -797,7 +799,9 @@ class AppWindow(Adw.ApplicationWindow):
             action_name="win.switch-view-toggle",
             action_target=GLib.Variant("q", View.PREVIEW),
         )
-        self.preview_toggle_btn.set_tooltip_text("Show Web Preview")
+        connect_accel_tooltip(
+            self.preview_toggle_btn, "Show Web Preview", "win.show-preview",
+        )
         btn_box.append(self.preview_toggle_btn)
 
         self.both_toggle_btn = Gtk.ToggleButton(
@@ -805,7 +809,11 @@ class AppWindow(Adw.ApplicationWindow):
             action_name="win.switch-view-toggle",
             action_target=GLib.Variant("q", View.BOTH),
         )
-        self.both_toggle_btn.set_tooltip_text("Show Editor and Web Preview")
+        connect_accel_tooltip(
+            self.both_toggle_btn,
+            "Show Editor and Web Preview",
+            "win.show-both",
+        )
         btn_box.append(self.both_toggle_btn)
 
         return btn_box

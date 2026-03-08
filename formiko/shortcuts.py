@@ -73,19 +73,19 @@ class VimGroup(ShortcutsGroup):
         self.append(ShortcutsShortcut(accelerator="p", title="Paste"))
         self.append(
             ShortcutsShortcut(
-                accelerator="Escape+g+g",
+                accelerator="Escape g g",
                 title="Go to Begin of Document",
             ),
         )
         self.append(
             ShortcutsShortcut(
-                accelerator="Escape+<Shift>G",
+                accelerator="Escape <Shift>G",
                 title="Go to End of Document",
             ),
         )
         self.append(
             ShortcutsShortcut(
-                accelerator="Escape+g+g+<Shift>v+<Shift>G",
+                accelerator="Escape g g <Shift>v <Shift>G",
                 title="Select All",
             ),
         )
@@ -142,7 +142,7 @@ class GeneralGroup(ShortcutsGroup):
         elif editor_type == "vim":
             self.append(
                 ShortcutsShortcut(
-                    accelerator="Escape+colon+w",
+                    accelerator="Escape colon w",
                     title="Save Document Vim",
                 ),
             )
@@ -166,7 +166,19 @@ class GeneralGroup(ShortcutsGroup):
             ),
         )
         self.append(
+            ShortcutsShortcut(accelerator="F9", title="Show File Browser"),
+        )
+        self.append(
             ShortcutsShortcut(accelerator="<Control>q", title="Quit Formiko"),
+        )
+        self.append(
+            ShortcutsShortcut(accelerator="F10", title="Main Menu"),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Control>question",
+                title="Keyboard Shortcuts",
+            ),
         )
 
 
@@ -181,6 +193,11 @@ class FormattingGroup(ShortcutsGroup):
         )
         self.append(
             ShortcutsShortcut(accelerator="<Control>i", title="Italic"),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>x", title="Strikethrough",
+            ),
         )
         self.append(
             ShortcutsShortcut(

@@ -81,6 +81,8 @@ class Application(Adw.Application):
         action.connect("activate", self.on_quit)
         self.add_action(action)
 
+        self.set_accels_for_action("app.shortcuts", ["<Control>question"])
+
     def do_activate(self):
         """'do_activate' application handler."""
         self.new_window(None)
@@ -207,6 +209,7 @@ class Application(Adw.Application):
             ["<Shift><Control>g"],
         )
         self.set_accels_for_action("win.refresh-preview", ["<Control>r"])
+        self.set_accels_for_action("win.toggle-sidebar", ["F9"])
         self.set_accels_for_action("win.show-editor", ["<Alt>e"])
         self.set_accels_for_action("win.show-preview", ["<Alt>p"])
         self.set_accels_for_action("win.show-both", ["<Alt>b"])
@@ -214,6 +217,10 @@ class Application(Adw.Application):
         # Formatting actions (SOURCE editor only)
         self.set_accels_for_action("fmt.bold-text", ["<Control>b"])
         self.set_accels_for_action("fmt.italic-text", ["<Control>i"])
+        self.set_accels_for_action(
+            "fmt.strikethrough-text",
+            ["<Shift><Control>x"],
+        )
         self.set_accels_for_action("fmt.insert-link", ["<Control>k"])
         self.set_accels_for_action("fmt.code-text", ["<Shift><Control>c"])
         self.set_accels_for_action("fmt.blockquote", ["<Shift><Control>q"])

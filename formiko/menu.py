@@ -10,8 +10,10 @@ class AppMenu(Menu):
     def __init__(self, editor_type=EditorType.SOURCE):
         super().__init__()
         sec = Menu()
+        sec.append("New Document", "app.new-window")
         sec.append("Open…", "win.open-document")
         if editor_type == EditorType.SOURCE:
+            sec.append("Save", "win.save-document")
             sec.append("Save As…", "win.save-document-as")
         self.append_section(None, sec)
         if editor_type != EditorType.PREVIEW:
@@ -20,9 +22,6 @@ class AppMenu(Menu):
             self.append_section(None, sec)
         sec = Menu()
         sec.append("Print…", "win.print-document")
-        self.append_section(None, sec)
-        sec = Menu()
-        sec.append("New Window", "app.new-window")
         self.append_section(None, sec)
         sec = Menu()
         sec.append("Keyboard Shortcuts", "app.shortcuts")
