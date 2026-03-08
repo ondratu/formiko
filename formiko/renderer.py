@@ -269,7 +269,8 @@ class Renderer(Overlay):
         self.tab_width = 8
         self.__position = -1
         self.file_name = None
-        self._loaded_context = None  # (file_name, mime_type) of last full load
+        self._loaded_context = None  # (file_name, mime_type) of last finished
+        self._pending_context = None  # context of the load in progress
         self.pos = 0
         self.src = ""
 
@@ -594,7 +595,7 @@ class Renderer(Overlay):
                         self.scroll_to_position(self.pos)
                         return
             file_name = self.file_name or get_home_dir()
-            self._loaded_context = (self.file_name, mime_type)
+            self._pending_context = (self.file_name, mime_type)
             self.webview.load_bytes(
                 Bytes(html.encode("utf-8")),
                 mime_type,
@@ -633,6 +634,7 @@ class Renderer(Overlay):
         """
         if load_event != LoadEvent.FINISHED:
             return
+        self._loaded_context = self._pending_context
         self.webview.evaluate_javascript(
             f"document.fgColor='{self.fgcolor}'",
             -1,
