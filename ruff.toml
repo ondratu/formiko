@@ -56,6 +56,7 @@ lint.ignore = [
     "INP001",   # Only one package formiko
     "D107",     # No __init__ documentation
     "PLR0913",  # Too many arguments (pure utility functions may need more)
+    "PLR0915",  # Too many statements
 ]
 
 lint.per-file-ignores = {"tests/**" = ["D101", "D102", "SLF001", "PLR2004", "PLC0415", "N814", "RUF012"]}

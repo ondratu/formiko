@@ -12,7 +12,7 @@ from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
-from gi.repository import Adw, Gdk, Gtk
+from gi.repository import Adw, Gdk, Gio, Gtk, Pango
 from gi.repository.GLib import (
     MAXUINT,
     Bytes,
@@ -68,6 +68,12 @@ except ImportError:
 
 class HtmlPreview:
     """Dummy html preview class."""
+
+
+# CSS spec: 1pt = 1/72 inch, 1 CSS pixel = 1/96 inch → 1pt = 96/72 CSS px.
+# WebKit font sizes are in CSS pixels; HiDPI scaling is handled internally
+# via the device pixel ratio, so this ratio is correct for all resolutions.
+_PT_TO_CSS_PX = 96 / 72
 
 
 class Env:
@@ -225,6 +231,10 @@ class Renderer(Overlay):
         self.fgcolor = "#000"
         self.bgcolor = "#fff"
         self.linkcolor = "#000"
+        self.font_family = "sans-serif"
+        self.font_size_px = 16  # WebKit default (≈ 12pt at 96 DPI)
+        self.mono_family = "monospace"
+        self.mono_size_px = 13  # WebKit default for monospace
 
         self.webview = WebView()
         self.webview.connect("mouse-target-changed", self.on_mouse)
@@ -242,10 +252,26 @@ class Renderer(Overlay):
         )
         self.connect("realize", lambda _w: self.on_theme_changed())
 
+        try:
+            self._desktop_settings = Gio.Settings(
+                schema_id="org.gnome.desktop.interface",
+            )
+            self._desktop_settings.connect(
+                "changed::document-font-name",
+                self._on_system_font_changed,
+            )
+            self._desktop_settings.connect(
+                "changed::monospace-font-name",
+                self._on_system_font_changed,
+            )
+        except Exception:
+            self._desktop_settings = None  # non-GNOME desktop
+
         self.set_child(self.webview)
 
         web_settings = self.webview.get_settings()
         web_settings.set_enable_javascript_markup(False)  # XSS Fix
+        self._apply_system_font()
 
         controller = self.webview.get_find_controller()
         self.search_done = None
@@ -306,6 +332,46 @@ class Renderer(Overlay):
             else ("#ffffff" if is_dark else "#2e2e2e")
         )
         self.linkcolor = self._rgba_to_hex(ac) if found_ac else self.fgcolor
+
+    def _read_system_font(self):
+        """Read document and monospace font family and size from GNOME."""
+        try:
+            settings = Gio.Settings(schema_id="org.gnome.desktop.interface")
+            font_name = settings.get_string("document-font-name") or ""
+            mono_name = settings.get_string("monospace-font-name") or ""
+        except Exception:
+            font_name = ""
+            mono_name = ""
+
+        if font_name:
+            desc = Pango.FontDescription.from_string(font_name)
+            self.font_family = desc.get_family() or self.font_family
+            size = desc.get_size()
+            self.font_size_px = round(
+                (size / Pango.SCALE if size else 12) * _PT_TO_CSS_PX,
+            )
+
+        if mono_name:
+            mono_desc = Pango.FontDescription.from_string(mono_name)
+            self.mono_family = mono_desc.get_family() or self.mono_family
+            mono_size = mono_desc.get_size()
+            self.mono_size_px = round(
+                (mono_size / Pango.SCALE if mono_size else 12) * _PT_TO_CSS_PX,
+            )
+
+    def _apply_system_font(self):
+        """Apply system document and monospace fonts to WebKit settings."""
+        self._read_system_font()
+        web_settings = self.webview.get_settings()
+        web_settings.set_default_font_family(self.font_family)
+        web_settings.set_default_font_size(self.font_size_px)
+        web_settings.set_monospace_font_family(self.mono_family)
+        web_settings.set_default_monospace_font_size(self.mono_size_px)
+
+    def _on_system_font_changed(self, _settings, _key):
+        """React to system font change and re-render the preview."""
+        self._apply_system_font()
+        idle_add(self._apply_theme_and_render)
 
     @staticmethod
     def _is_dark():

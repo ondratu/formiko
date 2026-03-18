@@ -99,8 +99,6 @@ gtksource or webkit2 may have a different version name.
 
     pip3 install formiko --break-system-packages
 
-**Optionally**
-
     # languages
     apt install hunspell-en-us  # or other language you want
 

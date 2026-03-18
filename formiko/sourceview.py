@@ -6,7 +6,7 @@ from os.path import basename, dirname, exists, isfile, splitext
 from sys import stderr
 from traceback import format_exc
 
-from gi.repository import Adw, Gdk, GObject, Gtk, GtkSource
+from gi.repository import Adw, Gdk, Gio, GObject, Gtk, GtkSource, Pango
 from gi.repository.GLib import (
     UserDirectory,
     Variant,
@@ -109,13 +109,23 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         adj = self.get_vadjustment()
         adj.connect("value-changed", self.on_scroll_changed)
 
-        # Set monospace font via CSS provider
-        css = Gtk.CssProvider()
-        css.load_from_string("textview { font-family: Monospace; }")
+        # Set monospace font from system settings (GNOME monospace-font-name)
+        self._font_css = Gtk.CssProvider()
         self.source_view.get_style_context().add_provider(
-            css,
+            self._font_css,
             Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
         )
+        self._apply_system_font()
+        try:
+            self._desktop_settings = Gio.Settings(
+                schema_id="org.gnome.desktop.interface",
+            )
+            self._desktop_settings.connect(
+                "changed::monospace-font-name",
+                self._on_system_font_changed,
+            )
+        except Exception:  # noqa: S110
+            pass  # schema not available (non-GNOME desktop)
 
         self.set_child(self.source_view)
 
@@ -255,6 +265,26 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def on_style_scheme_changed(self, *_):
         """React to dark/light mode change (Adwaita or GTK theme name)."""
         self._apply_color_scheme(self._is_dark())
+
+    def _apply_system_font(self):
+        """Apply the system monospace font (GNOME gsettings) to the editor."""
+        font_name = "Monospace 11"
+        try:
+            settings = Gio.Settings(schema_id="org.gnome.desktop.interface")
+            font_name = settings.get_string("monospace-font-name") or font_name
+        except Exception:  # noqa: S110
+            pass
+        desc = Pango.FontDescription.from_string(font_name)
+        family = desc.get_family() or "Monospace"
+        size_pts = desc.get_size() / Pango.SCALE if desc.get_size() else 11
+        css = (
+            f'textview {{ font-family: "{family}"; font-size: {size_pts}pt; }}'
+        )
+        self._font_css.load_from_string(css)
+
+    def _on_system_font_changed(self, _settings, _key):
+        """React to system monospace font change."""
+        self._apply_system_font()
 
     def change_mime_type(self, parser):
         """Change internal mime type for right syntax highlighting."""
