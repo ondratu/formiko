@@ -38,37 +38,10 @@ from gi.repository.WebKit import (
 )
 
 from formiko.dialogs import FileNotFoundDialog, run_alert_dialog
+from formiko.directives import HtmlPreview, Mark2Resturctured, TinyWriter
 from formiko.json_preview import JSONPreview
 from formiko.sourceview import LANG_BY_EXT
 from formiko.utils import Undefined
-
-try:
-    from docutils_tinyhtml import Writer as TinyWriter
-except ImportError:
-
-    class TinyWriter(Undefined):  # type: ignore[no-redef]
-        """Not imported TinyWriter."""
-
-
-try:
-    from m2r2 import convert as m2r_convert  # type: ignore[import]
-
-    class Mark2Resturctured(RstParser):
-        """Converting from MarkDown to reStructuredText before parse."""
-
-        def parse(self, inputstring, document):
-            """Create RST from MD first and call than parse."""
-            return super().parse(m2r_convert(inputstring), document)
-
-except ImportError:
-
-    class Mark2Resturctured(Undefined):  # type: ignore[no-redef]
-        """Not imported TinyWriter."""
-
-
-class HtmlPreview:
-    """Dummy html preview class."""
-
 
 # CSS spec: 1pt = 1/72 inch, 1 CSS pixel = 1/96 inch → 1pt = 96/72 CSS px.
 # WebKit font sizes are in CSS pixels; HiDPI scaling is handled internally
@@ -587,6 +560,7 @@ class Renderer(Overlay):
                     settings["stylesheet_path"] = []
                 kwargs = {
                     "source": self.src,
+                    "source_path": self.file_name,
                     "parser": self.parser_instance,
                     "writer": self.writer_instance,
                     "writer_name": "html",
@@ -760,7 +734,7 @@ class Renderer(Overlay):
             self.pos = position
 
         if self.pos > 1:  # vim
-            a, b = len(self.src[: self.pos]), len(self.src[self.pos:])
+            a, b = len(self.src[:self.pos]), len(self.src[self.pos:])
             position = (float(a) / (a + b)) if a or b else 0
         else:
             position = self.pos

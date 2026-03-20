@@ -7,6 +7,15 @@ Version 2.0.0b2
     * Editor (GtkSourceView) uses system monospace font and size
     * Renderer (WebKit) uses system document font and monospace font
     * Font settings are applied dynamically on change
+  * Fix RST ``include`` directive with relative paths when opening files
+    from a subdirectory
+  * Add custom directives (``formiko/directives.py``):
+    * ``.. mdinclude::`` — include and inline-render a Markdown file
+      (requires m2r2; works in both RST and Markdown documents)
+    * ``.. file-tree::`` — render a directory tree as a bullet list
+      * Options: ``:depth:`` (default 2), ``:include:``, ``:exclude:``,
+        ``:links:``
+  * Add tests for all custom directives
 
 Version 2.0.0b1
 

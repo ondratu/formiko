@@ -29,6 +29,52 @@ It supports these parsers and writers:
   http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
 
+Custom directives
+~~~~~~~~~~~~~~~~~
+Formiko registers additional directives that are available in both
+reStructuredText and MarkDown (via M2R2) documents.
+
+``.. file-tree:: <path>``
+  Renders a directory tree rooted at *path* (relative to the source file)
+  as a bullet list.
+
+  Options:
+
+  ``:depth: <n>``
+    Maximum display depth. Default is ``2``.
+  ``:include: <pattern>``
+    Show only files matching the glob pattern (e.g. ``*.md``).
+    Directories with no matching files are hidden automatically.
+  ``:exclude: <pattern>``
+    Hide files matching the glob pattern. Applied after ``:include:``.
+  ``:links:``
+    Turn file names into hyperlinks pointing to the files,
+    with paths relative to the source document.
+
+  Example::
+
+    .. file-tree:: docs
+       :depth: 3
+       :include: *.rst
+       :links:
+
+``.. mdinclude:: <file>``
+  Includes a Markdown file and converts it to reStructuredText inline.
+  Requires `m2r2 <https://github.com/crossnox/m2r2>`_. The directive is
+  intended for Markdown files, but works in RST documents as well.
+
+  Options:
+
+  ``:start-line: <n>``
+    Start reading the file from line *n*.
+  ``:end-line: <n>``
+    Stop reading the file at line *n*.
+
+  Example::
+
+    .. mdinclude:: CONTRIBUTING.md
+       :start-line: 3
+
 Vim support
 ~~~~~~~~~~~
 Formiko has Neovim editor support aka ``formiko-vim`` command. This runs `Neovim
