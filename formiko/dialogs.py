@@ -1,6 +1,7 @@
 """Formiko dialog widgets."""
 
 from importlib.resources import files
+from os.path import splitext
 from traceback import print_exc
 
 from gi.repository import Adw, Gio, GLib, Gtk
@@ -25,6 +26,40 @@ LANG_BY_EXT = {
     ".htm": default_manager.get_language("html"),
     ".json": default_manager.get_language("json"),
 }
+
+#: Extensions shown in the "Markup & Text" open-dialog filter.
+_MARKUP_EXTENSIONS = frozenset({".rst", ".md", ".markdown", ".txt", ".text"})
+
+#: Exact file names (no extension) shown in the "Markup & Text" filter.
+KNOWN_EXACT_NAMES = frozenset({
+    "INSTALL",
+    "AUTHORS",
+    "AUTHOR",
+    "LICENSE",
+    "LICENCE",
+    "COPYING",
+    "README",
+    "TODO",
+    "HOWTO",
+    "CHANGES",
+    "CHANGELOG",
+    "ChangeLog",
+    "NEWS",
+    "CONTRIBUTORS",
+    "NOTICE",
+    "CREDITS",
+    "BUGS",
+    "HACKING",
+})
+
+#: All extensions recognised across every open-dialog filter (lowercase).
+KNOWN_EXTENSIONS = _MARKUP_EXTENSIONS | frozenset(LANG_BY_EXT)
+
+
+def is_known_file(name: str) -> bool:
+    """Return True if *name* matches any filter used in the open dialog."""
+    ext = splitext(name)[1].lower()
+    return ext in KNOWN_EXTENSIONS or name in KNOWN_EXACT_NAMES
 
 
 def load_authors():
@@ -283,28 +318,9 @@ def make_filter_markup_text():
     """Return Gtk.FileFilter for markup and plain-text documents."""
     f = Gtk.FileFilter()
     f.set_name("Markup & Text files")
-    for pattern in ("*.rst", "*.md", "*.markdown", "*.txt", "*.text"):
-        f.add_pattern(pattern)
-    for name in (
-        "INSTALL",
-        "AUTHORS",
-        "AUTHOR",
-        "LICENSE",
-        "LICENCE",
-        "COPYING",
-        "README",
-        "TODO",
-        "HOWTO",
-        "CHANGES",
-        "CHANGELOG",
-        "ChangeLog",
-        "NEWS",
-        "CONTRIBUTORS",
-        "NOTICE",
-        "CREDITS",
-        "BUGS",
-        "HACKING",
-    ):
+    for ext in _MARKUP_EXTENSIONS:
+        f.add_pattern(f"*{ext}")
+    for name in KNOWN_EXACT_NAMES:
         f.add_pattern(name)
     return f
 

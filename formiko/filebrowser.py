@@ -1,24 +1,13 @@
 """File browser sidebar widget."""
 
 from os import listdir
-from os.path import basename, isdir, join, splitext
+from os.path import basename, isdir, join
 
 from gi.repository import GObject, Gtk
 from gi.repository.GLib import UserDirectory, get_user_special_dir
 
+from formiko.dialogs import is_known_file
 from formiko.widgets import ImutableDict
-
-SUPPORTED_EXTS = frozenset(
-    {
-        ".md",
-        ".m2r",
-        ".rst",
-        ".json",
-        ".html",
-        ".htm",
-        ".txt",
-    },
-)
 
 
 class FileListBoxRow(Gtk.ListBoxRow):
@@ -95,7 +84,7 @@ class FileBrowser(Gtk.Box):
             names = sorted(
                 name
                 for name in listdir(self._directory)
-                if splitext(name)[1].lower() in SUPPORTED_EXTS
+                if is_known_file(name)
             )
         except OSError:
             return
