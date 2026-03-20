@@ -470,6 +470,14 @@ class Renderer(Overlay):
                 if exists(tmp):
                     file_path = tmp
                     break
+            else:
+                # No existing file found; inherit the source file's
+                # extension so a new file gets the same type as the
+                # document it came from.
+                src_ext = splitext(self.file_name)[1] if self.file_name else ""
+                if src_ext in LANG_BY_EXT:
+                    file_path += src_ext
+                    ext = src_ext
         if ext in LANG_BY_EXT:
             self.__win.open_document(file_path)
         elif exists(file_path):

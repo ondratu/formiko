@@ -16,6 +16,9 @@ Version 2.0.0b2
       * Options: ``:depth:`` (default 2), ``:include:``, ``:exclude:``,
         ``:links:``
   * Add tests for all custom directives
+  * Inherit source file extension when opening extension-less links to
+    non-existent files (e.g. link from ``doc.md`` to ``page`` creates
+    ``page.md`` instead of ``page``)
 
 Version 2.0.0b1
 
