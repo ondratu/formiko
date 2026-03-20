@@ -136,7 +136,10 @@ class Statusbar(Gtk.Box):
         self.message_label.set_margin_end(10)
         self.append(self.message_label)
 
+        self._words_count = 0
+        self._chars_count = 0
         self.info_bar = self.create_info_bar()
+        self._update_stat_label()
         self.info_bar.set_margin_start(10)
         self.info_bar.set_margin_end(10)
         self.append(self.info_bar)
@@ -248,21 +251,26 @@ class Statusbar(Gtk.Box):
     def create_info_bar(self):
         """Create info bar part."""
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        bar.words_count = Gtk.Label(label="0")
-        bar.append(bar.words_count)
-        bar.append(Gtk.Label(label="words,"))
-        bar.chars_count = Gtk.Label(label="0")
-        bar.append(bar.chars_count)
-        bar.append(Gtk.Label(label="characters"))
+        bar.stat_label = Gtk.Label()
+        bar.append(bar.stat_label)
         return bar
+
+    def _update_stat_label(self):
+        """Reformat the combined word/character count label."""
+        self.info_bar.stat_label.set_label(
+            f"{self._words_count}\N{NO-BREAK SPACE}words,"
+            f" {self._chars_count}\N{NO-BREAK SPACE}characters",
+        )
 
     def set_words_count(self, count):
         """Set words count label."""
-        self.info_bar.words_count.set_label(str(count))
+        self._words_count = count
+        self._update_stat_label()
 
     def set_chars_count(self, count):
         """Set chars count label."""
-        self.info_bar.chars_count.set_label(str(count))
+        self._chars_count = count
+        self._update_stat_label()
 
     def push(self, context_id, text):
         """Set message to status bar."""
