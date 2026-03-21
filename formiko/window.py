@@ -1,48 +1,35 @@
 """Gtk.ApplicationWindow implementation."""
 
-import re
-import threading
 from enum import Enum
-from os import stat
 from os.path import basename, dirname, expanduser, splitext
-from traceback import print_exc
 
-from gi import get_required_version
 from gi.repository import Adw, Gio, GLib, Gtk
 
 from formiko.dialogs import (
-    QuitDialogWithoutSave,
+    UnsavedChangesDialog,
     build_export_filters,
     build_open_filters,
     open_file_dialog,
     run_alert_dialog,
     save_file_dialog,
 )
+from formiko.document_page import DocumentPage
 from formiko.editor import EditorType
-from formiko.editor_actions import EditorActionGroup
 from formiko.filebrowser import FileBrowser
 from formiko.formatting_actions import FormattingActionGroup
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
-from formiko.renderer import EXTS, Renderer
 from formiko.renderer import WebView as GtkWebView
-from formiko.sourceview import SourceView
 from formiko.sourceview import View as GtkSourceView
 from formiko.status_menu import Statusbar
 from formiko.user import UserCache, UserPreferences, View
-
-if get_required_version("Vte"):
-    from formiko.vim import VimEditor
-
 from formiko.widgets import IconButton, connect_accel_tooltip
 
 NOT_SAVED_NAME = "Untitled Document"
-RE_WORD = re.compile(r"([\w]+)", re.U)
-RE_CHAR = re.compile(r'[\w \t\.,\?\(\)"\']', re.U)
 
 
 class SearchWay(Enum):
-    """Way of searching."""
+    """Direction for search navigation."""
 
     NEXT = 0
     PREVIOUS = 1
@@ -55,13 +42,22 @@ class AppWindow(Adw.ApplicationWindow):
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = unused-argument
 
-    def __init__(self, editor_type: EditorType, file_name=""):
+    tab_view: Adw.TabView
+
+    def __init__(
+        self,
+        editor_type: EditorType,
+        file_name="",
+        no_initial_tab=False,
+    ):
         """Initor.
 
-        :param str editor:
+        :param EditorType editor_type:
             One of editor type source, vim or None
         :param str file_name:
             File name path to open.
+        :param bool no_initial_tab:
+            Skip creating an initial tab (used for drag-receive windows).
         """
         self.runing = True
         self.editor_type = editor_type
@@ -70,19 +66,14 @@ class AppWindow(Adw.ApplicationWindow):
         self.cache = UserCache()
         self.preferences = UserPreferences()
         self._action_groups = {}
+        self._tabs_needing_paned_reset: set = set()
+        self._last_active_doc = None
         super().__init__()
-        self.create_renderer()
         self.actions()
-        self.connect("close-request", self.on_close_request)
         self.set_default_icon_name("formiko")
-        self.layout(file_name)
-
-        self.__last_changes = 0
-        self._vim_title = ""
-        if self.editor_type is EditorType.PREVIEW:
-            _, ext = splitext(file_name)
-            self.on_file_type(None, ext)
-        GLib.timeout_add(200, self.check_in_thread)
+        self.layout(file_name, no_initial_tab)
+        self.connect("close-request", self.on_close_request)
+        GLib.timeout_add(200, self._update_active_tab_ui)
 
     def insert_action_group(self, prefix, group):
         """Override to track inserted action groups for get_action_group()."""
@@ -107,6 +98,10 @@ class AppWindow(Adw.ApplicationWindow):
 
     def _register_document_actions(self):
         """Register file document actions."""
+        action = Gio.SimpleAction.new("new-tab", None)
+        action.connect("activate", self.on_new_tab)
+        self.add_action(action)
+
         action = Gio.SimpleAction.new("open-document", None)
         action.connect("activate", self.on_open_document)
         self.add_action(action)
@@ -199,6 +194,10 @@ class AppWindow(Adw.ApplicationWindow):
                 self.on_toggle_sidebar,
             )
 
+        action = Gio.SimpleAction.new("show-tabs-overview", None)
+        action.connect("activate", self.on_show_tabs_overview)
+        self.add_action(action)
+
     def _register_renderer_actions(self):
         """Register renderer parser and style actions."""
         pref = self.preferences
@@ -229,13 +228,18 @@ class AppWindow(Adw.ApplicationWindow):
     def _register_json_actions(self):
         """Register JSON fold/expand actions."""
         action = Gio.SimpleAction.new("json-expand-all", None)
-        action.connect("activate", lambda *_: self.renderer.json_expand_all())
+        action.connect(
+            "activate",
+            lambda *_: self.active_page
+            and self.active_page.renderer.json_expand_all(),
+        )
         self.add_action(action)
 
         action = Gio.SimpleAction.new("json-collapse-all", None)
         action.connect(
             "activate",
-            lambda *_: self.renderer.json_collapse_all(),
+            lambda *_: self.active_page
+            and self.active_page.renderer.json_collapse_all(),
         )
         self.add_action(action)
 
@@ -260,24 +264,33 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def on_close_window(self, action, *params):
-        """'close-window' action handler."""
-        if self.ask_if_modified():
+        """'close-window' action handler: close active tab or whole window."""
+        if self.tab_view.get_n_pages() > 1:
+            page = self.tab_view.get_selected_page()
+            if page:
+                self.tab_view.close_page(page)
+        elif self.ask_if_modified():
             self.save_win_state()
             self.destroy()
 
     def open_document(self, file_path):
-        """Open document inw actual window."""
-        if (
-            self.editor_type == EditorType.SOURCE
-            and self.get_title() == NOT_SAVED_NAME
-        ):
-            self.editor.read_from_file(file_path)
-        else:
-            for window in self.get_application().get_windows():
-                if file_path == window.file_path:
+        """Open *file_path* in an existing tab or create a new one."""
+        # Check all tabs in every window for an already-open copy
+        for window in self.get_application().get_windows():
+            if not isinstance(window, AppWindow):
+                continue
+            if not window.tab_view:
+                continue
+            for doc in window.iter_doc_pages():
+                if file_path == doc.file_path:
                     window.present()
+                    page = window.get_page_for_doc(doc)
+                    if page:
+                        window.tab_view.set_selected_page(page)
                     return
-            self.get_application().new_window(self.editor_type, file_path)
+
+        # No existing tab - open in a new tab in this window
+        self.new_tab(file_path)
 
     def on_open_document(self, actions, *params):
         """'open-document' action handler."""
@@ -292,21 +305,29 @@ class AppWindow(Adw.ApplicationWindow):
 
     def on_save_document(self, action, *params):
         """'save-document' action handler."""
-        if self.editor_type == EditorType.SOURCE:
-            self.editor.save()
+        page = self.active_page
+        if page and page.editor_type == EditorType.SOURCE:
+            page.editor.save()
 
     def on_save_document_as(self, action, *params):
         """'save-document-as' action handler."""
-        if self.editor_type == EditorType.SOURCE:
-            self.editor.save_as()
+        page = self.active_page
+        if page and page.editor_type == EditorType.SOURCE:
+            page.editor.save_as()
 
     def on_export_document_as(self, action, *params):
         """'export-document-as' action handler."""
-        file_name = self.editor.file_name or None
+        page = self.active_page
+        if not page:
+            return
+        file_name = (
+            page.editor.file_name
+            if page.editor_type != EditorType.PREVIEW
+            else None
+        )
+        renderer = page.renderer
         filters, default_filter, suffix, filter_suffixes = (
-            build_export_filters(
-                self.renderer.get_parser(),
-            )
+            build_export_filters(renderer.get_parser())
         )
         name, _ = splitext(file_name) if file_name else (None, None)
         save_file_dialog(
@@ -320,17 +341,19 @@ class AppWindow(Adw.ApplicationWindow):
             if name
             else GLib.get_home_dir(),
             initial_name=basename(name) if name else None,
-            callback=self._write_export,
+            callback=lambda fn: self._write_export(renderer, fn),
         )
 
-    def _write_export(self, file_name):
+    def _write_export(self, renderer, file_name):
         """Write rendered output to *file_name*."""
         with open(file_name, "w+", encoding="utf-8") as output:
-            output.write(self.renderer.render_output()[1].strip())
+            output.write(renderer.render_output()[1].strip())
 
     def on_print_document(self, action, *params):
         """'print-document' action handler."""
-        self.renderer.print_page()
+        page = self.active_page
+        if page:
+            page.renderer.print_page()
 
     def on_close_request(self, *args):
         """'close-request' handler (GTK4 replacement for delete-event)."""
@@ -346,20 +369,26 @@ class AppWindow(Adw.ApplicationWindow):
 
         state = param.get_uint16()
         self.cache.view = state
+        for doc in self._iter_doc_pages():
+            if doc.editor_type == EditorType.PREVIEW:
+                continue
+            if state == View.BOTH:
+                doc.editor.set_visible(True)
+                doc.renderer.set_visible(True)
+            elif state == View.EDITOR:
+                doc.editor.set_visible(True)
+                doc.renderer.set_visible(False)
+            else:
+                doc.editor.set_visible(False)
+                doc.renderer.set_visible(True)
+
+        refresh_enabled = state != View.EDITOR
+        self.refresh_preview_action.set_enabled(refresh_enabled)
         if state == View.BOTH:
-            self.editor.set_visible(True)
-            self.renderer.set_visible(True)
-            self.refresh_preview_action.set_enabled(True)
             self.both_toggle_btn.set_active(True)
         elif state == View.EDITOR:
-            self.editor.set_visible(True)
-            self.renderer.set_visible(False)
-            self.refresh_preview_action.set_enabled(False)
             self.editor_toggle_btn.set_active(True)
         else:
-            self.editor.set_visible(False)
-            self.renderer.set_visible(True)
-            self.refresh_preview_action.set_enabled(True)
             self.preview_toggle_btn.set_active(True)
 
     def on_change_preview(self, action, param):
@@ -367,27 +396,37 @@ class AppWindow(Adw.ApplicationWindow):
         if action.get_state() != param:
             action.set_state(param)
 
-        if not getattr(self, "paned", False):
-            return
         orientation = param.get_uint16()
-        if self.paned.get_orientation() != orientation:
-            self.paned.set_orientation(orientation)
-            self.preferences.preview = orientation
-            self.preferences.save()
-            GLib.idle_add(
-                lambda: GLib.timeout_add(100, self.set_position) and False,
-            )
+        if self.preferences.preview == orientation:
+            return
+        self.preferences.preview = orientation
+        self.preferences.save()
+        for doc in self._iter_doc_pages():
+            if doc.paned:
+                doc.paned.set_orientation(orientation)
+                self._tabs_needing_paned_reset.add(doc)
+        GLib.idle_add(
+            lambda: GLib.timeout_add(
+                100, self._reset_active_paned,
+            ) and False,
+        )
 
-    def set_position(self):
-        """Set position after change orientation.
+    def _paned_half(self, paned):
+        """Return the position for a 50/50 split of *paned*."""
+        if paned.get_orientation() == Gtk.Orientation.VERTICAL:
+            return paned.get_height() // 2
+        return paned.get_width() // 2
 
-        This must be do after some timeout. It is HARD FIX of gtk error
-        https://gitlab.gnome.org/GNOME/gtk/issues/1959
-        """
-        if self.paned.get_orientation() == Gtk.Orientation.VERTICAL:
-            self.paned.set_position(self.paned.get_height() // 2)
-        else:
-            self.paned.set_position(self.paned.get_width() // 2)
+    def _reset_active_paned(self):
+        """Set the active tab's paned to 50/50 after orientation change."""
+        doc = self.active_page
+        if doc and doc.paned:
+            paned = doc.paned
+            half = self._paned_half(paned)
+            if half > 0:
+                paned.set_position(half)
+                self._tabs_needing_paned_reset.discard(doc)
+        return False
 
     def on_auto_scroll_toggle(self, action, param):
         """'auto-schroll-toggle' action handler."""
@@ -397,46 +436,46 @@ class AppWindow(Adw.ApplicationWindow):
         self.preferences.save()
 
     def on_change_parser(self, action, param):
-        """'change-parser' action handler."""
+        """'change-parser' action handler (applies to active tab)."""
         parser = param.get_string()
 
         if action.get_state() != param:
             action.set_state(param)
-            self.renderer.set_parser(parser)
-            self.preferences.parser = parser
-            self.editor.change_mime_type(parser)
-        self.preferences.save()
 
-        self.json_box.set_visible(parser == "json")
-        self.json_fold_box.set_visible(parser == "json")
-        if self.editor_type == EditorType.SOURCE:
-            self.fmt_bar.set_visible(parser != "json")
-            self.get_action_group("fmt").set_parser(parser)
-            self.editor.set_list_features_enabled(
+        page = self.active_page
+        if not page:
+            return
+
+        page.preferences.parser = parser
+        page.renderer.set_parser(parser)
+        if page.editor_type == EditorType.SOURCE:
+            page.fmt_actions.set_parser(parser)
+            page.editor.change_mime_type(parser)
+            page.editor.set_list_features_enabled(
                 parser in ("rst", "md", "m2r"),
             )
 
-    def on_file_type(self, widget, ext):
-        """'file-type' event handler."""
-        parser = EXTS.get(ext, self.preferences.parser)
-        self.renderer.set_parser(parser)
+        # Save as global default for new tabs
+        self.preferences.parser = parser
+        self.preferences.save()
+
+        self._apply_parser_ui(parser)
+
+    def on_active_tab_parser_changed(self, doc, parser):
+        """Update window UI when the active tab's parser changes."""
+        if self.active_page is not doc:
+            return
         action = self.lookup_action("change-parser")
         if action:
             action.set_state(GLib.Variant("s", parser))
+        self._apply_parser_ui(parser)
 
+    def _apply_parser_ui(self, parser):
+        """Update header-bar visibility for JSON vs markup parsers."""
         self.json_box.set_visible(parser == "json")
         self.json_fold_box.set_visible(parser == "json")
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
-            self.get_action_group("fmt").set_parser(parser)
-            self.editor.set_list_features_enabled(
-                parser in ("rst", "md", "m2r"),
-            )
-
-        if hasattr(self, "file_browser"):
-            directory = dirname(self.editor.file_path)
-            if directory:
-                self.file_browser.set_directory(directory)
 
     def _on_browser_file_activated(self, _browser, file_path):
         """Open a file selected in the file browser."""
@@ -458,9 +497,12 @@ class AppWindow(Adw.ApplicationWindow):
 
     def _on_filter_activate(self, _):
         """Handle activation of the JSONPath filter."""
+        page = self.active_page
+        if not page:
+            return
         expr = self.path_entry.get_text()
-        if self.renderer.get_parser() == "json":
-            json_preview = self.renderer.parser_instance
+        if page.renderer.get_parser() == "json":
+            json_preview = page.renderer.parser_instance
             if json_preview:
                 json_preview.filter_callback = self._on_filter_applied
                 json_preview.apply_path_filter(expr)
@@ -475,42 +517,44 @@ class AppWindow(Adw.ApplicationWindow):
             self.status_bar.push(0, msg)
 
     def on_change_writer(self, action, param):
-        """'change-writer' action handler."""
+        """'change-writer' action handler (applies to all tabs)."""
         if action.get_state() != param:
             action.set_state(param)
             writer = param.get_string()
-            self.renderer.set_writer(writer)
             self.preferences.writer = writer
             self.preferences.save()
+            for doc in self._iter_doc_pages():
+                doc.renderer.set_writer(writer)
 
     def on_custom_style_toggle(self, action, param):
-        """'custom-style-toggle' action handler."""
+        """'custom-style-toggle' action handler (applies to all tabs)."""
         custom_style = not action.get_state().get_boolean()
         action.set_state(GLib.Variant("b", custom_style))
         self.preferences.custom_style = custom_style
-        if custom_style and self.preferences.style:
-            self.renderer.set_style(self.preferences.style)
-        else:
-            self.renderer.set_style("")
+        style = self.preferences.style if custom_style else ""
+        for doc in self._iter_doc_pages():
+            doc.renderer.set_style(style)
         self.preferences.save()
 
     def on_change_style(self, action, param):
-        """'change-style' action handler."""
+        """'change-style' action handler (applies to all tabs)."""
         if action.get_state() != param:
             action.set_state(param)
             style = param.get_string()
             self.preferences.style = style
-            if self.preferences.custom_style and style:
-                self.renderer.set_style(self.preferences.style)
-            else:
-                self.renderer.set_style("")
+            effective = style if self.preferences.custom_style else ""
+            for doc in self._iter_doc_pages():
+                doc.renderer.set_style(effective)
             self.preferences.save()
 
     def on_find_in_document(self, action, *param):
         """'find-in-document' action handler."""
+        page = self.active_page
+        if not page:
+            return
         if (
-            self.editor_type != EditorType.SOURCE
-            and not self.renderer.props.visible
+            page.editor_type != EditorType.SOURCE
+            and not page.renderer.props.visible
         ):
             return  # works only with source view or renderer
 
@@ -520,8 +564,10 @@ class AppWindow(Adw.ApplicationWindow):
             else:
                 self.on_find_previous_match(action, *param)
         else:
-            self.editor.stop_search()
-            self.renderer.stop_search()
+            editor = getattr(page, "editor", None)
+            if editor:
+                editor.stop_search()
+            page.renderer.stop_search()
 
             self.search_way = SearchWay.NEXT
             self.focused = self.get_focus()
@@ -540,20 +586,28 @@ class AppWindow(Adw.ApplicationWindow):
     def on_search_mode_changed(self, search_bar, param):
         """'search-mode-enabled' notify event handler."""
         if not self.search.get_search_mode():
+            page = self.active_page
+            editor = getattr(page, "editor", None) if page else None
+            renderer = page.renderer if page else None
             if not self.search_text:
                 if isinstance(self.focused, GtkSourceView):
-                    self.editor.stop_search()
+                    if editor:
+                        editor.stop_search()
                 elif isinstance(self.focused, GtkWebView):
-                    self.renderer.stop_search()
+                    if renderer:
+                        renderer.stop_search()
                 elif (
-                    self.editor_type == EditorType.SOURCE
-                    and self.editor.props.visible
+                    page
+                    and page.editor_type == EditorType.SOURCE
+                    and editor
+                    and editor.props.visible
                 ):
-                    self.editor.stop_search()
-                elif self.renderer.props.visible:
-                    self.renderer.stop_search()
+                    editor.stop_search()
+                elif renderer and renderer.props.visible:
+                    renderer.stop_search()
 
-            self.focused.grab_focus()
+            if self.focused:
+                self.focused.grab_focus()
             self.focused = None
 
     def on_search_changed(self, search_entry):
@@ -574,18 +628,24 @@ class AppWindow(Adw.ApplicationWindow):
         res = False
         if self.search.get_search_mode():
             text = self.search_entry.get_text()
+            page = self.active_page
+            if not page:
+                return res
+            editor = getattr(page, "editor", None)
+            renderer = page.renderer
 
             if isinstance(self.focused, GtkSourceView):
-                res = self.editor.do_next_match(text)
+                res = editor.do_next_match(text) if editor else False
             elif isinstance(self.focused, GtkWebView):
-                res = self.renderer.do_next_match(text)
+                res = renderer.do_next_match(text)
             elif (
-                self.editor_type == EditorType.SOURCE
-                and self.editor.props.visible
+                page.editor_type == EditorType.SOURCE
+                and editor
+                and editor.props.visible
             ):
-                res = self.editor.do_next_match(text)
-            elif self.renderer.props.visible:
-                res = self.renderer.do_next_match(text)
+                res = editor.do_next_match(text)
+            elif renderer.props.visible:
+                res = renderer.do_next_match(text)
         return res
 
     def on_find_previous_match(self, action, *params):
@@ -593,49 +653,84 @@ class AppWindow(Adw.ApplicationWindow):
         res = False
         if self.search.get_search_mode():
             text = self.search_entry.get_text()
+            page = self.active_page
+            if not page:
+                return res
+            editor = getattr(page, "editor", None)
+            renderer = page.renderer
 
             if isinstance(self.focused, GtkSourceView):
-                res = self.editor.do_previous_match(text)
+                res = editor.do_previous_match(text) if editor else False
             elif isinstance(self.focused, GtkWebView):
-                res = self.renderer.do_previous_match(text)
+                res = renderer.do_previous_match(text)
             elif (
-                self.editor_type == EditorType.SOURCE
-                and self.editor.props.visible
+                page.editor_type == EditorType.SOURCE
+                and editor
+                and editor.props.visible
             ):
-                res = self.editor.do_previous_match(text)
-            elif self.renderer.props.visible:
-                res = self.renderer.do_previous_match(text)
+                res = editor.do_previous_match(text)
+            elif renderer.props.visible:
+                res = renderer.do_previous_match(text)
         return res
 
     def on_refresh_preview(self, action, *params):
         """'refresh-preview' action handler."""
-        self.check_in_thread(True)
+        page = self.active_page
+        if page:
+            page.check_in_thread(True)
 
     def ask_if_modified(self):
-        """Ask user for quit without save file when file is modified."""
-        if self.editor_type != EditorType.PREVIEW:
-            if self.editor.is_modified:
-                dialog = QuitDialogWithoutSave(self.editor.file_name)
-                if run_alert_dialog(dialog, self) != "ok":
-                    return False  # do not quit
-            self.runing = False
-            if self.editor_type == EditorType.VIM:
-                self.editor.vim_quit()  # do call destroy_from_vim
-        else:
-            self.runing = False
-        return True  # do quit
-
-    def destroy_from_vim(self, *args):
-        """Destroy app when on vim :q."""
+        """Ask user for each unsaved tab. Returns True if OK to proceed."""
+        for doc in self._iter_doc_pages():
+            if doc.editor_type == EditorType.PREVIEW:
+                continue
+            if doc.is_modified:
+                page = self.get_page_for_doc(doc)
+                if page:
+                    self.tab_view.set_selected_page(page)
+                dialog = UnsavedChangesDialog(doc.file_name)
+                response = run_alert_dialog(dialog, self)
+                if response == "cancel":
+                    return False
+                if (
+                    response == "save"
+                    and doc.editor_type == EditorType.SOURCE
+                ):
+                    doc.editor.save()
+        # Stop all tab refresh loops
         self.runing = False
+        for doc in self._iter_doc_pages():
+            doc.stop()
+            if doc.editor_type == EditorType.VIM:
+                doc.editor.vim_quit()
+        return True
+
+    def destroy_from_vim(self, vim_widget=None, *args):
+        """Close the tab whose VimEditor exited."""
+        self.runing = False
+        for doc in self._iter_doc_pages():
+            if doc.editor_type == EditorType.VIM and (
+                vim_widget is None or doc.editor is vim_widget
+            ):
+                doc.stop()
+                page = self.get_page_for_doc(doc)
+                if page:
+                    if self.tab_view.get_n_pages() <= 1:
+                        self.save_win_state()
+                        self.destroy()
+                    else:
+                        self.tab_view.close_page_finish(page, True)
+                return
+        self.save_win_state()
         self.destroy()
 
     def save_win_state(self):
         """Save window state to cache."""
         self.cache.width = self.get_width()
         self.cache.height = self.get_height()
-        if getattr(self, "paned", False):
-            self.cache.paned = self.paned.get_position()
+        page = self.active_page
+        if page and page.paned:
+            self.cache.paned = page.paned.get_position()
         self.cache.is_maximized = self.is_maximized()
         self.cache.save()
 
@@ -680,9 +775,9 @@ class AppWindow(Adw.ApplicationWindow):
 
         headerbar.pack_start(
             IconButton(
-                symbol="document-new-symbolic",
-                tooltip="New Document",
-                action_name="app.new-window",
+                symbol="tab-new-symbolic",
+                tooltip="New Tab",
+                action_name="win.new-tab",
             ),
         )
         headerbar.pack_start(
@@ -739,6 +834,14 @@ class AppWindow(Adw.ApplicationWindow):
 
         if self.editor_type != EditorType.PREVIEW:
             headerbar.pack_end(self._create_view_toggle_box())
+
+        headerbar.pack_end(
+            IconButton(
+                symbol="view-grid-symbolic",
+                tooltip="Show Tabs Overview",
+                action_name="win.show-tabs-overview",
+            ),
+        )
 
     def _create_json_filter_box(self):
         """Create the JSONPath filter entry and button box."""
@@ -818,89 +921,36 @@ class AppWindow(Adw.ApplicationWindow):
 
         return btn_box
 
-    def create_renderer(self):
-        """Create and set renderer."""
-        self.renderer = Renderer(
-            self,
-            parser=self.preferences.parser,
-            writer=self.preferences.writer,
-        )
-        if self.preferences.custom_style and self.preferences.style:
-            self.renderer.set_style(self.preferences.style)
-        self.renderer.set_tab_width(self.preferences.editor.tab_width)
-
-    def fill_panned(self, file_name):
-        """Fill panned widget with right widgets."""
-        if self.editor_type == EditorType.VIM:
-            self.editor = VimEditor(self, file_name)
-        else:
-            self.editor = SourceView(
-                self,
-                self.preferences,
-                "editor.spell-lang",
-            )
-            self.insert_action_group(
-                "editor",
-                EditorActionGroup(
-                    self.editor,
-                    self.renderer,
-                    self.preferences,
-                ),
-            )
-
-        if self.editor_type == EditorType.SOURCE:
-            self.insert_action_group(
-                "fmt",
-                FormattingActionGroup(
-                    self.editor,
-                    self.renderer,
-                    EXTS.get(
-                        splitext(file_name)[1] if file_name else "",
-                        self.preferences.parser,
-                    ),
-                    self.preferences,
-                ),
-            )
-
-        self.editor.connect("file-type", self.on_file_type)
-        self.editor.connect("scroll-changed", self.on_scroll_changed)
-        if self.editor_type == EditorType.SOURCE:
-            self.editor.set_list_features_enabled(
-                self.preferences.parser in ("rst", "md", "m2r"),
-            )
-        if file_name:
-            self.editor.read_from_file(file_name)
-
-        self.paned.set_start_child(self.editor)
-        self.paned.set_resize_start_child(True)
-        self.paned.set_shrink_start_child(False)
-        self.paned.set_end_child(self.renderer)
-        self.paned.set_resize_end_child(True)
-        self.paned.set_shrink_end_child(False)
-
-        if self.cache.view == View.EDITOR:
-            self.renderer.set_visible(False)
-            self.refresh_preview_action.set_enabled(False)
-        elif self.cache.view == View.PREVIEW:
-            self.editor.set_visible(False)
-
-    def layout(self, file_name):
-        """Create and fill window layout."""
+    def layout(self, file_name, no_initial_tab=False):
+        """Create and fill window layout with TabView."""
         self.set_default_size(self.cache.width, self.cache.height)
 
+        # --- Tab infrastructure ---
+        self.tab_view = Adw.TabView()
+        self.tab_view.connect("notify::selected-page", self.on_tab_switched)
+        self.tab_view.connect("close-page", self.on_close_page)
+        self.tab_view.connect("create-window", self.on_create_window_for_tab)
+
+        tab_bar = Adw.TabBar()
+        tab_bar.set_view(self.tab_view)
+        tab_bar.set_autohide(True)
+
+        # --- ToolbarView ---
         toolbar_view = Adw.ToolbarView()
         toolbar_view.add_top_bar(self.create_headerbar())
-        self.set_content(toolbar_view)
+        toolbar_view.add_top_bar(tab_bar)
 
+        if self.editor_type == EditorType.SOURCE:
+            self.status_bar = Statusbar(self.preferences.editor)
+            toolbar_view.add_bottom_bar(self.status_bar)
+
+        # --- Overlay (search bar floats on top) ---
         overlay = Gtk.Overlay()
         overlay.set_vexpand(True)
-        toolbar_view.set_content(overlay)
+        self._create_search_bar(overlay)
 
+        # --- File browser sidebar (non-PREVIEW modes) ---
         if self.editor_type != EditorType.PREVIEW:
-            self.paned = Gtk.Paned(
-                orientation=self.preferences.preview,
-                position=self.cache.paned,
-            )
             self.file_browser = FileBrowser()
             self.file_browser.connect(
                 "file-activated",
@@ -910,25 +960,36 @@ class AppWindow(Adw.ApplicationWindow):
                 collapsed=True,
                 show_sidebar=False,
                 sidebar=self.file_browser,
-                content=self.paned,
+                content=self.tab_view,
                 sidebar_width_unit=Adw.LengthUnit.SP,
                 min_sidebar_width=220,
                 max_sidebar_width=220,
             )
             overlay.set_child(self.overlay_split)
-            self.fill_panned(file_name)
         else:
-            self.__file_name = file_name
-            self._update_title(basename(file_name), file_name)
-            overlay.set_child(self.renderer)
+            overlay.set_child(self.tab_view)
+
+        toolbar_view.set_content(overlay)
+
+        # --- TabOverview wraps everything ---
+        self.tab_overview = Adw.TabOverview()
+        self.tab_overview.set_view(self.tab_view)
+        self.tab_overview.set_child(toolbar_view)
+        self.tab_overview.set_enable_new_tab(True)
+        self.tab_overview.connect(
+            "create-tab", self._on_tab_overview_create_tab,
+        )
+        self.set_content(self.tab_overview)
 
         if self.cache.is_maximized:
             self.maximize()
 
-        if self.editor_type == EditorType.SOURCE:
-            self.status_bar = Statusbar(self.preferences.editor)
-            toolbar_view.add_bottom_bar(self.status_bar)
+        # Create the initial tab (unless this window is for drag-receive)
+        if not no_initial_tab:
+            self.new_tab(file_name)
 
+    def _create_search_bar(self, overlay):
+        """Create the floating search bar and add it to *overlay*."""
         self.search_text = ""
         self.search = Gtk.SearchBar()
         self.search.set_show_close_button(False)
@@ -951,138 +1012,245 @@ class AppWindow(Adw.ApplicationWindow):
         self.search.connect_entry(self.search_entry)
         self.search_entry.connect("search-changed", self.on_search_changed)
 
-        # GTK4: use EventControllerFocus instead of focus-out-event
         focus_ctrl = Gtk.EventControllerFocus.new()
         focus_ctrl.connect("leave", self.on_search_focus_out)
         self.search_entry.add_controller(focus_ctrl)
 
-        prev_button = IconButton(
-            symbol="go-previous-symbolic",
-            tooltip="Previeous search",
-            action_name="win.find-previous-match",
-            focus_on_click=False,
+        sbox.append(
+            IconButton(
+                symbol="go-previous-symbolic",
+                tooltip="Previous search",
+                action_name="win.find-previous-match",
+                focus_on_click=False,
+            ),
         )
-        sbox.append(prev_button)
-        next_button = IconButton(
-            symbol="go-next-symbolic",
-            tooltip="Next search",
-            action_name="win.find-next-match",
-            focus_on_click=False,
+        sbox.append(
+            IconButton(
+                symbol="go-next-symbolic",
+                tooltip="Next search",
+                action_name="win.find-next-match",
+                focus_on_click=False,
+            ),
         )
-        sbox.append(next_button)
 
-    def check_in_thread(self, force=False):
-        """Check file state in thread."""
-        if self.runing:
-            if self.editor_type == EditorType.VIM:
-                threading.Thread(
-                    target=self.refresh_from_vim,
-                    args=(force,),
-                    daemon=True,
-                ).start()
-            elif self.editor_type == EditorType.SOURCE:
-                GLib.idle_add(self.refresh_from_source, force)
-            else:  # self.editor = None
-                GLib.idle_add(self.refresh_from_file, force)
+    # ------------------------------------------------------------------
+    # Tab management
+    # ------------------------------------------------------------------
 
-    def not_running(self):
-        """If application not running exit it."""
-        if not self.runing:
-            raise SystemExit(0)
+    def new_tab(self, file_name=""):
+        """Open *file_name* (or an empty document) in a new tab.
 
-    def refresh_from_vim(self, force):
-        """Refresh file from vim (runs in background thread)."""
-        another_file = False
-        try:
-            file_name = self.editor.file_name
-            file_path = self.editor.file_path
-            modified = self.editor.is_modified
-            self.not_running()
-            if file_name != self._vim_title:
-                self._vim_title = file_name
-                GLib.idle_add(
-                    self._update_title,
-                    file_name,
-                    file_path,
-                    modified,
+        If *file_name* is given and the currently active tab is an empty,
+        unmodified document, the file is loaded into that tab instead of
+        opening a new one.
+
+        Returns the :class:`Adw.TabPage` for the tab.
+        """
+        # Reuse the active tab when it is empty and unmodified
+        if file_name:
+            active = self.active_page
+            if (
+                active is not None
+                and active.editor_type != EditorType.PREVIEW
+                and not active.file_path
+                and not active.is_modified
+            ):
+                active.load_file(file_name)
+                page = self.tab_view.get_page(active)
+                page.set_title(basename(file_name))
+                self._update_title(
+                    active.file_name, active.file_path, active.is_modified,
                 )
-                another_file = True
-            self.not_running()
-            last_changes = self.editor.get_vim_changes()
+                return page
 
-            if force or last_changes > self.__last_changes or another_file:
-                self.__last_changes = last_changes
-                self.not_running()
-                lines = self.editor.get_vim_lines()
-                self.not_running()
-                buff = self.editor.get_vim_get_buffer(lines)
-                self.not_running()
-                pos = self.editor.get_vim_scroll_pos(lines)
-                file_path = self.editor.file_path
-                self.renderer.render(buff, file_path, pos)
-            GLib.timeout_add(100, self.check_in_thread)
-        except SystemExit:
+        # Sync cache.paned from active tab so new tab inherits current split
+        active = self.active_page
+        if active and active.paned:
+            self.cache.paned = active.paned.get_position()
+        doc = DocumentPage(self, self.editor_type, file_name)
+        title = basename(file_name) if file_name else NOT_SAVED_NAME
+        page = self.tab_view.append(doc)
+        page.set_title(title)
+        page.set_icon(Gio.ThemedIcon.new("text-x-generic-symbolic"))
+        self.tab_view.set_selected_page(page)
+        return page
+
+    def on_new_tab(self, action, *params):
+        """'new-tab' action handler."""
+        self.new_tab()
+
+    def on_show_tabs_overview(self, action, *params):
+        """'show-tabs-overview' action handler."""
+        self.tab_overview.set_open(not self.tab_overview.get_open())
+
+    def _on_tab_overview_create_tab(self, _overview):
+        """Return a new empty tab (used by TabOverview '+' button)."""
+        return self.new_tab()
+
+    @property
+    def active_page(self):
+        """Return the active :class:`DocumentPage`, or ``None``."""
+        tab_page = self.tab_view.get_selected_page()
+        return tab_page.get_child() if tab_page else None
+
+    def iter_doc_pages(self):
+        """Yield all :class:`DocumentPage` instances in this window."""
+        pages = self.tab_view.get_pages()
+        for i in range(pages.get_n_items()):
+            yield pages.get_item(i).get_child()
+
+    def _iter_doc_pages(self):
+        """Alias for backwards compat; prefer iter_doc_pages()."""
+        yield from self.iter_doc_pages()
+
+    def get_page_for_doc(self, doc):
+        """Return the :class:`Adw.TabPage` that wraps *doc*, or ``None``."""
+        pages = self.tab_view.get_pages()
+        for i in range(pages.get_n_items()):
+            page = pages.get_item(i)
+            if page.get_child() is doc:
+                return page
+        return None
+
+    def on_tab_switched(self, tab_view, _pspec):
+        """Handle tab switch: update action groups, title, parser UI."""
+        page = tab_view.get_selected_page()
+        if not page:
             return
-        except BaseException:
-            print_exc()
+        doc = page.get_child()
 
-    def refresh_from_source(self, force):
-        """Refresh file from SourceView."""
-        try:
-            modified = self.editor.is_modified
+        # Copy paned position from the previously active tab
+        prev = self._last_active_doc
+        if (
+            prev is not None
+            and prev is not doc
+            and prev.paned
+            and doc.paned
+            and doc not in self._tabs_needing_paned_reset
+        ):
+            doc.paned.set_position(prev.paned.get_position())
+        self._last_active_doc = doc
+
+        # Register per-tab action groups on the window
+        if hasattr(doc, "fmt_actions"):
+            self.insert_action_group("fmt", doc.fmt_actions)
+        if hasattr(doc, "editor_actions"):
+            self.insert_action_group("editor", doc.editor_actions)
+
+        # Update window title
+        self._update_title(doc.file_name, doc.file_path, doc.is_modified)
+
+        # Sync the change-parser action state to the new tab's parser
+        parser = doc.parser
+        action = self.lookup_action("change-parser")
+        if action:
+            action.set_state(GLib.Variant("s", parser))
+        self._apply_parser_ui(parser)
+
+        # Reset paned to 50/50 if orientation changed since this tab was shown
+        if doc in self._tabs_needing_paned_reset:
+            GLib.timeout_add(50, self._reset_active_paned)
+
+        # Update file browser to show the new tab's directory
+        if hasattr(self, "file_browser") and doc.file_path:
+            directory = dirname(doc.file_path)
+            if directory:
+                self.file_browser.set_directory(directory)
+
+        # Close the search bar to avoid confusion between tabs
+        if hasattr(self, "search") and self.search.get_search_mode():
+            self.search.set_search_mode(False)
+
+    def _update_active_tab_ui(self):
+        """100 ms timer: sync window title and status bar from active tab."""
+        if not self.runing:
+            return False
+        page = self.active_page
+        if page:
+            modified = page.is_modified
+            self._update_title(page.file_name, page.file_path, modified)
+
+            # Update the TabPage title, tooltip and attention indicator
+            tab_page = self.tab_view.get_selected_page()
+            if tab_page:
+                star = "*" if modified else ""
+                name = page.file_name or NOT_SAVED_NAME
+                tab_page.set_title(f"{star}{name}")
+                tab_page.set_needs_attention(modified)
+                if page.file_path:
+                    tab_page.set_tooltip(page.file_path)
+                else:
+                    tab_page.set_tooltip(f"{name} (Draft)")
+
+            # Update Save action enabled state
             action = self.lookup_action("save-document")
-            if action:  # sometimes when closing window action is None
-                action.set_enabled(modified)
-            self._update_title(
-                self.editor.file_name,
-                self.editor.file_path,
-                modified,
-            )
-
-            last_changes = self.editor.changes
-            if force or last_changes > self.__last_changes:
-                self.__last_changes = last_changes
-                text = self.editor.text
-
-                words_count = 0
-                for _w in RE_WORD.finditer(text):
-                    words_count += 1
-                self.status_bar.set_words_count(words_count)
-
-                chars_count = 0
-                for _c in RE_CHAR.finditer(text):
-                    chars_count += 1
-                self.status_bar.set_chars_count(chars_count)
-
-                self.renderer.render(
-                    text,
-                    self.editor.file_path,
-                    self.editor.position,
+            if action:
+                action.set_enabled(
+                    page.editor_type == EditorType.SOURCE and modified,
                 )
-            GLib.timeout_add(100, self.check_in_thread)
-        except BaseException:
-            print_exc()
 
-    def refresh_from_file(self, force):
-        """Refresh from disk file."""
-        try:
-            last_changes = stat(self.__file_name).st_ctime
-            if force or last_changes > self.__last_changes:
-                self.__last_changes = last_changes
-                with open(self.__file_name) as source:
-                    buff = source.read()
-                    self.renderer.render(
-                        buff,
-                        self.__file_name,
-                        self.renderer.position,
-                    )
-        except BaseException:
-            print_exc()
-        GLib.timeout_add(500, self.check_in_thread)
+            # Update status bar for SOURCE tabs
+            if (
+                hasattr(self, "status_bar")
+                and page.editor_type == EditorType.SOURCE
+            ):
+                # pylint: disable=protected-access
+                self.status_bar.set_words_count(page.words_count)
+                self.status_bar.set_chars_count(page.chars_count)
+
+        GLib.timeout_add(100, self._update_active_tab_ui)
+        return False
+
+    def on_close_page(self, tab_view, page):
+        """Handle 'close-page' signal with optional save confirmation."""
+        doc = page.get_child()
+        if doc.editor_type != EditorType.PREVIEW and doc.is_modified:
+            GLib.idle_add(self._confirm_close_page, tab_view, page)
+            return True  # prevent immediate close; we handle it in idle
+        self._finalize_close_page(tab_view, page)
+        return True
+
+    def _confirm_close_page(self, tab_view, page):
+        """Show a save dialog and then finalise the close."""
+        self.tab_view.set_selected_page(page)
+        doc = page.get_child()
+        dialog = UnsavedChangesDialog(doc.file_name)
+        response = run_alert_dialog(dialog, self)
+        if response == "cancel":
+            tab_view.close_page_finish(page, False)
+            return False  # don't repeat the idle
+        if response == "save" and doc.editor_type == EditorType.SOURCE:
+            doc.editor.save()
+        self._finalize_close_page(tab_view, page)
+        return False  # don't repeat the idle
+
+    def _finalize_close_page(self, tab_view, page):
+        """Stop the tab's refresh loop and close it."""
+        doc = page.get_child()
+        doc.stop()
+        if doc.editor_type == EditorType.VIM and hasattr(doc, "editor"):
+            doc.editor.vim_quit()
+        tab_view.close_page_finish(page, True)
+        # Close the window when the last tab is removed
+        if tab_view.get_n_pages() == 0:
+            self.save_win_state()
+            self.destroy()
+
+    def on_create_window_for_tab(self, _tab_view):
+        """Create a new window to receive a tab dragged out of this window."""
+        app = self.get_application()
+        win = AppWindow(self.editor_type, no_initial_tab=True)
+        app.add_window(win)
+        win.present()
+        return win.tab_view
+
+    # ------------------------------------------------------------------
+    # Old refresh methods removed; refresh lives in DocumentPage.
+    # Window-level _update_active_tab_ui() is the only timer here.
+    # ------------------------------------------------------------------
 
     @property
     def file_path(self):
-        """Return opened file path depend on mode."""
-        if self.editor_type != EditorType.PREVIEW:
-            return self.editor.file_path
-        return self.__file_name
+        """Return the active tab's file path."""
+        page = self.active_page
+        return page.file_path if page else None

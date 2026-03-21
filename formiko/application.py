@@ -202,6 +202,11 @@ class Application(Adw.Application):
         )
         self.set_accels_for_action("win.print-document", ["<Control>p"])
         self.set_accels_for_action("win.close-window", ["<Control>w"])
+        self.set_accels_for_action("win.new-tab", ["<Control>t"])
+        self.set_accels_for_action(
+            "win.show-tabs-overview",
+            ["<Shift><Control>o"],
+        )
         self.set_accels_for_action("win.find-in-document", ["<Control>f"])
         self.set_accels_for_action("win.find-next-match", ["<Control>g"])
         self.set_accels_for_action(

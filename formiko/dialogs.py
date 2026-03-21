@@ -133,20 +133,26 @@ def about_dialog():
     )
 
 
-class QuitDialogWithoutSave(Adw.AlertDialog):
-    """Quit dialog without save."""
+class UnsavedChangesDialog(Adw.AlertDialog):
+    """Dialog shown when closing a document with unsaved changes."""
 
     def __init__(self, file_name):
-        name = f"`{file_name}`" if file_name else ""
+        name = f"`{file_name}`" if file_name else "Untitled document"
         super().__init__(
-            heading="Quit without saving?",
-            body=f"Document {name} is not saved.\n"
-            "Are you sure you want to quit without saving?",
+            heading="Save Changes?",
+            body=f"Document {name} contains unsaved changes."
+            " Changes that are not saved will be permanently lost.",
         )
+        self.add_response("discard", "Discard")
         self.add_response("cancel", "Cancel")
-        self.add_response("ok", "Quit")
-        self.set_response_appearance("ok", Adw.ResponseAppearance.DESTRUCTIVE)
-        self.set_default_response("cancel")
+        self.add_response("save", "Save")
+        self.set_response_appearance(
+            "discard", Adw.ResponseAppearance.DESTRUCTIVE,
+        )
+        self.set_response_appearance(
+            "save", Adw.ResponseAppearance.SUGGESTED,
+        )
+        self.set_default_response("save")
         self.set_close_response("cancel")
 
 

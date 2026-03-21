@@ -112,6 +112,38 @@ class PreviewGroup(ShortcutsGroup):
         self.append(ShortcutsShortcut(accelerator="<Alt>b", title="Show both"))
 
 
+class TabsGroup(ShortcutsGroup):
+    """Shortcuts group for tab management."""
+
+    def __init__(self):
+        super().__init__(title="Tabs")
+
+        self.append(
+            ShortcutsShortcut(accelerator="<Control>t", title="New Tab"),
+        )
+        self.append(
+            ShortcutsShortcut(accelerator="<Control>w", title="Close Tab"),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>o",
+                title="Show Tabs Overview",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Control>Tab <Control>Page_Down",
+                title="Switch to Next Tab",
+            ),
+        )
+        self.append(
+            ShortcutsShortcut(
+                accelerator="<Shift><Control>Tab <Control>Page_Up",
+                title="Switch to Previous Tab",
+            ),
+        )
+
+
 class GeneralGroup(ShortcutsGroup):
     """General application shortcuts group."""
 
@@ -157,12 +189,6 @@ class GeneralGroup(ShortcutsGroup):
             ShortcutsShortcut(
                 accelerator="<Control>p",
                 title="Print Document",
-            ),
-        )
-        self.append(
-            ShortcutsShortcut(
-                accelerator="<Control>w",
-                title="Close Document",
             ),
         )
         self.append(
@@ -224,13 +250,13 @@ class FormattingGroup(ShortcutsGroup):
                 accelerator="<Shift><Control>n", title="Numbered List",
             ),
         )
-        self.append(
-            ShortcutsShortcut(
-                accelerator="<Control>1 <Control>2 <Control>3 "
-                            "<Control>4 <Control>5 <Control>6",
-                title="Header 1-6",
-            ),
-        )
+        for level in range(1, 7):
+            self.append(
+                ShortcutsShortcut(
+                    accelerator=f"<Control>{level}",
+                    title=f"Header {level}",
+                ),
+            )
 
 
 class ShortcutsWindow(Gtk.ShortcutsWindow):
@@ -239,9 +265,10 @@ class ShortcutsWindow(Gtk.ShortcutsWindow):
     def __init__(self, editor_type: EditorType):
         # view_name and view does not work. Don't know why
         super().__init__(modal=True)
-        sec = ShortcutsSection(title="Formiko", visible=True, max_height=12)
+        sec = ShortcutsSection(title="Formiko", visible=True, max_height=15)
 
         sec.add_group(GeneralGroup(editor_type))
+        sec.add_group(TabsGroup())
         sec.add_group(PreviewGroup())
         sec.add_group(FindGroup())
 

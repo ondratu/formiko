@@ -19,6 +19,26 @@ Version 2.0.0b2
   * Inherit source file extension when opening extension-less links to
     non-existent files (e.g. link from ``doc.md`` to ``page`` creates
     ``page.md`` instead of ``page``)
+  * Tab support (Adw.TabView / TabBar / TabOverview):
+    * Each open file lives in its own tab within a single window
+    * Open new tab via Ctrl+T or the tab bar "+" button
+    * Close tab via Ctrl+W; last tab closes the window
+    * Navigate tabs with Ctrl+Tab / Ctrl+Shift+Tab and
+      Ctrl+Page_Down / Ctrl+Page_Up
+    * Show all tabs overview via Ctrl+Shift+O
+    * Opening a file into an empty unmodified tab reuses it instead of
+      adding a new tab
+    * Files already open in a tab are activated instead of reopened
+    * Tab title shows an asterisk (*) for unsaved changes
+    * Tab tooltip shows the full file path, or "Untitled Document (Draft)"
+      for unsaved documents
+    * Per-tab state: file, parser/format, word and character count,
+      window title and formatting toolbar
+    * Global state: writer, style, view mode (editor/preview/both),
+      split orientation and position
+    * Unsaved-changes dialog uses Save / Discard / Cancel (GNOME HIG)
+      and activates the affected tab before showing
+    * Tab keyboard shortcuts added to the Keyboard Shortcuts dialog
 
 Version 2.0.0b1
 
