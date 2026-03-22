@@ -1055,9 +1055,9 @@ class AppWindow(Adw.ApplicationWindow):
                 and not active.file_path
                 and not active.is_modified
             ):
-                active.load_file(file_name)
                 page = self.tab_view.get_page(active)
                 page.set_title(basename(file_name))
+                active.load_file(file_name)
                 self._update_title(
                     active.file_name, active.file_path, active.is_modified,
                 )

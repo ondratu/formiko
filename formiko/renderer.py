@@ -271,7 +271,7 @@ class Renderer(Overlay):
         self._loaded_context = None  # (file_name, mime_type) of last finished
         self._pending_context = None  # context of the load in progress
         self.pos = 0
-        self.src = ""
+        self.src = None  # None = no content yet; prevents spurious renders
 
     @staticmethod
     def _rgba_to_hex(rgba):
@@ -608,6 +608,13 @@ class Renderer(Overlay):
 
     def do_render(self):
         """Render the source, and show rendered output."""
+        # Skip until content has been explicitly set via render() or
+        # load_file().  set_writer/set_parser/set_tab_width all call
+        # idle_add(do_render) during initialisation before any content exists;
+        # without this guard they each trigger a full WebKit load_bytes() with
+        # empty HTML.
+        if self.src is None:
+            return
         state, html, mime_type = self.render_output()
         if html and self.__win.runing:
             if mime_type == "text/html" and "</head>" in html:

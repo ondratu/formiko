@@ -148,19 +148,21 @@ class DocumentPage(Gtk.Box):
 
         Reads the file into the editor; parser and UI are updated via the
         'file-type' signal that :meth:`editor.read_from_file` emits.
-        After loading, the renderer is refreshed directly — no need to wait
-        for the periodic refresh loop.
         Only valid for non-PREVIEW tabs.
         """
         self.editor.read_from_file(file_name)
-        # Render immediately with the loaded content instead of waiting for
-        # the periodic check_in_thread loop (avoids multi-level idle chaining).
         self._last_changes = self.editor.changes
-        self.renderer.render(
-            self.editor.text,
-            self.editor.file_path,
-            self.editor.position,
-        )
+        # read_from_file emits 'file-type' synchronously (before set_text),
+        # which triggers set_parser → idle_add(do_render) with the new parser.
+        # That pending idle is the one render we want.  Set renderer.src
+        # directly here so the idle finds the correct content when it runs,
+        # without queuing a second do_render via renderer.render().
+        text = self.editor.text
+        self.renderer.src = text
+        self.renderer.file_name = self.editor.file_path
+        self.renderer.pos = self.editor.position
+        self._words_count = sum(1 for _ in RE_WORD.finditer(text))
+        self._chars_count = sum(1 for _ in RE_CHAR.finditer(text))
 
     def refresh(self):
         """Force an immediate re-render of this tab's content."""
