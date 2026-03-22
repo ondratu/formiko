@@ -69,10 +69,10 @@ class AppWindow(Adw.ApplicationWindow):
         self._tabs_needing_paned_reset: set = set()
         self._last_active_doc = None
         super().__init__()
-        self.actions()
+        self._setup_actions()
         self.set_default_icon_name("formiko")
-        self.layout(file_name, no_initial_tab)
-        self.connect("close-request", self.on_close_request)
+        self._setup_layout(file_name, no_initial_tab)
+        self.connect("close-request", self._on_close_request)
         GLib.timeout_add(200, self._update_active_tab_ui)
 
     def insert_action_group(self, prefix, group):
@@ -88,7 +88,7 @@ class AppWindow(Adw.ApplicationWindow):
             return self.get_application()
         return self._action_groups.get(prefix)
 
-    def actions(self):
+    def _setup_actions(self):
         """Set window actions."""
         self._register_document_actions()
         self._register_search_actions()
@@ -99,7 +99,7 @@ class AppWindow(Adw.ApplicationWindow):
     def _register_document_actions(self):
         """Register file document actions."""
         action = Gio.SimpleAction.new("new-tab", None)
-        action.connect("activate", self.on_new_tab)
+        action.connect("activate", self._on_new_tab)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("open-document", None)
@@ -107,40 +107,40 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
         action = Gio.SimpleAction.new("save-document", None)
-        action.connect("activate", self.on_save_document)
+        action.connect("activate", self._on_save_document)
         action.set_enabled(False)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("save-document-as", None)
-        action.connect("activate", self.on_save_document_as)
+        action.connect("activate", self._on_save_document_as)
         action.set_enabled(self.editor_type == EditorType.SOURCE)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("export-document-as", None)
-        action.connect("activate", self.on_export_document_as)
+        action.connect("activate", self._on_export_document_as)
         action.set_enabled(self.editor_type != EditorType.PREVIEW)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("print-document", None)
-        action.connect("activate", self.on_print_document)
+        action.connect("activate", self._on_print_document)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("close-window", None)
-        action.connect("activate", self.on_close_window)
+        action.connect("activate", self._on_close_window)
         self.add_action(action)
 
     def _register_search_actions(self):
         """Register find/search actions."""
         action = Gio.SimpleAction.new("find-in-document", None)
-        action.connect("activate", self.on_find_in_document)
+        action.connect("activate", self._on_find_in_document)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("find-next-match", None)
-        action.connect("activate", self.on_find_next_match)
+        action.connect("activate", self._on_find_next_match)
         self.add_action(action)
 
         action = Gio.SimpleAction.new("find-previous-match", None)
-        action.connect("activate", self.on_find_previous_match)
+        action.connect("activate", self._on_find_previous_match)
         self.add_action(action)
 
     def _register_view_actions(self):
@@ -151,15 +151,15 @@ class AppWindow(Adw.ApplicationWindow):
         )
         self.refresh_preview_action.connect(
             "activate",
-            self.on_refresh_preview,
+            self._on_refresh_preview,
         )
         self.add_action(self.refresh_preview_action)
 
-        self.create_stateful_action(
+        self._create_stateful_action(
             "switch-view-toggle",
             "q",
             self.cache.view,
-            self.on_switch_view_toggle,
+            self._on_switch_view_toggle,
         )
         for name, view in (
             ("show-editor", View.EDITOR),
@@ -176,53 +176,53 @@ class AppWindow(Adw.ApplicationWindow):
             )
             self.add_action(action)
 
-        self.create_stateful_action(
+        self._create_stateful_action(
             "change-preview",
             "q",
             self.preferences.preview,
-            self.on_change_preview,
+            self._on_change_preview,
         )
-        self.create_toggle_action(
+        self._create_toggle_action(
             "auto-scroll-toggle",
             self.preferences.auto_scroll,
-            self.on_auto_scroll_toggle,
+            self._on_auto_scroll_toggle,
         )
         if self.editor_type != EditorType.PREVIEW:
-            self.create_toggle_action(
+            self._create_toggle_action(
                 "toggle-sidebar",
                 False,
-                self.on_toggle_sidebar,
+                self._on_toggle_sidebar,
             )
 
         action = Gio.SimpleAction.new("show-tabs-overview", None)
-        action.connect("activate", self.on_show_tabs_overview)
+        action.connect("activate", self._on_show_tabs_overview)
         self.add_action(action)
 
     def _register_renderer_actions(self):
         """Register renderer parser and style actions."""
         pref = self.preferences
-        self.create_stateful_action(
+        self._create_stateful_action(
             "change-writer",
             "s",
             pref.writer,
-            self.on_change_writer,
+            self._on_change_writer,
         )
-        self.create_stateful_action(
+        self._create_stateful_action(
             "change-parser",
             "s",
             pref.parser,
-            self.on_change_parser,
+            self._on_change_parser,
         )
-        self.create_toggle_action(
+        self._create_toggle_action(
             "custom-style-toggle",
             pref.custom_style,
-            self.on_custom_style_toggle,
+            self._on_custom_style_toggle,
         )
-        self.create_stateful_action(
+        self._create_stateful_action(
             "change-style",
             "s",
             pref.style,
-            self.on_change_style,
+            self._on_change_style,
         )
 
     def _register_json_actions(self):
@@ -243,7 +243,7 @@ class AppWindow(Adw.ApplicationWindow):
         )
         self.add_action(action)
 
-    def create_stateful_action(self, name, _type, default_value, method):
+    def _create_stateful_action(self, name, _type, default_value, method):
         """Support method for creating stateful action."""
         action = Gio.SimpleAction.new_stateful(
             name,
@@ -253,7 +253,7 @@ class AppWindow(Adw.ApplicationWindow):
         action.connect("activate", method)
         self.add_action(action)
 
-    def create_toggle_action(self, name, default_value, method):
+    def _create_toggle_action(self, name, default_value, method):
         """Create boolean toggle action (no parameter type, activate-based)."""
         action = Gio.SimpleAction.new_stateful(
             name,
@@ -263,7 +263,7 @@ class AppWindow(Adw.ApplicationWindow):
         action.connect("activate", method)
         self.add_action(action)
 
-    def on_close_window(self, action, *params):
+    def _on_close_window(self, action, *params):
         """'close-window' action handler: close active tab or whole window."""
         if self.tab_view.get_n_pages() > 1:
             page = self.tab_view.get_selected_page()
@@ -303,19 +303,19 @@ class AppWindow(Adw.ApplicationWindow):
             callback=self.open_document,
         )
 
-    def on_save_document(self, action, *params):
+    def _on_save_document(self, action, *params):
         """'save-document' action handler."""
         page = self.active_page
         if page and page.editor_type == EditorType.SOURCE:
             page.editor.save()
 
-    def on_save_document_as(self, action, *params):
+    def _on_save_document_as(self, action, *params):
         """'save-document-as' action handler."""
         page = self.active_page
         if page and page.editor_type == EditorType.SOURCE:
             page.editor.save_as()
 
-    def on_export_document_as(self, action, *params):
+    def _on_export_document_as(self, action, *params):
         """'export-document-as' action handler."""
         page = self.active_page
         if not page:
@@ -349,20 +349,20 @@ class AppWindow(Adw.ApplicationWindow):
         with open(file_name, "w+", encoding="utf-8") as output:
             output.write(renderer.render_output()[1].strip())
 
-    def on_print_document(self, action, *params):
+    def _on_print_document(self, action, *params):
         """'print-document' action handler."""
         page = self.active_page
         if page:
             page.renderer.print_page()
 
-    def on_close_request(self, *args):
+    def _on_close_request(self, *args):
         """'close-request' handler (GTK4 replacement for delete-event)."""
         rv = self.ask_if_modified()
         if rv:
             self.save_win_state()
         return not rv  # True = prevent close
 
-    def on_switch_view_toggle(self, action, param):
+    def _on_switch_view_toggle(self, action, param):
         """'switch-view-toggle' action handler."""
         if action.get_state() != param:
             action.set_state(param)
@@ -391,7 +391,7 @@ class AppWindow(Adw.ApplicationWindow):
         else:
             self.preview_toggle_btn.set_active(True)
 
-    def on_change_preview(self, action, param):
+    def _on_change_preview(self, action, param):
         """'change-preview' action handler."""
         if action.get_state() != param:
             action.set_state(param)
@@ -428,14 +428,14 @@ class AppWindow(Adw.ApplicationWindow):
                 self._tabs_needing_paned_reset.discard(doc)
         return False
 
-    def on_auto_scroll_toggle(self, action, param):
+    def _on_auto_scroll_toggle(self, action, param):
         """'auto-schroll-toggle' action handler."""
         auto_scroll = not action.get_state().get_boolean()
         action.set_state(GLib.Variant("b", auto_scroll))
         self.preferences.auto_scroll = auto_scroll
         self.preferences.save()
 
-    def on_change_parser(self, action, param):
+    def _on_change_parser(self, action, param):
         """'change-parser' action handler (applies to active tab)."""
         parser = param.get_string()
 
@@ -484,13 +484,13 @@ class AppWindow(Adw.ApplicationWindow):
         if action and action.get_state().get_boolean():
             action.activate(None)
 
-    def on_toggle_sidebar(self, action, *_):
+    def _on_toggle_sidebar(self, action, *_):
         """'toggle-sidebar' action handler."""
         new_state = not action.get_state().get_boolean()
         action.set_state(GLib.Variant("b", new_state))
         self.overlay_split.set_show_sidebar(new_state)
 
-    def on_scroll_changed(self, widget, position):
+    def _on_scroll_changed(self, widget, position):
         """'scroll-changed' event handler."""
         if self.preferences.auto_scroll:
             self.renderer.scroll_to_position(position)
@@ -516,7 +516,7 @@ class AppWindow(Adw.ApplicationWindow):
                 msg = "Filter cleared."
             self.status_bar.push(0, msg)
 
-    def on_change_writer(self, action, param):
+    def _on_change_writer(self, action, param):
         """'change-writer' action handler (applies to all tabs)."""
         if action.get_state() != param:
             action.set_state(param)
@@ -526,7 +526,7 @@ class AppWindow(Adw.ApplicationWindow):
             for doc in self._iter_doc_pages():
                 doc.renderer.set_writer(writer)
 
-    def on_custom_style_toggle(self, action, param):
+    def _on_custom_style_toggle(self, action, param):
         """'custom-style-toggle' action handler (applies to all tabs)."""
         custom_style = not action.get_state().get_boolean()
         action.set_state(GLib.Variant("b", custom_style))
@@ -536,7 +536,7 @@ class AppWindow(Adw.ApplicationWindow):
             doc.renderer.set_style(style)
         self.preferences.save()
 
-    def on_change_style(self, action, param):
+    def _on_change_style(self, action, param):
         """'change-style' action handler (applies to all tabs)."""
         if action.get_state() != param:
             action.set_state(param)
@@ -547,7 +547,7 @@ class AppWindow(Adw.ApplicationWindow):
                 doc.renderer.set_style(effective)
             self.preferences.save()
 
-    def on_find_in_document(self, action, *param):
+    def _on_find_in_document(self, action, *param):
         """'find-in-document' action handler."""
         page = self.active_page
         if not page:
@@ -560,9 +560,9 @@ class AppWindow(Adw.ApplicationWindow):
 
         if self.search.get_search_mode():
             if self.search_way == SearchWay.NEXT:
-                self.on_find_next_match(action, *param)
+                self._on_find_next_match(action, *param)
             else:
-                self.on_find_previous_match(action, *param)
+                self._on_find_previous_match(action, *param)
         else:
             editor = getattr(page, "editor", None)
             if editor:
@@ -577,13 +577,13 @@ class AppWindow(Adw.ApplicationWindow):
                 self.search_entry.set_text(self.search_text)
                 self.search_entry.select_region(0, -1)
 
-    def on_search_focus_out(self, *args):
+    def _on_search_focus_out(self, *args):
         """'focus-leave' event handler (replaces focus-out-event)."""
         self.search_text = self.search_entry.get_text()
         if self.search.get_search_mode():
             self.search.set_search_mode(False)
 
-    def on_search_mode_changed(self, search_bar, param):
+    def _on_search_mode_changed(self, search_bar, param):
         """'search-mode-enabled' notify event handler."""
         if not self.search.get_search_mode():
             page = self.active_page
@@ -610,12 +610,12 @@ class AppWindow(Adw.ApplicationWindow):
                 self.focused.grab_focus()
             self.focused = None
 
-    def on_search_changed(self, search_entry):
+    def _on_search_changed(self, search_entry):
         """'search-changed' event handler."""
         if self.search_way == SearchWay.NEXT:
-            res = self.on_find_next_match(None, None)
+            res = self._on_find_next_match(None, None)
         else:
-            res = self.on_find_previous_match(None, None)
+            res = self._on_find_previous_match(None, None)
 
         ctx = self.search_entry.get_style_context()
         if not res and self.search_entry.get_text():
@@ -623,7 +623,7 @@ class AppWindow(Adw.ApplicationWindow):
         else:
             Gtk.StyleContext.remove_class(ctx, "error")
 
-    def on_find_next_match(self, action, *params):
+    def _on_find_next_match(self, action, *params):
         """'find-next-match' action handler."""
         res = False
         if self.search.get_search_mode():
@@ -648,7 +648,7 @@ class AppWindow(Adw.ApplicationWindow):
                 res = renderer.do_next_match(text)
         return res
 
-    def on_find_previous_match(self, action, *params):
+    def _on_find_previous_match(self, action, *params):
         """'find-previous-match' action handler."""
         res = False
         if self.search.get_search_mode():
@@ -673,11 +673,11 @@ class AppWindow(Adw.ApplicationWindow):
                 res = renderer.do_previous_match(text)
         return res
 
-    def on_refresh_preview(self, action, *params):
+    def _on_refresh_preview(self, action, *params):
         """'refresh-preview' action handler."""
         page = self.active_page
         if page:
-            page.check_in_thread(True)
+            page.refresh()
 
     def ask_if_modified(self):
         """Ask user for each unsaved tab. Returns True if OK to proceed."""
@@ -754,7 +754,7 @@ class AppWindow(Adw.ApplicationWindow):
         self._window_title.set_subtitle(subtitle)
         self.set_title(wm_title)
 
-    def create_headerbar(self):
+    def _create_headerbar(self):
         """Create main window header bar."""
         headerbar = Adw.HeaderBar()
         self._window_title = Adw.WindowTitle()
@@ -921,15 +921,15 @@ class AppWindow(Adw.ApplicationWindow):
 
         return btn_box
 
-    def layout(self, file_name, no_initial_tab=False):
+    def _setup_layout(self, file_name, no_initial_tab=False):
         """Create and fill window layout with TabView."""
         self.set_default_size(self.cache.width, self.cache.height)
 
         # --- Tab infrastructure ---
         self.tab_view = Adw.TabView()
-        self.tab_view.connect("notify::selected-page", self.on_tab_switched)
-        self.tab_view.connect("close-page", self.on_close_page)
-        self.tab_view.connect("create-window", self.on_create_window_for_tab)
+        self.tab_view.connect("notify::selected-page", self._on_tab_switched)
+        self.tab_view.connect("close-page", self._on_close_page)
+        self.tab_view.connect("create-window", self._on_create_window_for_tab)
 
         tab_bar = Adw.TabBar()
         tab_bar.set_view(self.tab_view)
@@ -937,7 +937,7 @@ class AppWindow(Adw.ApplicationWindow):
 
         # --- ToolbarView ---
         toolbar_view = Adw.ToolbarView()
-        toolbar_view.add_top_bar(self.create_headerbar())
+        toolbar_view.add_top_bar(self._create_headerbar())
         toolbar_view.add_top_bar(tab_bar)
 
         if self.editor_type == EditorType.SOURCE:
@@ -997,7 +997,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.search.set_valign(Gtk.Align.START)
         self.search.connect(
             "notify::search-mode-enabled",
-            self.on_search_mode_changed,
+            self._on_search_mode_changed,
         )
         overlay.add_overlay(self.search)
 
@@ -1010,10 +1010,10 @@ class AppWindow(Adw.ApplicationWindow):
         self.search_entry.set_hexpand(True)
         sbox.append(self.search_entry)
         self.search.connect_entry(self.search_entry)
-        self.search_entry.connect("search-changed", self.on_search_changed)
+        self.search_entry.connect("search-changed", self._on_search_changed)
 
         focus_ctrl = Gtk.EventControllerFocus.new()
-        focus_ctrl.connect("leave", self.on_search_focus_out)
+        focus_ctrl.connect("leave", self._on_search_focus_out)
         self.search_entry.add_controller(focus_ctrl)
 
         sbox.append(
@@ -1075,11 +1075,11 @@ class AppWindow(Adw.ApplicationWindow):
         self.tab_view.set_selected_page(page)
         return page
 
-    def on_new_tab(self, action, *params):
+    def _on_new_tab(self, action, *params):
         """'new-tab' action handler."""
         self.new_tab()
 
-    def on_show_tabs_overview(self, action, *params):
+    def _on_show_tabs_overview(self, action, *params):
         """'show-tabs-overview' action handler."""
         self.tab_overview.set_open(not self.tab_overview.get_open())
 
@@ -1112,7 +1112,7 @@ class AppWindow(Adw.ApplicationWindow):
                 return page
         return None
 
-    def on_tab_switched(self, tab_view, _pspec):
+    def _on_tab_switched(self, tab_view, _pspec):
         """Handle tab switch: update action groups, title, parser UI."""
         page = tab_view.get_selected_page()
         if not page:
@@ -1201,7 +1201,7 @@ class AppWindow(Adw.ApplicationWindow):
         GLib.timeout_add(100, self._update_active_tab_ui)
         return False
 
-    def on_close_page(self, tab_view, page):
+    def _on_close_page(self, tab_view, page):
         """Handle 'close-page' signal with optional save confirmation."""
         doc = page.get_child()
         if doc.editor_type != EditorType.PREVIEW and doc.is_modified:
@@ -1236,7 +1236,7 @@ class AppWindow(Adw.ApplicationWindow):
             self.save_win_state()
             self.destroy()
 
-    def on_create_window_for_tab(self, _tab_view):
+    def _on_create_window_for_tab(self, _tab_view):
         """Create a new window to receive a tab dragged out of this window."""
         app = self.get_application()
         win = AppWindow(self.editor_type, no_initial_tab=True)

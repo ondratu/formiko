@@ -60,7 +60,7 @@ class DocumentPage(Gtk.Box):
             self.renderer.set_parser(parser)
             self.append(self.renderer)
 
-        GLib.timeout_add(200, self.check_in_thread)
+        GLib.timeout_add(200, self._check_in_thread)
 
     # ------------------------------------------------------------------
     # Construction helpers
@@ -162,6 +162,10 @@ class DocumentPage(Gtk.Box):
             self.editor.position,
         )
 
+    def refresh(self):
+        """Force an immediate re-render of this tab's content."""
+        self._check_in_thread(True)
+
     # ------------------------------------------------------------------
     # Signal handlers
     # ------------------------------------------------------------------
@@ -234,23 +238,23 @@ class DocumentPage(Gtk.Box):
     # Refresh loop
     # ------------------------------------------------------------------
 
-    def check_in_thread(self, force=False):
+    def _check_in_thread(self, force=False):
         """Periodic refresh dispatcher for this tab."""
         if not self.running:
             return False
         if self.editor_type == EditorType.VIM:
             threading.Thread(
-                target=self.refresh_from_vim,
+                target=self._refresh_from_vim,
                 args=(force,),
                 daemon=True,
             ).start()
         elif self.editor_type == EditorType.SOURCE:
-            GLib.idle_add(self.refresh_from_source, force)
+            GLib.idle_add(self._refresh_from_source, force)
         else:
-            GLib.idle_add(self.refresh_from_file, force)
+            GLib.idle_add(self._refresh_from_file, force)
         return False
 
-    def refresh_from_source(self, force=False):
+    def _refresh_from_source(self, force=False):
         """Refresh the renderer from the SourceView buffer."""
         try:
             last_changes = self.editor.changes
@@ -264,11 +268,11 @@ class DocumentPage(Gtk.Box):
                     self.editor.file_path,
                     self.editor.position,
                 )
-            GLib.timeout_add(100, self.check_in_thread)
+            GLib.timeout_add(100, self._check_in_thread)
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
 
-    def refresh_from_vim(self, force=False):
+    def _refresh_from_vim(self, force=False):
         """Refresh the renderer from the Vim buffer (background thread)."""
         another_file = False
         try:
@@ -294,11 +298,11 @@ class DocumentPage(Gtk.Box):
                     return
                 pos = self.editor.get_vim_scroll_pos(lines)
                 self.renderer.render(buff, file_path, pos)
-            GLib.timeout_add(100, self.check_in_thread)
+            GLib.timeout_add(100, self._check_in_thread)
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
 
-    def refresh_from_file(self, force=False):
+    def _refresh_from_file(self, force=False):
         """Refresh the renderer from disk (PREVIEW mode)."""
         try:
             last_changes = stat(self._preview_file).st_ctime
@@ -313,7 +317,7 @@ class DocumentPage(Gtk.Box):
                     )
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
-        GLib.timeout_add(500, self.check_in_thread)
+        GLib.timeout_add(500, self._check_in_thread)
 
     def stop(self):
         """Stop the refresh loop for this tab."""
