@@ -36,7 +36,7 @@ class SearchWay(Enum):
 
 
 class AppWindow(Adw.ApplicationWindow):
-    """Gtk.ApplicationWindow implementation."""
+    """Main application window with tabbed editor interface."""
 
     # pylint: disable = too-many-public-methods
     # pylint: disable = too-many-instance-attributes
@@ -50,14 +50,10 @@ class AppWindow(Adw.ApplicationWindow):
         file_name="",
         no_initial_tab=False,
     ):
-        """Initor.
+        """:param EditorType editor_type: SOURCE, VIM or PREVIEW.
 
-        :param EditorType editor_type:
-            One of editor type source, vim or None
-        :param str file_name:
-            File name path to open.
-        :param bool no_initial_tab:
-            Skip creating an initial tab (used for drag-receive windows).
+        :param str file_name: Path to open on startup.
+        :param bool no_initial_tab: Skip initial tab (drag-receive windows).
         """
         self.runing = True
         self.editor_type = editor_type
@@ -73,7 +69,6 @@ class AppWindow(Adw.ApplicationWindow):
         self.set_default_icon_name("formiko")
         self._setup_layout(file_name, no_initial_tab)
         self.connect("close-request", self._on_close_request)
-        GLib.timeout_add(200, self._update_active_tab_ui)
 
     def insert_action_group(self, prefix, group):
         """Override to track inserted action groups for get_action_group()."""
@@ -89,7 +84,6 @@ class AppWindow(Adw.ApplicationWindow):
         return self._action_groups.get(prefix)
 
     def _setup_actions(self):
-        """Set window actions."""
         self._register_document_actions()
         self._register_search_actions()
         self._register_view_actions()
@@ -97,7 +91,6 @@ class AppWindow(Adw.ApplicationWindow):
         self._register_json_actions()
 
     def _register_document_actions(self):
-        """Register file document actions."""
         action = Gio.SimpleAction.new("new-tab", None)
         action.connect("activate", self._on_new_tab)
         self.add_action(action)
@@ -130,7 +123,6 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _register_search_actions(self):
-        """Register find/search actions."""
         action = Gio.SimpleAction.new("find-in-document", None)
         action.connect("activate", self._on_find_in_document)
         self.add_action(action)
@@ -144,7 +136,6 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _register_view_actions(self):
-        """Register view layout and preview actions."""
         self.refresh_preview_action = Gio.SimpleAction.new(
             "refresh-preview",
             None,
@@ -199,7 +190,6 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _register_renderer_actions(self):
-        """Register renderer parser and style actions."""
         pref = self.preferences
         self._create_stateful_action(
             "change-writer",
@@ -226,7 +216,6 @@ class AppWindow(Adw.ApplicationWindow):
         )
 
     def _register_json_actions(self):
-        """Register JSON fold/expand actions."""
         action = Gio.SimpleAction.new("json-expand-all", None)
         action.connect(
             "activate",
@@ -244,7 +233,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _create_stateful_action(self, name, _type, default_value, method):
-        """Support method for creating stateful action."""
+        """Create a stateful GSimpleAction with the given variant type."""
         action = Gio.SimpleAction.new_stateful(
             name,
             GLib.VariantType.new(_type),
@@ -254,7 +243,6 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _create_toggle_action(self, name, default_value, method):
-        """Create boolean toggle action (no parameter type, activate-based)."""
         action = Gio.SimpleAction.new_stateful(
             name,
             None,
@@ -275,7 +263,6 @@ class AppWindow(Adw.ApplicationWindow):
 
     def open_document(self, file_path):
         """Open *file_path* in an existing tab or create a new one."""
-        # Check all tabs in every window for an already-open copy
         for window in self.get_application().get_windows():
             if not isinstance(window, AppWindow):
                 continue
@@ -289,11 +276,10 @@ class AppWindow(Adw.ApplicationWindow):
                         window.tab_view.set_selected_page(page)
                     return
 
-        # No existing tab - open in a new tab in this window
         self.new_tab(file_path)
 
     def on_open_document(self, actions, *params):
-        """'open-document' action handler."""
+        """Open the file-chooser dialog."""
         filters, default_filter = build_open_filters()
         open_file_dialog(
             self,
@@ -304,13 +290,11 @@ class AppWindow(Adw.ApplicationWindow):
         )
 
     def _on_save_document(self, action, *params):
-        """'save-document' action handler."""
         page = self.active_page
         if page and page.editor_type == EditorType.SOURCE:
             page.editor.save()
 
     def _on_save_document_as(self, action, *params):
-        """'save-document-as' action handler."""
         page = self.active_page
         if page and page.editor_type == EditorType.SOURCE:
             page.editor.save_as()
@@ -350,7 +334,6 @@ class AppWindow(Adw.ApplicationWindow):
             output.write(renderer.render_output()[1].strip())
 
     def _on_print_document(self, action, *params):
-        """'print-document' action handler."""
         page = self.active_page
         if page:
             page.renderer.print_page()
@@ -697,7 +680,6 @@ class AppWindow(Adw.ApplicationWindow):
                     and doc.editor_type == EditorType.SOURCE
                 ):
                     doc.editor.save()
-        # Stop all tab refresh loops
         self.runing = False
         for doc in self._iter_doc_pages():
             doc.stop()
@@ -725,7 +707,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.destroy()
 
     def save_win_state(self):
-        """Save window state to cache."""
+        """Persist window geometry and paned position to cache."""
         self.cache.width = self.get_width()
         self.cache.height = self.get_height()
         page = self.active_page
@@ -754,8 +736,50 @@ class AppWindow(Adw.ApplicationWindow):
         self._window_title.set_subtitle(subtitle)
         self.set_title(wm_title)
 
+    @staticmethod
+    def doc_starred_name(doc):
+        """Return tab display name for *doc*, prefixed with '*' if modified."""
+        star = "*" if doc.is_modified else ""
+        return f"{star}{doc.file_name or NOT_SAVED_NAME}"
+
+    def _sync_tab_page_ui(self, doc):
+        """Sync the AdwTabPage title, tooltip and attention badge for *doc*."""
+        tab_page = self.get_page_for_doc(doc)
+        if not tab_page:
+            return
+        name = self.doc_starred_name(doc)
+        tab_page.set_title(name)
+        tab_page.set_needs_attention(doc.is_modified)
+        fallback = f"{doc.file_name or NOT_SAVED_NAME} (Draft)"
+        tab_page.set_tooltip(doc.file_path or fallback)
+
+    def _sync_active_window_ui(self, doc):
+        """Sync window title, save action and status bar for the active tab."""
+        self._update_title(doc.file_name, doc.file_path, doc.is_modified)
+        action = self.lookup_action("save-document")
+        if action:
+            action.set_enabled(
+                doc.editor_type == EditorType.SOURCE and doc.is_modified,
+            )
+        if (
+            hasattr(self, "status_bar")
+            and doc.editor_type == EditorType.SOURCE
+        ):
+            self.status_bar.set_words_count(doc.words_count)
+            self.status_bar.set_chars_count(doc.chars_count)
+
+    def _on_doc_state_changed(self, doc):
+        """Update tab UI and window title on name/modified state change."""
+        self._sync_tab_page_ui(doc)
+        if doc is self.active_page:
+            self._sync_active_window_ui(doc)
+
+    def _on_doc_words_changed(self, doc, words, chars):
+        if doc is self.active_page and hasattr(self, "status_bar"):
+            self.status_bar.set_words_count(words)
+            self.status_bar.set_chars_count(chars)
+
     def _create_headerbar(self):
-        """Create main window header bar."""
         headerbar = Adw.HeaderBar()
         self._window_title = Adw.WindowTitle()
         headerbar.set_title_widget(self._window_title)
@@ -764,7 +788,6 @@ class AppWindow(Adw.ApplicationWindow):
         return headerbar
 
     def _headerbar_pack_start(self, headerbar):
-        """Pack left-side buttons into the header bar."""
         if self.editor_type != EditorType.PREVIEW:
             sidebar_btn = Gtk.ToggleButton(
                 icon_name="sidebar-show-symbolic",
@@ -922,10 +945,9 @@ class AppWindow(Adw.ApplicationWindow):
         return btn_box
 
     def _setup_layout(self, file_name, no_initial_tab=False):
-        """Create and fill window layout with TabView."""
+        """Create and wire up the window layout."""
         self.set_default_size(self.cache.width, self.cache.height)
 
-        # --- Tab infrastructure ---
         self.tab_view = Adw.TabView()
         self.tab_view.connect("notify::selected-page", self._on_tab_switched)
         self.tab_view.connect("close-page", self._on_close_page)
@@ -935,7 +957,6 @@ class AppWindow(Adw.ApplicationWindow):
         tab_bar.set_view(self.tab_view)
         tab_bar.set_autohide(True)
 
-        # --- ToolbarView ---
         toolbar_view = Adw.ToolbarView()
         toolbar_view.add_top_bar(self._create_headerbar())
         toolbar_view.add_top_bar(tab_bar)
@@ -944,12 +965,10 @@ class AppWindow(Adw.ApplicationWindow):
             self.status_bar = Statusbar(self.preferences.editor)
             toolbar_view.add_bottom_bar(self.status_bar)
 
-        # --- Overlay (search bar floats on top) ---
         overlay = Gtk.Overlay()
         overlay.set_vexpand(True)
         self._create_search_bar(overlay)
 
-        # --- File browser sidebar (non-PREVIEW modes) ---
         if self.editor_type != EditorType.PREVIEW:
             self.file_browser = FileBrowser()
             self.file_browser.connect(
@@ -971,7 +990,6 @@ class AppWindow(Adw.ApplicationWindow):
 
         toolbar_view.set_content(overlay)
 
-        # --- TabOverview wraps everything ---
         self.tab_overview = Adw.TabOverview()
         self.tab_overview.set_view(self.tab_view)
         self.tab_overview.set_child(toolbar_view)
@@ -984,7 +1002,6 @@ class AppWindow(Adw.ApplicationWindow):
         if self.cache.is_maximized:
             self.maximize()
 
-        # Create the initial tab (unless this window is for drag-receive)
         if not no_initial_tab:
             self.new_tab(file_name)
 
@@ -1040,13 +1057,10 @@ class AppWindow(Adw.ApplicationWindow):
     def new_tab(self, file_name=""):
         """Open *file_name* (or an empty document) in a new tab.
 
-        If *file_name* is given and the currently active tab is an empty,
-        unmodified document, the file is loaded into that tab instead of
-        opening a new one.
-
-        Returns the :class:`Adw.TabPage` for the tab.
+        If the active tab is an empty, unmodified document, the file is loaded
+        into it instead of opening a new tab.
+        Returns the :class:`Adw.TabPage`.
         """
-        # Reuse the active tab when it is empty and unmodified
         if file_name:
             active = self.active_page
             if (
@@ -1056,11 +1070,7 @@ class AppWindow(Adw.ApplicationWindow):
                 and not active.is_modified
             ):
                 page = self.tab_view.get_page(active)
-                page.set_title(basename(file_name))
                 active.load_file(file_name)
-                self._update_title(
-                    active.file_name, active.file_path, active.is_modified,
-                )
                 return page
 
         # Sync cache.paned from active tab so new tab inherits current split
@@ -1072,15 +1082,15 @@ class AppWindow(Adw.ApplicationWindow):
         page = self.tab_view.append(doc)
         page.set_title(title)
         page.set_icon(Gio.ThemedIcon.new("text-x-generic-symbolic"))
+        doc.connect("doc-state-changed", self._on_doc_state_changed)
+        doc.connect("words-count-changed", self._on_doc_words_changed)
         self.tab_view.set_selected_page(page)
         return page
 
     def _on_new_tab(self, action, *params):
-        """'new-tab' action handler."""
         self.new_tab()
 
     def _on_show_tabs_overview(self, action, *params):
-        """'show-tabs-overview' action handler."""
         self.tab_overview.set_open(not self.tab_overview.get_open())
 
     def _on_tab_overview_create_tab(self, _overview):
@@ -1089,7 +1099,7 @@ class AppWindow(Adw.ApplicationWindow):
 
     @property
     def active_page(self):
-        """Return the active :class:`DocumentPage`, or ``None``."""
+        """Active :class:`DocumentPage`, or ``None``."""
         tab_page = self.tab_view.get_selected_page()
         return tab_page.get_child() if tab_page else None
 
@@ -1131,75 +1141,29 @@ class AppWindow(Adw.ApplicationWindow):
             doc.paned.set_position(prev.paned.get_position())
         self._last_active_doc = doc
 
-        # Register per-tab action groups on the window
         if hasattr(doc, "fmt_actions"):
             self.insert_action_group("fmt", doc.fmt_actions)
         if hasattr(doc, "editor_actions"):
             self.insert_action_group("editor", doc.editor_actions)
 
-        # Update window title
-        self._update_title(doc.file_name, doc.file_path, doc.is_modified)
+        self._sync_active_window_ui(doc)
 
-        # Sync the change-parser action state to the new tab's parser
         parser = doc.parser
         action = self.lookup_action("change-parser")
         if action:
             action.set_state(GLib.Variant("s", parser))
         self._apply_parser_ui(parser)
 
-        # Reset paned to 50/50 if orientation changed since this tab was shown
         if doc in self._tabs_needing_paned_reset:
             GLib.timeout_add(50, self._reset_active_paned)
 
-        # Update file browser to show the new tab's directory
         if hasattr(self, "file_browser") and doc.file_path:
             directory = dirname(doc.file_path)
             if directory:
                 self.file_browser.set_directory(directory)
 
-        # Close the search bar to avoid confusion between tabs
         if hasattr(self, "search") and self.search.get_search_mode():
             self.search.set_search_mode(False)
-
-    def _update_active_tab_ui(self):
-        """100 ms timer: sync window title and status bar from active tab."""
-        if not self.runing:
-            return False
-        page = self.active_page
-        if page:
-            modified = page.is_modified
-            self._update_title(page.file_name, page.file_path, modified)
-
-            # Update the TabPage title, tooltip and attention indicator
-            tab_page = self.tab_view.get_selected_page()
-            if tab_page:
-                star = "*" if modified else ""
-                name = page.file_name or NOT_SAVED_NAME
-                tab_page.set_title(f"{star}{name}")
-                tab_page.set_needs_attention(modified)
-                if page.file_path:
-                    tab_page.set_tooltip(page.file_path)
-                else:
-                    tab_page.set_tooltip(f"{name} (Draft)")
-
-            # Update Save action enabled state
-            action = self.lookup_action("save-document")
-            if action:
-                action.set_enabled(
-                    page.editor_type == EditorType.SOURCE and modified,
-                )
-
-            # Update status bar for SOURCE tabs
-            if (
-                hasattr(self, "status_bar")
-                and page.editor_type == EditorType.SOURCE
-            ):
-                # pylint: disable=protected-access
-                self.status_bar.set_words_count(page.words_count)
-                self.status_bar.set_chars_count(page.chars_count)
-
-        GLib.timeout_add(100, self._update_active_tab_ui)
-        return False
 
     def _on_close_page(self, tab_view, page):
         """Handle 'close-page' signal with optional save confirmation."""
@@ -1245,8 +1209,8 @@ class AppWindow(Adw.ApplicationWindow):
         return win.tab_view
 
     # ------------------------------------------------------------------
-    # Old refresh methods removed; refresh lives in DocumentPage.
-    # Window-level _update_active_tab_ui() is the only timer here.
+    # Old refresh methods removed; refresh and title updates are now
+    # driven by DocumentPage signals (doc-state-changed, words-count-changed).
     # ------------------------------------------------------------------
 
     @property

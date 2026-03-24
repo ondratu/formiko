@@ -7,7 +7,7 @@ from os.path import basename, dirname, splitext
 from traceback import print_exc
 
 from gi import get_required_version
-from gi.repository import GLib, Gtk
+from gi.repository import GLib, GObject, Gtk
 
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
@@ -15,6 +15,7 @@ from formiko.formatting_actions import FormattingActionGroup
 from formiko.renderer import EXTS, Renderer
 from formiko.sourceview import SourceView
 from formiko.user import UserPreferences, View
+from formiko.widgets import ImutableDict
 
 if get_required_version("Vte"):
     from formiko.vim import VimEditor
@@ -24,12 +25,16 @@ RE_CHAR = re.compile(r'[\w \t\.,\?\(\)"\']', re.U)
 
 
 class DocumentPage(Gtk.Box):
-    """Per-tab widget containing editor, renderer and per-file state.
+    """Per-tab widget: editor + renderer + per-file state."""
 
-    One instance is created for each open tab.  Global (per-window) settings
-    such as writer, style and view mode are read from *window.preferences* at
-    creation time; only *parser* is stored per-tab.
-    """
+    __gsignals__ = ImutableDict({
+        # Emitted when file name/path or modified state changes.
+        "doc-state-changed": (GObject.SignalFlags.RUN_FIRST, None, ()),
+        # Emitted after each render cycle with updated word/char counts.
+        "words-count-changed": (
+            GObject.SignalFlags.RUN_FIRST, None, (int, int),
+        ),
+    })
 
     def __init__(self, window, editor_type: EditorType, file_name=""):
         super().__init__(
@@ -62,12 +67,7 @@ class DocumentPage(Gtk.Box):
 
         GLib.timeout_add(200, self._check_in_thread)
 
-    # ------------------------------------------------------------------
-    # Construction helpers
-    # ------------------------------------------------------------------
-
     def _create_renderer(self):
-        """Create a Renderer instance using global window writer/style."""
         win_prefs = self._window.preferences
         self.renderer = Renderer(
             self._window,
@@ -81,13 +81,11 @@ class DocumentPage(Gtk.Box):
         self.renderer.set_tab_width(self.preferences.editor.tab_width)
 
     def _create_editor_layout(self, file_name):
-        """Create editor, action groups and paned layout."""
         ext = splitext(file_name)[1] if file_name else ""
         initial_parser = EXTS.get(ext, self.preferences.parser)
         self.preferences.parser = initial_parser
         self.renderer.set_parser(initial_parser)
 
-        # Editor widget
         if self.editor_type == EditorType.VIM:
             self.editor = VimEditor(self._window, file_name)
         else:
@@ -115,11 +113,14 @@ class DocumentPage(Gtk.Box):
 
         self.editor.connect("file-type", self._on_file_type)
         self.editor.connect("scroll-changed", self._on_scroll_changed)
+        if self.editor_type == EditorType.SOURCE:
+            self.editor.text_buffer.connect(
+                "modified-changed", self._on_modified_changed,
+            )
 
         if file_name:
             self.editor.read_from_file(file_name)
 
-        # Paned layout
         win_cache = self._window.cache
         self.paned = Gtk.Paned(
             orientation=self._window.preferences.preview,
@@ -134,7 +135,6 @@ class DocumentPage(Gtk.Box):
         self.paned.set_resize_end_child(True)
         self.paned.set_shrink_end_child(False)
 
-        # Apply current global view mode
         view = self._window.cache.view
         if view == View.EDITOR:
             self.renderer.set_visible(False)
@@ -144,12 +144,7 @@ class DocumentPage(Gtk.Box):
         self.append(self.paned)
 
     def load_file(self, file_name):
-        """Load *file_name* into this (empty, unmodified) document tab.
-
-        Reads the file into the editor; parser and UI are updated via the
-        'file-type' signal that :meth:`editor.read_from_file` emits.
-        Only valid for non-PREVIEW tabs.
-        """
+        """Load *file_name* into this empty, unmodified tab."""
         self.editor.read_from_file(file_name)
         self._last_changes = self.editor.changes
         # read_from_file emits 'file-type' synchronously (before set_text),
@@ -165,15 +160,10 @@ class DocumentPage(Gtk.Box):
         self._chars_count = sum(1 for _ in RE_CHAR.finditer(text))
 
     def refresh(self):
-        """Force an immediate re-render of this tab's content."""
+        """Force an immediate re-render."""
         self._check_in_thread(True)
 
-    # ------------------------------------------------------------------
-    # Signal handlers
-    # ------------------------------------------------------------------
-
     def _on_file_type(self, _widget, ext):
-        """Handle 'file-type' signal from the editor."""
         parser = EXTS.get(ext, self.preferences.parser)
         self.preferences.parser = parser
         self.renderer.set_parser(parser)
@@ -183,65 +173,58 @@ class DocumentPage(Gtk.Box):
             self.editor.set_list_features_enabled(
                 parser in ("rst", "md", "m2r"),
             )
-        # Update file browser in the parent window
         if hasattr(self._window, "file_browser") and self.file_path:
             directory = dirname(self.file_path)
             if directory:
                 self._window.file_browser.set_directory(directory)
-        # Update window-level UI if we are the active tab
         self._window.on_active_tab_parser_changed(self, parser)
+        self.emit("doc-state-changed")
+
+    def _on_modified_changed(self, _buf):
+        self.emit("doc-state-changed")
 
     def _on_scroll_changed(self, _widget, position):
-        """Handle 'scroll-changed' signal for auto-scroll sync."""
         if self._window.preferences.auto_scroll:
             self.renderer.scroll_to_position(position)
 
-    # ------------------------------------------------------------------
-    # Properties
-    # ------------------------------------------------------------------
-
     @property
     def words_count(self):
-        """Return current word count (updated by refresh loop)."""
+        """Word count, updated each render cycle."""
         return self._words_count
 
     @property
     def chars_count(self):
-        """Return current character count (updated by refresh loop)."""
+        """Character count, updated each render cycle."""
         return self._chars_count
 
     @property
     def file_path(self):
-        """Return the opened file path."""
+        """Opened file path, or the preview file path."""
         if self.editor_type != EditorType.PREVIEW:
             return self.editor.file_path
         return self._preview_file
 
     @property
     def file_name(self):
-        """Return the opened file name (basename)."""
+        """Basename of the opened file."""
         if self.editor_type != EditorType.PREVIEW:
             return self.editor.file_name
         return basename(self._preview_file) if self._preview_file else ""
 
     @property
     def is_modified(self):
-        """Return True when the document has unsaved changes."""
+        """True when the document has unsaved changes."""
         if self.editor_type != EditorType.PREVIEW:
             return self.editor.is_modified
         return False
 
     @property
     def parser(self):
-        """Return the current parser name."""
+        """Current parser name."""
         return self.preferences.parser
 
-    # ------------------------------------------------------------------
-    # Refresh loop
-    # ------------------------------------------------------------------
-
     def _check_in_thread(self, force=False):
-        """Periodic refresh dispatcher for this tab."""
+        """Periodic refresh dispatcher."""
         if not self.running:
             return False
         if self.editor_type == EditorType.VIM:
@@ -270,6 +253,11 @@ class DocumentPage(Gtk.Box):
                     self.editor.file_path,
                     self.editor.position,
                 )
+                self.emit(
+                    "words-count-changed",
+                    self._words_count,
+                    self._chars_count,
+                )
             GLib.timeout_add(100, self._check_in_thread)
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
@@ -285,6 +273,7 @@ class DocumentPage(Gtk.Box):
             if file_name != self._vim_title:
                 self._vim_title = file_name
                 another_file = True
+                GLib.idle_add(self.emit, "doc-state-changed")
             if not self.running:
                 return
             last_changes = self.editor.get_vim_changes()
@@ -322,5 +311,5 @@ class DocumentPage(Gtk.Box):
         GLib.timeout_add(500, self._check_in_thread)
 
     def stop(self):
-        """Stop the refresh loop for this tab."""
+        """Stop the refresh loop."""
         self.running = False
