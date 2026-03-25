@@ -388,9 +388,14 @@ class AppWindow(Adw.ApplicationWindow):
             if doc.paned:
                 doc.paned.set_orientation(orientation)
                 self._tabs_needing_paned_reset.add(doc)
+        # Workaround for https://gitlab.gnome.org/GNOME/gtk/issues/1959 -
+        # set_orientation() calls queue_resize(), which schedules a layout
+        # pass via the GDK frame clock (next vsync, ~16 ms at 60 Hz).
+        # idle_add fires before that frame clock tick, so get_width() would
+        # still return the old size; the 20 ms timeout waits past one frame.
         GLib.idle_add(
             lambda: GLib.timeout_add(
-                100, self._reset_active_paned,
+                20, self._reset_active_paned,
             ) and False,
         )
 
@@ -1155,7 +1160,8 @@ class AppWindow(Adw.ApplicationWindow):
         self._apply_parser_ui(parser)
 
         if doc in self._tabs_needing_paned_reset:
-            GLib.timeout_add(50, self._reset_active_paned)
+            # Same GTK#1959 workaround: defer set_position until after layout.
+            GLib.timeout_add(20, self._reset_active_paned)
 
         if hasattr(self, "file_browser") and doc.file_path:
             directory = dirname(doc.file_path)
