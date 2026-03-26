@@ -99,6 +99,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
 
         self.set_hexpand(True)
         self.set_vexpand(True)
+
         self.text_buffer = Buffer.new_with_language(
             LANG_BY_EXT["." + preferences.parser],
         )
@@ -127,20 +128,34 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         except Exception:  # noqa: S110
             pass  # schema not available (non-GNOME desktop)
 
-        self.set_child(self.source_view)
+        # Apply source_view properties BEFORE set_child() to avoid triggering
+        # an extra GTK4 LAYOUT cycle after the widget is inserted into the tree.
+        # Setting these after set_child() causes the GTK4 alloc_needed deadlock
+        # when GtkSource's syntax engine calls queue_resize during LAYOUT.
+        editor_pref = preferences.editor
+        self.set_spaces_instead_of_tabs(editor_pref.spaces_instead_of_tabs)
+        self.source_view.set_tab_width(editor_pref.tab_width)
+        self.source_view.set_auto_indent(editor_pref.auto_indent)
+        self.source_view.set_show_line_numbers(editor_pref.line_numbers)
+        self.source_view.set_right_margin_position(
+            editor_pref.right_margin_value,
+        )
+        self.source_view.set_show_right_margin(editor_pref.right_margin)
+        self.source_view.set_highlight_current_line(editor_pref.current_line)
+        self.set_text_wrapping(editor_pref.text_wrapping)
+        self.set_white_chars(editor_pref.white_chars)
+        self._auto_bullet_pref = editor_pref.auto_bullet
+        self._tab_indent_pref = editor_pref.tab_indent_bullet
 
-        # Follow Adwaita dark/light mode for syntax highlighting scheme
+        # Apply color scheme to the buffer before inserting into the widget tree.
+        # text_buffer.set_style_scheme() does not need a realized widget, and
+        # applying it after set_child() can trigger queue_resize on the view.
         self._apply_color_scheme(self._is_dark())
-        Adw.StyleManager.get_default().connect(
-            "notify::dark",
-            self.on_style_scheme_changed,
-        )
-        Gtk.Settings.get_default().connect(
-            "notify::gtk-theme-name",
-            self.on_style_scheme_changed,
-        )
 
-        # Initialize spell checker
+        # Initialize spell checker before set_child() — TextBufferAdapter, action
+        # groups, and extra menus all operate on the buffer or view object itself
+        # (no widget tree needed), so initialising them here avoids triggering
+        # an extra LAYOUT cycle after the view enters the tree.
         self.spell_adapter = None
         self.checker = None
         if _SPELLING_AVAILABLE:
@@ -157,34 +172,17 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             self.source_view.set_extra_menu(
                 self.spell_adapter.get_menu_model(),
             )
-            # Connect to checker (not adapter) — context menu's language action
-            # calls spelling_checker_set_language() directly, bypassing the
-            # adapter's own notify::language signal.
             self.checker.connect(
                 "notify::language",
                 self.on_language_changed,
             )
 
-        editor_pref = preferences.editor
-        self.set_period_save(editor_pref.period_save)
         self.set_check_spelling(
             editor_pref.check_spelling,
             editor_pref.spell_lang,
         )
-        self.set_spaces_instead_of_tabs(editor_pref.spaces_instead_of_tabs)
-        self.source_view.set_tab_width(editor_pref.tab_width)
-        self.source_view.set_auto_indent(editor_pref.auto_indent)
-        self.source_view.set_show_line_numbers(editor_pref.line_numbers)
-        self.source_view.set_right_margin_position(
-            editor_pref.right_margin_value,
-        )
-        self.source_view.set_show_right_margin(editor_pref.right_margin)
-        self.source_view.set_highlight_current_line(editor_pref.current_line)
-        self.set_text_wrapping(editor_pref.text_wrapping)
-        self.set_white_chars(editor_pref.white_chars)
-        self._auto_bullet_pref = editor_pref.auto_bullet
-        self._tab_indent_pref = editor_pref.tab_indent_bullet
 
+        # SearchContext operates on the buffer, not the widget tree.
         self.search_settings = SearchSettings(wrap_around=True)
         self.search_context = SearchContext.new(
             self.text_buffer,
@@ -192,7 +190,20 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         )
         self.search_mark = None
 
+        self.set_child(self.source_view)
+
+        # Follow Adwaita dark/light mode for syntax highlighting scheme
+        Adw.StyleManager.get_default().connect(
+            "notify::dark",
+            self.on_style_scheme_changed,
+        )
+        Gtk.Settings.get_default().connect(
+            "notify::gtk-theme-name",
+            self.on_style_scheme_changed,
+        )
+
         self.__win = win
+        self.set_period_save(editor_pref.period_save)
         timeout_add(200, self.check_in_thread)
 
     @property
