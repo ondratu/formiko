@@ -4,6 +4,7 @@ from io import StringIO
 from json import dumps
 from os.path import exists, splitext
 from traceback import format_exc
+from urllib.parse import unquote
 
 from docutils import DataError
 from docutils.core import publish_string
@@ -435,8 +436,8 @@ class Renderer(Overlay):
         decision.ignore()
         if uri.startswith("file://"):
             parts = uri[7:].split("#", 1)
-            file_path = parts[0]
-            anchor = parts[1] if len(parts) > 1 else None
+            file_path = unquote(parts[0])
+            anchor = unquote(parts[1]) if len(parts) > 1 else None
             if anchor and file_path == self.file_name:
                 self.scroll_to_anchor(anchor)
             else:
