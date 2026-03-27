@@ -58,6 +58,10 @@ class TabLabel(Gtk.Box):
         """Update the displayed tab title."""
         self._label.set_label(title)
 
+    def set_tooltip(self, text):
+        """Set tooltip on the inner label (works on all tabs)."""
+        self._label.set_tooltip_text(text)
+
     def set_needs_attention(self, needs):
         """Highlight label when the document has unsaved changes."""
         if needs:
@@ -793,7 +797,7 @@ class AppWindow(Adw.ApplicationWindow):
         tab_label.set_title(name)
         tab_label.set_needs_attention(doc.is_modified)
         fallback = f"{doc.file_name or NOT_SAVED_NAME} (Draft)"
-        tab_label.set_tooltip_text(doc.file_path or fallback)
+        tab_label.set_tooltip(doc.file_path or fallback)
 
     def _sync_active_window_ui(self, doc):
         """Sync window title, save action and status bar for the active tab."""
@@ -1106,6 +1110,7 @@ class AppWindow(Adw.ApplicationWindow):
         tab_label = TabLabel(
             title, lambda _btn, d=doc: self._request_close_doc(d),
         )
+        tab_label.set_tooltip(file_name or NOT_SAVED_NAME)
         self._tab_labels[doc] = tab_label
         doc.connect("doc-state-changed", self._on_doc_state_changed)
         doc.connect("words-count-changed", self._on_doc_words_changed)
