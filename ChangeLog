@@ -19,13 +19,13 @@ Version 2.0.0b2
   * Inherit source file extension when opening extension-less links to
     non-existent files (e.g. link from ``doc.md`` to ``page`` creates
     ``page.md`` instead of ``page``)
-  * Tab support (Adw.TabView / TabBar / TabOverview):
+  * Tab support (Gtk.Notebook):
     * Each open file lives in its own tab within a single window
-    * Open new tab via Ctrl+T or the tab bar "+" button
-    * Close tab via Ctrl+W; last tab closes the window
+    * Open new tab via Ctrl+T
+    * Close tab via Ctrl+W or the tab close button; last tab closes the window
     * Navigate tabs with Ctrl+Tab / Ctrl+Shift+Tab and
       Ctrl+Page_Down / Ctrl+Page_Up
-    * Show all tabs overview via Ctrl+Shift+O
+    * Tab bar is auto-hidden when only one tab is open
     * Opening a file into an empty unmodified tab reuses it instead of
       adding a new tab
     * Files already open in a tab are activated instead of reopened

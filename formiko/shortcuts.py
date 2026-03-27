@@ -126,12 +126,6 @@ class TabsGroup(ShortcutsGroup):
         )
         self.append(
             ShortcutsShortcut(
-                accelerator="<Shift><Control>o",
-                title="Show Tabs Overview",
-            ),
-        )
-        self.append(
-            ShortcutsShortcut(
                 accelerator="<Control>Tab <Control>Page_Down",
                 title="Switch to Next Tab",
             ),

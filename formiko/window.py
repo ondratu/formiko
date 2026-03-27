@@ -3,7 +3,7 @@
 from enum import Enum
 from os.path import basename, dirname, expanduser, splitext
 
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk, Pango
 
 from formiko.dialogs import (
     UnsavedChangesDialog,
@@ -35,14 +35,43 @@ class SearchWay(Enum):
     PREVIOUS = 1
 
 
+class TabLabel(Gtk.Box):
+    """Tab label widget with title and close button for Gtk.Notebook."""
+
+    def __init__(self, title, on_close):
+        super().__init__(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        self._label = Gtk.Label(label=title)
+        self._label.set_hexpand(True)
+        self._label.set_ellipsize(Pango.EllipsizeMode.END)
+        self._label.set_width_chars(8)
+        self._label.set_max_width_chars(30)
+        close_btn = Gtk.Button()
+        close_btn.set_icon_name("window-close-symbolic")
+        close_btn.add_css_class("flat")
+        close_btn.add_css_class("circular")
+        close_btn.set_focus_on_click(False)
+        close_btn.connect("clicked", on_close)
+        self.append(self._label)
+        self.append(close_btn)
+
+    def set_title(self, title):
+        """Update the displayed tab title."""
+        self._label.set_label(title)
+
+    def set_needs_attention(self, needs):
+        """Highlight label when the document has unsaved changes."""
+        if needs:
+            self._label.add_css_class("accent")
+        else:
+            self._label.remove_css_class("accent")
+
+
 class AppWindow(Adw.ApplicationWindow):
     """Main application window with tabbed editor interface."""
 
     # pylint: disable = too-many-public-methods
     # pylint: disable = too-many-instance-attributes
     # pylint: disable = unused-argument
-
-    tab_view: Adw.TabView
 
     def __init__(
         self,
@@ -64,6 +93,7 @@ class AppWindow(Adw.ApplicationWindow):
         self._action_groups = {}
         self._tabs_needing_paned_reset: set = set()
         self._last_active_doc = None
+        self._tab_labels: dict = {}
         super().__init__()
         self._setup_actions()
         self.set_default_icon_name("formiko")
@@ -120,6 +150,14 @@ class AppWindow(Adw.ApplicationWindow):
 
         action = Gio.SimpleAction.new("close-window", None)
         action.connect("activate", self._on_close_window)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("next-tab", None)
+        action.connect("activate", self._on_next_tab)
+        self.add_action(action)
+
+        action = Gio.SimpleAction.new("prev-tab", None)
+        action.connect("activate", self._on_prev_tab)
         self.add_action(action)
 
     def _register_search_actions(self):
@@ -185,10 +223,6 @@ class AppWindow(Adw.ApplicationWindow):
                 self._on_toggle_sidebar,
             )
 
-        action = Gio.SimpleAction.new("show-tabs-overview", None)
-        action.connect("activate", self._on_show_tabs_overview)
-        self.add_action(action)
-
     def _register_renderer_actions(self):
         pref = self.preferences
         self._create_stateful_action(
@@ -253,10 +287,11 @@ class AppWindow(Adw.ApplicationWindow):
 
     def _on_close_window(self, action, *params):
         """'close-window' action handler: close active tab or whole window."""
-        if self.tab_view.get_n_pages() > 1:
-            page = self.tab_view.get_selected_page()
-            if page:
-                self.tab_view.close_page(page)
+        if self.notebook.get_n_pages() > 1:
+            n = self.notebook.get_current_page()
+            if n >= 0:
+                doc = self.notebook.get_nth_page(n)
+                self._request_close_doc(doc)
         elif self.ask_if_modified():
             self.save_win_state()
             self.destroy()
@@ -266,14 +301,14 @@ class AppWindow(Adw.ApplicationWindow):
         for window in self.get_application().get_windows():
             if not isinstance(window, AppWindow):
                 continue
-            if not window.tab_view:
+            if not window.notebook:
                 continue
             for doc in window.iter_doc_pages():
                 if file_path == doc.file_path:
                     window.present()
-                    page = window.get_page_for_doc(doc)
-                    if page:
-                        window.tab_view.set_selected_page(page)
+                    window.notebook.set_current_page(
+                        window.notebook.page_num(doc),
+                    )
                     return
 
         self.new_tab(file_path)
@@ -673,9 +708,9 @@ class AppWindow(Adw.ApplicationWindow):
             if doc.editor_type == EditorType.PREVIEW:
                 continue
             if doc.is_modified:
-                page = self.get_page_for_doc(doc)
-                if page:
-                    self.tab_view.set_selected_page(page)
+                n = self.notebook.page_num(doc)
+                if n >= 0:
+                    self.notebook.set_current_page(n)
                 dialog = UnsavedChangesDialog(doc.file_name)
                 response = run_alert_dialog(dialog, self)
                 if response == "cancel":
@@ -695,18 +730,20 @@ class AppWindow(Adw.ApplicationWindow):
     def destroy_from_vim(self, vim_widget=None, *args):
         """Close the tab whose VimEditor exited."""
         self.runing = False
-        for doc in self._iter_doc_pages():
+        for doc in list(self.iter_doc_pages()):
             if doc.editor_type == EditorType.VIM and (
                 vim_widget is None or doc.editor is vim_widget
             ):
                 doc.stop()
-                page = self.get_page_for_doc(doc)
-                if page:
-                    if self.tab_view.get_n_pages() <= 1:
-                        self.save_win_state()
-                        self.destroy()
-                    else:
-                        self.tab_view.close_page_finish(page, True)
+                if self.notebook.get_n_pages() <= 1:
+                    self.save_win_state()
+                    self.destroy()
+                else:
+                    n = self.notebook.page_num(doc)
+                    if n >= 0:
+                        self._tab_labels.pop(doc, None)
+                        self.notebook.remove_page(n)
+                        self._update_tab_bar_visibility()
                 return
         self.save_win_state()
         self.destroy()
@@ -748,15 +785,15 @@ class AppWindow(Adw.ApplicationWindow):
         return f"{star}{doc.file_name or NOT_SAVED_NAME}"
 
     def _sync_tab_page_ui(self, doc):
-        """Sync the AdwTabPage title, tooltip and attention badge for *doc*."""
-        tab_page = self.get_page_for_doc(doc)
-        if not tab_page:
+        """Sync the tab label title and attention highlight for *doc*."""
+        tab_label = self._tab_labels.get(doc)
+        if not tab_label:
             return
         name = self.doc_starred_name(doc)
-        tab_page.set_title(name)
-        tab_page.set_needs_attention(doc.is_modified)
+        tab_label.set_title(name)
+        tab_label.set_needs_attention(doc.is_modified)
         fallback = f"{doc.file_name or NOT_SAVED_NAME} (Draft)"
-        tab_page.set_tooltip(doc.file_path or fallback)
+        tab_label.set_tooltip_text(doc.file_path or fallback)
 
     def _sync_active_window_ui(self, doc):
         """Sync window title, save action and status bar for the active tab."""
@@ -863,14 +900,6 @@ class AppWindow(Adw.ApplicationWindow):
         if self.editor_type != EditorType.PREVIEW:
             headerbar.pack_end(self._create_view_toggle_box())
 
-        headerbar.pack_end(
-            IconButton(
-                symbol="view-grid-symbolic",
-                tooltip="Show Tabs Overview",
-                action_name="win.show-tabs-overview",
-            ),
-        )
-
     def _create_json_filter_box(self):
         """Create the JSONPath filter entry and button box."""
         self.path_entry = Gtk.SearchEntry(placeholder_text="JSONPath filter…")
@@ -953,18 +982,14 @@ class AppWindow(Adw.ApplicationWindow):
         """Create and wire up the window layout."""
         self.set_default_size(self.cache.width, self.cache.height)
 
-        self.tab_view = Adw.TabView()
-        self.tab_view.connect("notify::selected-page", self._on_tab_switched)
-        self.tab_view.connect("close-page", self._on_close_page)
-        self.tab_view.connect("create-window", self._on_create_window_for_tab)
-
-        tab_bar = Adw.TabBar()
-        tab_bar.set_view(self.tab_view)
-        tab_bar.set_autohide(True)
+        self.notebook = Gtk.Notebook()
+        self.notebook.set_scrollable(True)
+        self.notebook.set_show_border(False)
+        self.notebook.set_show_tabs(False)
+        self.notebook.connect("switch-page", self._on_tab_switched)
 
         toolbar_view = Adw.ToolbarView()
         toolbar_view.add_top_bar(self._create_headerbar())
-        toolbar_view.add_top_bar(tab_bar)
 
         if self.editor_type == EditorType.SOURCE:
             self.status_bar = Statusbar(self.preferences.editor)
@@ -984,25 +1009,17 @@ class AppWindow(Adw.ApplicationWindow):
                 collapsed=True,
                 show_sidebar=False,
                 sidebar=self.file_browser,
-                content=self.tab_view,
+                content=self.notebook,
                 sidebar_width_unit=Adw.LengthUnit.SP,
                 min_sidebar_width=220,
                 max_sidebar_width=220,
             )
             overlay.set_child(self.overlay_split)
         else:
-            overlay.set_child(self.tab_view)
+            overlay.set_child(self.notebook)
 
         toolbar_view.set_content(overlay)
-
-        self.tab_overview = Adw.TabOverview()
-        self.tab_overview.set_view(self.tab_view)
-        self.tab_overview.set_child(toolbar_view)
-        self.tab_overview.set_enable_new_tab(True)
-        self.tab_overview.connect(
-            "create-tab", self._on_tab_overview_create_tab,
-        )
-        self.set_content(self.tab_overview)
+        self.set_content(toolbar_view)
 
         if self.cache.is_maximized:
             self.maximize()
@@ -1059,12 +1076,15 @@ class AppWindow(Adw.ApplicationWindow):
     # Tab management
     # ------------------------------------------------------------------
 
+    def _update_tab_bar_visibility(self):
+        """Auto-hide the tab bar when only one tab is open."""
+        self.notebook.set_show_tabs(self.notebook.get_n_pages() > 1)
+
     def new_tab(self, file_name=""):
         """Open *file_name* (or an empty document) in a new tab.
 
         If the active tab is an empty, unmodified document, the file is loaded
         into it instead of opening a new tab.
-        Returns the :class:`Adw.TabPage`.
         """
         if file_name:
             active = self.active_page
@@ -1074,9 +1094,8 @@ class AppWindow(Adw.ApplicationWindow):
                 and not active.file_path
                 and not active.is_modified
             ):
-                page = self.tab_view.get_page(active)
                 active.load_file(file_name)
-                return page
+                return active
 
         # Sync cache.paned from active tab so new tab inherits current split
         active = self.active_page
@@ -1084,56 +1103,74 @@ class AppWindow(Adw.ApplicationWindow):
             self.cache.paned = active.paned.get_position()
         doc = DocumentPage(self, self.editor_type, file_name)
         title = basename(file_name) if file_name else NOT_SAVED_NAME
-        page = self.tab_view.append(doc)
-        page.set_title(title)
-        page.set_icon(Gio.ThemedIcon.new("text-x-generic-symbolic"))
+        tab_label = TabLabel(
+            title, lambda _btn, d=doc: self._request_close_doc(d),
+        )
+        self._tab_labels[doc] = tab_label
         doc.connect("doc-state-changed", self._on_doc_state_changed)
         doc.connect("words-count-changed", self._on_doc_words_changed)
-        self.tab_view.set_selected_page(page)
-        return page
+        scroll_ctrl = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.VERTICAL,
+        )
+        scroll_ctrl.connect("scroll", self._on_tab_label_scroll)
+        tab_label.add_controller(scroll_ctrl)
+        idx = self.notebook.append_page(doc, tab_label)
+        self.notebook.set_tab_reorderable(doc, True)
+        doc.show()
+        self.notebook.set_current_page(idx)
+        self._update_tab_bar_visibility()
+        return doc
 
     def _on_new_tab(self, action, *params):
         self.new_tab()
 
-    def _on_show_tabs_overview(self, action, *params):
-        self.tab_overview.set_open(not self.tab_overview.get_open())
+    def _on_next_tab(self, action, *params):
+        """Switch to the next tab, wrapping around at the end."""
+        n = self.notebook.get_n_pages()
+        if n > 1:
+            current = self.notebook.get_current_page()
+            self.notebook.set_current_page((current + 1) % n)
 
-    def _on_tab_overview_create_tab(self, _overview):
-        """Return a new empty tab (used by TabOverview '+' button)."""
-        return self.new_tab()
+    def _on_prev_tab(self, action, *params):
+        """Switch to the previous tab, wrapping around at the start."""
+        n = self.notebook.get_n_pages()
+        if n > 1:
+            current = self.notebook.get_current_page()
+            self.notebook.set_current_page((current - 1) % n)
+
+    def _on_tab_label_scroll(self, _ctrl, _dx, dy):
+        """Switch tab on mouse-wheel scroll over a tab label."""
+        n = self.notebook.get_n_pages()
+        if n <= 1:
+            return False
+        current = self.notebook.get_current_page()
+        if dy > 0:
+            self.notebook.set_current_page(min(current + 1, n - 1))
+        elif dy < 0:
+            self.notebook.set_current_page(max(current - 1, 0))
+        return True
 
     @property
     def active_page(self):
         """Active :class:`DocumentPage`, or ``None``."""
-        tab_page = self.tab_view.get_selected_page()
-        return tab_page.get_child() if tab_page else None
+        n = self.notebook.get_current_page()
+        return self.notebook.get_nth_page(n) if n >= 0 else None
 
     def iter_doc_pages(self):
         """Yield all :class:`DocumentPage` instances in this window."""
-        pages = self.tab_view.get_pages()
-        for i in range(pages.get_n_items()):
-            yield pages.get_item(i).get_child()
+        for i in range(self.notebook.get_n_pages()):
+            yield self.notebook.get_nth_page(i)
 
     def _iter_doc_pages(self):
         """Alias for backwards compat; prefer iter_doc_pages()."""
         yield from self.iter_doc_pages()
 
     def get_page_for_doc(self, doc):
-        """Return the :class:`Adw.TabPage` that wraps *doc*, or ``None``."""
-        pages = self.tab_view.get_pages()
-        for i in range(pages.get_n_items()):
-            page = pages.get_item(i)
-            if page.get_child() is doc:
-                return page
-        return None
+        """Return *doc* if it is an open tab in this window, else ``None``."""
+        return doc if self.notebook.page_num(doc) >= 0 else None
 
-    def _on_tab_switched(self, tab_view, _pspec):
+    def _on_tab_switched(self, notebook, doc, page_num):
         """Handle tab switch: update action groups, title, parser UI."""
-        page = tab_view.get_selected_page()
-        if not page:
-            return
-        doc = page.get_child()
-
         # Copy paned position from the previously active tab
         prev = self._last_active_doc
         if (
@@ -1171,48 +1208,33 @@ class AppWindow(Adw.ApplicationWindow):
         if hasattr(self, "search") and self.search.get_search_mode():
             self.search.set_search_mode(False)
 
-    def _on_close_page(self, tab_view, page):
-        """Handle 'close-page' signal with optional save confirmation."""
-        doc = page.get_child()
+    def _request_close_doc(self, doc):
+        """Close tab for *doc*, prompting to save if unsaved changes exist."""
         if doc.editor_type != EditorType.PREVIEW and doc.is_modified:
-            GLib.idle_add(self._confirm_close_page, tab_view, page)
-            return True  # prevent immediate close; we handle it in idle
-        self._finalize_close_page(tab_view, page)
-        return True
+            n = self.notebook.page_num(doc)
+            if n >= 0:
+                self.notebook.set_current_page(n)
+            dialog = UnsavedChangesDialog(doc.file_name)
+            response = run_alert_dialog(dialog, self)
+            if response == "cancel":
+                return
+            if response == "save" and doc.editor_type == EditorType.SOURCE:
+                doc.editor.save()
+        self._finalize_close_doc(doc)
 
-    def _confirm_close_page(self, tab_view, page):
-        """Show a save dialog and then finalise the close."""
-        self.tab_view.set_selected_page(page)
-        doc = page.get_child()
-        dialog = UnsavedChangesDialog(doc.file_name)
-        response = run_alert_dialog(dialog, self)
-        if response == "cancel":
-            tab_view.close_page_finish(page, False)
-            return False  # don't repeat the idle
-        if response == "save" and doc.editor_type == EditorType.SOURCE:
-            doc.editor.save()
-        self._finalize_close_page(tab_view, page)
-        return False  # don't repeat the idle
-
-    def _finalize_close_page(self, tab_view, page):
-        """Stop the tab's refresh loop and close it."""
-        doc = page.get_child()
+    def _finalize_close_doc(self, doc):
+        """Stop the doc's refresh loop and remove its tab."""
         doc.stop()
         if doc.editor_type == EditorType.VIM and hasattr(doc, "editor"):
             doc.editor.vim_quit()
-        tab_view.close_page_finish(page, True)
-        # Close the window when the last tab is removed
-        if tab_view.get_n_pages() == 0:
+        n = self.notebook.page_num(doc)
+        if n >= 0:
+            self._tab_labels.pop(doc, None)
+            self.notebook.remove_page(n)
+            self._update_tab_bar_visibility()
+        if self.notebook.get_n_pages() == 0:
             self.save_win_state()
             self.destroy()
-
-    def _on_create_window_for_tab(self, _tab_view):
-        """Create a new window to receive a tab dragged out of this window."""
-        app = self.get_application()
-        win = AppWindow(self.editor_type, no_initial_tab=True)
-        app.add_window(win)
-        win.present()
-        return win.tab_view
 
     # ------------------------------------------------------------------
     # Old refresh methods removed; refresh and title updates are now
