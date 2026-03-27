@@ -39,6 +39,19 @@ Version 2.0.0b2
     * Unsaved-changes dialog uses Save / Discard / Cancel (GNOME HIG)
       and activates the affected tab before showing
     * Tab keyboard shortcuts added to the Keyboard Shortcuts dialog
+  * Improve About dialog (Adw.AboutDialog):
+    * Add debug info via ``_build_debug_info()``:
+      * Flatpak detection (``/.flatpak-info``)
+      * Runtime versions of GTK, Adw, GLib, GtkSource, WebKit
+      * Python interpreter version
+      * Installed Python package versions: docutils,
+        docutils-tinyhtmlwriter, jsonpath-ng, m2r2, pynvim, Pygments
+      * All user preferences (preview, parser, writer, editor settings);
+        custom stylesheet path shown only as ``<set>``/``<not set>``
+    * Debug info exposed via Troubleshooting section with Copy / Save action
+    * Add ``issue_url`` pointing to the GitHub issue tracker, which adds
+      a "Report an Issue" button per GNOME HIG
+    * Active window preferences passed to ``about_dialog()`` from ``on_about()``
 
 Version 2.0.0b1
 

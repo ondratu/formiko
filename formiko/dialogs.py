@@ -1,10 +1,15 @@
 """Formiko dialog widgets."""
 
+import contextlib
+import sys
+from importlib import metadata
 from importlib.resources import files
 from os.path import splitext
 from traceback import print_exc
 
 from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import GtkSource as GtkSourceModule
+from gi.repository import WebKit as WebKitModule
 from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
@@ -116,7 +121,75 @@ def run_alert_dialog(dialog, parent):
     return result[0]
 
 
-def about_dialog():
+def _build_debug_info(prefs=None):
+    """Collect library and package versions for bug reports."""
+    from os.path import exists as path_exists
+
+    def gv(mod):
+        return f"{mod.MAJOR_VERSION}.{mod.MINOR_VERSION}.{mod.MICRO_VERSION}"
+
+    is_flatpak = path_exists("/.flatpak-info")
+    lines = [
+        f"Flatpak: {'yes' if is_flatpak else 'no'}",
+        "",
+        "GTK libraries:",
+        f"  GTK:       {gv(Gtk)}",
+        f"  Adw:       {gv(Adw)}",
+        f"  GLib:      {gv(GLib)}",
+        f"  GtkSource: {gv(GtkSourceModule)}",
+        f"  WebKit:    {gv(WebKitModule)}",
+        "",
+        f"Python: {sys.version.split()[0]}",
+        "",
+        "Python packages:",
+    ]
+    pkgs = (
+        "docutils",
+        "docutils-tinyhtmlwriter",
+        "jsonpath-ng",
+        "m2r2",
+        "pynvim",
+        "Pygments",
+    )
+    for pkg in pkgs:
+        with contextlib.suppress(metadata.PackageNotFoundError):
+            lines.append(f"  {pkg}: {metadata.version(pkg)}")
+    if prefs is not None:
+        e = prefs.editor
+        preview_name = (
+            "horizontal"
+            if prefs.preview == Gtk.Orientation.HORIZONTAL
+            else "vertical"
+        )
+        lines += [
+            "",
+            "Settings:",
+            f"  preview:              {preview_name}",
+            f"  auto_scroll:          {prefs.auto_scroll}",
+            f"  parser:               {prefs.parser}",
+            f"  writer:               {prefs.writer}",
+            f"  custom_style:         {prefs.custom_style}",
+            f"  style:                "
+            f"{'<set>' if prefs.style else '<not set>'}",
+            f"  period_save:          {e.period_save}",
+            f"  check_spelling:       {e.check_spelling}",
+            f"  spell_lang:           {e.spell_lang or '<default>'}",
+            f"  spaces_instead_of_tabs: {e.spaces_instead_of_tabs}",
+            f"  tab_width:            {e.tab_width}",
+            f"  auto_indent:          {e.auto_indent}",
+            f"  line_numbers:         {e.line_numbers}",
+            f"  right_margin:         {e.right_margin}",
+            f"  right_margin_value:   {e.right_margin_value}",
+            f"  current_line:         {e.current_line}",
+            f"  text_wrapping:        {e.text_wrapping}",
+            f"  white_chars:          {e.white_chars}",
+            f"  auto_bullet:          {e.auto_bullet}",
+            f"  tab_indent_bullet:    {e.tab_indent_bullet}",
+        ]
+    return "\n".join(lines)
+
+
+def about_dialog(prefs=None):
     """Create About Formiko dialog."""
     authors = load_authors()
     return Adw.AboutDialog(
@@ -130,6 +203,9 @@ def about_dialog():
         developer_name=__author__.split(" <", maxsplit=1)[0],
         developers=authors.get("developers", [__author__]),
         artists=authors.get("artists", []),
+        issue_url="https://github.com/ondratu/formiko/issues/new",
+        debug_info=_build_debug_info(prefs),
+        debug_info_filename="formiko-debug-info.txt",
     )
 
 

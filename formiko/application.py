@@ -168,8 +168,10 @@ class Application(Adw.Application):
 
     def on_about(self, action, param):
         """'about' action handler."""
-        dialog = about_dialog()
-        dialog.present(self.get_active_window())
+        win = self.get_active_window()
+        prefs = getattr(win, "preferences", None)
+        dialog = about_dialog(prefs)
+        dialog.present(win)
 
     def on_traceback(self, action, param):
         """'traceback' action handler."""
