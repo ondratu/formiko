@@ -1,7 +1,7 @@
 Changelog
 =========
 
-Version 2.0.0b2
+Version 2.0.0
 
   * Use system font settings (GNOME gsettings) for editor and preview
     * Editor (GtkSourceView) uses system monospace font and size
@@ -52,9 +52,6 @@ Version 2.0.0b2
     * Add ``issue_url`` pointing to the GitHub issue tracker, which adds
       a "Report an Issue" button per GNOME HIG
     * Active window preferences passed to ``about_dialog()`` from ``on_about()``
-
-Version 2.0.0b1
-
   * Code refactoring
   * Remove deprecated `recommonmark`
   * Neovim support (formiko-vim)
