@@ -221,8 +221,10 @@ class CheckVersion(Command):
             return None
 
     def read_metainfo(self):
-        """Read last version from formiko.metainfo.xml."""
-        with open("formiko.metainfo.xml", encoding="utf-8") as meta:
+        """Read last version from cz.zeropage.Formiko.metainfo.xml."""
+        with open(
+            "cz.zeropage.Formiko.metainfo.xml", encoding="utf-8",
+        ) as meta:
             for line in meta:
                 if "<release " in line:
                     vals = dict(
@@ -239,8 +241,14 @@ setup(
             "share/doc/formiko",
             ["README.rst", "COPYING", "ChangeLog", "AUTHORS"],
         ),
-        ("share/applications", ["formiko.desktop", "formiko-vim.desktop"]),
-        ("share/metainfo", ["formiko.metainfo.xml"]),
+        (
+            "share/applications",
+            [
+                "cz.zeropage.Formiko.desktop",
+                "cz.zeropage.Formiko.Vim.desktop",
+            ],
+        ),
+        ("share/metainfo", ["cz.zeropage.Formiko.metainfo.xml"]),
         ("share/formiko/icons", ["icons/formiko.svg"]),
         *icons_data(),
     ],

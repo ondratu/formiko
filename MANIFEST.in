@@ -4,8 +4,8 @@ include README.rst
 include COPYING
 include AUTHORS
 include ChangeLog
-include formiko.desktop
-include formiko-vim.desktop
+include cz.zeropage.Formiko.desktop
+include cz.zeropage.Formiko.Vim.desktop
 include formiko.rst
 include formiko-vim.rst
 graft icons

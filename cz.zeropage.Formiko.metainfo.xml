@@ -58,11 +58,11 @@
     <screenshots>
       <screenshot type="default" width="1000" height="700">
         <caption>Main window showing the editor and live preview side by side.</caption>
-        <image>http://formiko.zeropage.cz/assets/gtk4.png</image>
+        <image>https://formiko.zeropage.cz/assets/gtk4.png</image>
       </screenshot>
       <screenshot width="1260" height="700">
         <caption>JSON file rendered in the built-in preview.</caption>
-        <image>http://formiko.zeropage.cz/assets/json.png</image>
+        <image>https://formiko.zeropage.cz/assets/json.png</image>
       </screenshot>
 
     </screenshots>
