@@ -214,7 +214,7 @@ Contribute
    If it saves you time or makes your work easier, consider a small
    donation — it keeps the project going.
 
-   `Donate via PayPal → <https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=4F4EJ3SV8JGYJ&item_name=Formiko+editor&currency_code=EUR&amount=5&source=url>`__
+   `Donate via PayPal → <https://www.paypal.com/ncp/payment/E7Z8JVT3ZCETJ>`__
 
 
 .. footer::
