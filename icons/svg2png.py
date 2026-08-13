@@ -9,7 +9,7 @@ def main():
     """Create the png files from svg."""
     for size in (16, 22, 24, 32, 48, 64, 128, 256, 512):
         icon = Pixbuf.new_from_file_at_scale("formiko.svg", size, size, True)
-        makedirs(f"{size}x{size}")
+        makedirs(f"{size}x{size}", exist_ok=True)
         icon.savev(f"{size}x{size}/formiko.png", "png", [], [])
 
 

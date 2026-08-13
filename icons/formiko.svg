@@ -19,8 +19,14 @@
    inkscape:export-filename="C:\Users\Petr\Desktop\vcelka_logo16.png"
    inkscape:export-xdpi="22.5"
    inkscape:export-ydpi="22.5">
-  <defs
-     id="defs7091" />
+  <defs id="defs7091">
+    <linearGradient id="plateGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#ececec" />
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="12" ry="12" fill="url(#plateGradient)" id="app-icon-backdrop" />
+
   <sodipodi:namedview
      id="base"
      pagecolor="#ffffff"
@@ -59,7 +65,7 @@
      inkscape:label="Vrstva 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(36.699266,-424.30333)">
+     transform="translate(7.04,4.70) scale(0.78) translate(36.699266,-424.30333)">
     <g
        id="g4430"
        transform="matrix(0.19093687,0,0,0.19093687,-45.114626,407.68289)">
