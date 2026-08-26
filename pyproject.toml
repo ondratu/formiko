@@ -57,3 +57,10 @@ include = ["formiko*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.codespell]
+# Ref: https://github.com/codespell-project/codespell#using-a-config-file
+skip = '.git,.gitignore,.gitattributes,*.svg,*.css'
+check-hidden = true
+# ignore-regex = ''
+# ignore-words-list = ''
