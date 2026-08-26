@@ -101,7 +101,7 @@ class VimEditor(Vte.Terminal):
         self._nvim_call(lambda: self.nvim.command(command))
 
     def get_vim_changes(self):
-        """Retun number of changes in vim."""
+        """Return number of changes in vim."""
         return self.vim_remote_expr("b:changedtick") or 0
 
     def get_vim_lines(self):
@@ -109,7 +109,7 @@ class VimEditor(Vte.Terminal):
         return self.vim_remote_expr("line('$')") or 0
 
     def get_vim_get_buffer(self, count):
-        """Retun text from vim."""
+        """Return text from vim."""
         buff = self.vim_remote_expr(f"getline(0, {count})")
         return "\n".join(buff)
 
