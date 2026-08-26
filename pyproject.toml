@@ -60,7 +60,7 @@ testpaths = ["tests"]
 
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
-skip = '.git,.gitignore,.gitattributes,*.svg,*.css'
+skip = '.git,.git-meta,.gitignore,.gitattributes,*.svg,*.css,*.min.*,build,dist,*.egg-info'
 check-hidden = true
 # ignore-regex = ''
 # ignore-words-list = ''
