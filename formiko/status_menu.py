@@ -110,7 +110,7 @@ class LineColPopover(Gtk.Popover):
         return vbox
 
     def on_margin_toggle(self, widget, spin):
-        """Change sensitve when margin toggle was changed."""
+        """Change sensitive when margin toggle was changed."""
         spin.set_sensitive(widget.get_active())
 
 

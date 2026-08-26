@@ -82,7 +82,7 @@ Version 2.0.0
 Version 1.5.0
 
   * fix local url with href anchor
-  * M2R convertor support for another MarkDown parsing way
+  * M2R converter support for another MarkDown parsing way
   * check_version command for version check in all files
     in repository
   * bad parser in config fix
@@ -168,7 +168,7 @@ Version 1.1.0
   * info for Debian and NetBSD users
   * SourceView editor settings:
      - tab width
-     - usinng spaces intead of tabs
+     - using spaces instead of tabs
      - 80 chars length line visualization
      - periodic saving file
 
@@ -187,7 +187,7 @@ Version 1.0.0
   * stable version 1.0.0
   * right source distribution
   * desktop integration
-  * litle bit fixies
+  * little bit fixies
   * application icon from petr simcik
   * final clean code
   * Small fixies from TODO:

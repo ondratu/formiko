@@ -40,7 +40,7 @@ def smart_bool(value):
 
 
 class SmartParser(ConfigParser):
-    """ConfigParser without rising excpetion whehn something does not exist."""
+    """ConfigParser without rising exception whehn something does not exist."""
 
     def smart_get(self, obj, key, conv=str, sec="main"):
         """Get with conversion function."""
@@ -105,7 +105,7 @@ class UserPreferences:
             log_default_handler(
                 "Application",
                 LogLevelFlags.LEVEL_WARNING,
-                f"Unknow parser `{self.parser}' in config, set default.",
+                f"Unknown parser `{self.parser}' in config, set default.",
             )
             self.parser = "rst"
         cp.smart_get(self, "writer")
