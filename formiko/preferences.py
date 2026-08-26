@@ -18,7 +18,7 @@ def set_tooltip(item: Gtk.CheckButton, enabled: bool, val: dict):
     tooltip = ""
     if not enabled:
         package = val.get("package", val["title"])
-        tooltip = f"Please intall {package}."
+        tooltip = f"Please install {package}."
 
     if "url" in val:
         tooltip += f" More info at {val['url']}"

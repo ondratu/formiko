@@ -142,7 +142,7 @@ class GeneralGroup(ShortcutsGroup):
     """General application shortcuts group."""
 
     def __init__(self, editor_type):
-        super().__init__(title="Genaral")
+        super().__init__(title="General")
 
         self.append(
             ShortcutsShortcut(accelerator="<Control>n", title="New Document"),

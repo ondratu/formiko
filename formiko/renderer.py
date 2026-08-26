@@ -134,9 +134,9 @@ NOT_FOUND = """
 <html>
   <head></head>
   <body>
-    <h1>Commponent {title} Not Found!</h1>
+    <h1>Component {title} Not Found!</h1>
     <p>Component <b>{title}</b> which you want to use is not found.
-       See <a href="{url}">{url}</a> for mor details and install it
+       See <a href="{url}">{url}</a> for more details and install it
        to system.
     </p>
   </body>
@@ -577,7 +577,7 @@ class Renderer(Overlay):
                 }
                 if self.__writer["key"] == "pep":
                     kwargs["reader_name"] = "pep"
-                    kwargs.pop("parser")  # pep is allways rst
+                    kwargs.pop("parser")  # pep is always rst
                 html = publish_string(**kwargs).decode("utf-8")
                 return True, html, "text/html"
 

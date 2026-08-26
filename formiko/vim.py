@@ -93,7 +93,7 @@ class VimEditor(Vte.Terminal):
             return default
 
     def vim_remote_expr(self, command):
-        """Do expresion on vim server and return value."""
+        """Do expression on vim server and return value."""
         return self._nvim_call(lambda: self.nvim.eval(command))
 
     def vim_remote_send(self, command):
@@ -151,7 +151,7 @@ class VimEditor(Vte.Terminal):
 
     @property
     def file_name(self):
-        """Return file openned in vim."""
+        """Return file opened in vim."""
         __file_name = self.vim_remote_expr("@%")
         if __file_name != self.__file_name:
             _, ext = splitext(__file_name)

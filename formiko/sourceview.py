@@ -72,7 +72,7 @@ def _list_continuation_marker(line_text: str) -> "str | None":
 
 
 class SourceView(Gtk.ScrolledWindow, ActionHelper):
-    """Widget containted SourceView."""
+    """Widget contained SourceView."""
 
     __file_name = ""
     __last_changes = 0

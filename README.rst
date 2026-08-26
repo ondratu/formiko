@@ -23,7 +23,7 @@ Features:
 It supports these parsers and writers:
 
 * Docutils reStructuredText parser - https://www.docutils.org
-* MarkDown to reStructuredText convertor (M2R2) -
+* MarkDown to reStructuredText converter (M2R2) -
   https://github.com/crossnox/m2r2
 * Docutils HTML4, HTML5, S5/HTML slide show and PEP HTML writer -
   http://docutils.sourceforge.net
@@ -89,7 +89,7 @@ Requirements:
 * WebKitGTK 6.x
 * GtkSourceView 5.x
 * libspelling 1.x
-* gir files for all Gtk libraries
+* git files for all Gtk libraries
 * vte - neovim support
 * docutils - reStructuredText support
 * jsonpath-ng - JSON Search path support
