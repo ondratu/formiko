@@ -119,7 +119,7 @@ class Application(Adw.Application):
             log_default_handler(
                 None,
                 LogLevelFlags.LEVEL_CRITICAL,
-                "Vim version needs Vte 2.91 git!",
+                "Vim version needs Vte 2.91 gir!",
                 None,
             )
             return 1

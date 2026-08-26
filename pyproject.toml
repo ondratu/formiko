@@ -63,4 +63,5 @@ testpaths = ["tests"]
 skip = '.git,.git-meta,.gitignore,.gitattributes,*.svg,*.css,*.min.*,build,dist,*.egg-info'
 check-hidden = true
 # ignore-regex = ''
-# ignore-words-list = ''
+# gir - GObject Introspection Repository files (.gir), a GNOME term
+ignore-words-list = 'gir'

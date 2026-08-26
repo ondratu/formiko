@@ -89,7 +89,7 @@ Requirements:
 * WebKitGTK 6.x
 * GtkSourceView 5.x
 * libspelling 1.x
-* git files for all Gtk libraries
+* gir files for all Gtk libraries
 * vte - neovim support
 * docutils - reStructuredText support
 * jsonpath-ng - JSON Search path support

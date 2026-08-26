@@ -40,7 +40,7 @@ def smart_bool(value):
 
 
 class SmartParser(ConfigParser):
-    """ConfigParser without rising exception whehn something does not exist."""
+    """ConfigParser without raising exception when something does not exist."""
 
     def smart_get(self, obj, key, conv=str, sec="main"):
         """Get with conversion function."""
