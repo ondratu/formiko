@@ -88,7 +88,7 @@ class AppWindow(Adw.ApplicationWindow):
         :param str file_name: Path to open on startup.
         :param bool no_initial_tab: Skip initial tab (drag-receive windows).
         """
-        self.runing = True
+        self.running = True
         self.editor_type = editor_type
         self.focused = None
         self.search_way = SearchWay.NEXT
@@ -724,7 +724,7 @@ class AppWindow(Adw.ApplicationWindow):
                     and doc.editor_type == EditorType.SOURCE
                 ):
                     doc.editor.save()
-        self.runing = False
+        self.running = False
         for doc in self._iter_doc_pages():
             doc.stop()
             if doc.editor_type == EditorType.VIM:
@@ -733,7 +733,7 @@ class AppWindow(Adw.ApplicationWindow):
 
     def destroy_from_vim(self, vim_widget=None, *args):
         """Close the tab whose VimEditor exited."""
-        self.runing = False
+        self.running = False
         for doc in list(self.iter_doc_pages()):
             if doc.editor_type == EditorType.VIM and (
                 vim_widget is None or doc.editor is vim_widget

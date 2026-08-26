@@ -214,10 +214,10 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def position(self):
         """Return cursor position."""
         adj = self.source_view.get_vadjustment()
-        hight = self.get_height()
+        height = self.get_height()
         value = adj.get_value()
         if value:
-            return adj.get_value() / (adj.get_upper() - hight)
+            return adj.get_value() / (adj.get_upper() - height)
         return 0
 
     @property

@@ -617,7 +617,7 @@ class Renderer(Overlay):
         if self.src is None:
             return
         state, html, mime_type = self.render_output()
-        if html and self.__win.runing:
+        if html and self.__win.running:
             if mime_type == "text/html" and "</head>" in html:
                 if not self.style:
                     theme_css = (
