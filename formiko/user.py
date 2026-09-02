@@ -87,6 +87,8 @@ class UserPreferences:
     writer = "html4"
     style = ""
     custom_style = False
+    wakatime_enabled = False
+    wakatime_api_key = ""
     editor = EditorPreferences()
 
     def __init__(self):
@@ -111,6 +113,9 @@ class UserPreferences:
         cp.smart_get(self, "writer")
         cp.smart_get(self, "style")
         cp.smart_get(self, "custom_style", smart_bool)
+
+        cp.smart_get(self, "wakatime_enabled", smart_bool, "wakatime")
+        cp.smart_get(self, "wakatime_api_key", str, "wakatime")
 
         cp.smart_get(self.editor, "period_save", smart_bool, "editor")
         cp.smart_get(self.editor, "check_spelling", smart_bool, "editor")
@@ -143,6 +148,10 @@ class UserPreferences:
         cp.smart_set(self, "writer")
         cp.smart_set(self, "style")
         cp.smart_set(self, "custom_style")
+
+        cp.add_section("wakatime")
+        cp.smart_set(self, "wakatime_enabled", "wakatime")
+        cp.smart_set(self, "wakatime_api_key", "wakatime")
 
         cp.add_section("editor")
         cp.smart_set(self.editor, "period_save", "editor")

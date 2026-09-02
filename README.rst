@@ -80,6 +80,23 @@ Vim support
 Formiko has Neovim editor support aka ``formiko-vim`` command. This runs `Neovim
 <https://neovim.io/>`_ editor in Vte.Terminal.
 
+WakaTime support
+~~~~~~~~~~~~~~~~
+Formiko can report your writing activity to `WakaTime <https://wakatime.com>`_.
+It is off by default; enable it in Preferences and paste in your WakaTime API
+key to turn it on. Once enabled, Formiko sends heartbeats to wakatime.com
+whenever you open, edit, save or read a document, so your time is tracked
+per project on your WakaTime dashboard.
+
+To get your API key, log in to wakatime.com and see
+`Get your API key <https://wakatime.com/settings/api-key>`_.
+
+In ``formiko-vim``, editing itself is tracked by neovim's own
+`vim-wakatime <https://github.com/wakatime/vim-wakatime>`_ plugin, not by
+Formiko's Preferences setting, and needs to be configured separately inside
+your neovim config. Formiko's own WakaTime setting still covers the live
+preview pane in that mode.
+
 Requirements:
 -------------
 * Python 3

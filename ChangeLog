@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Version 2.1.0.dev
+
+  * Add WakaTime support (https://wakatime.com), configurable in
+    Preferences
+
 Version 2.0.0
 
   * Use system font settings (GNOME gsettings) for editor and preview

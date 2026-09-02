@@ -1,6 +1,7 @@
 """Status bar menu widgets."""
 from gi.repository import Gio, GLib, Gtk
 
+from formiko.wakatime import WakaTimeStatus
 from formiko.widgets import ActionableSpinButton
 
 
@@ -114,6 +115,41 @@ class LineColPopover(Gtk.Popover):
         spin.set_sensitive(widget.get_active())
 
 
+class WakaTimeIndicator(Gtk.Image):
+    """Status bar indicator for WakaTime heartbeat failures.
+
+    Hidden while heartbeats succeed (or WakaTime is disabled); shown with a
+    status-specific icon/tooltip otherwise. A network error is shown as a
+    plain, low-key icon since it is transient and expected to self-resolve;
+    an invalid API key is styled with the ``error`` CSS class since it needs
+    the user to fix Preferences.
+    """
+
+    def __init__(self):
+        super().__init__(visible=False)
+        self.set_margin_start(6)
+        self.set_margin_end(6)
+
+    def set_status(self, status):
+        """Update icon/tooltip/visibility for *status*."""
+        self.remove_css_class("error")
+        if status == WakaTimeStatus.OK:
+            self.set_visible(False)
+        elif status == WakaTimeStatus.AUTH_ERROR:
+            self.set_from_icon_name("dialog-password-symbolic")
+            self.set_tooltip_text(
+                "WakaTime: invalid API key, check Preferences",
+            )
+            self.add_css_class("error")
+            self.set_visible(True)
+        else:
+            self.set_from_icon_name("network-error-symbolic")
+            self.set_tooltip_text(
+                "WakaTime: heartbeat failed, will retry",
+            )
+            self.set_visible(True)
+
+
 class Statusbar(Gtk.Box):
     """Status bar widget."""
 
@@ -143,6 +179,9 @@ class Statusbar(Gtk.Box):
         self.info_bar.set_margin_start(10)
         self.info_bar.set_margin_end(10)
         self.append(self.info_bar)
+
+        self.wakatime_indicator = WakaTimeIndicator()
+        self.append(self.wakatime_indicator)
 
         self.editor_popover = self.create_editor_popover(preferences)
         self.editor_btn = StatusMenuButton("Editor", self.editor_popover)

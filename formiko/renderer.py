@@ -13,7 +13,7 @@ from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
-from gi.repository import Adw, Gdk, Gio, Gtk, Pango
+from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 from gi.repository.GLib import (
     MAXUINT,
     Bytes,
@@ -43,6 +43,7 @@ from formiko.directives import HtmlPreview, Mark2Resturctured, TinyWriter
 from formiko.json_preview import JSONPreview
 from formiko.sourceview import LANG_BY_EXT
 from formiko.utils import Undefined
+from formiko.widgets import ImutableDict
 
 # CSS spec: 1pt = 1/72 inch, 1 CSS pixel = 1/96 inch → 1pt = 96/72 CSS px.
 # WebKit font sizes are in CSS pixels; HiDPI scaling is handled internally
@@ -193,11 +194,33 @@ JS_POSITION = """
 window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)
 """
 
+# Debounced scroll listener, re-injected after every page load (each load
+# is a fresh JS context). Used to emit "user-scrolled" for WakaTime -
+# reading/scrolling is considered activity same as editing.
+JS_SCROLL_LISTENER = """
+(function () {
+    if (window.__formikoScrollHooked) return;
+    window.__formikoScrollHooked = true;
+    let timer;
+    window.addEventListener("scroll", function () {
+        clearTimeout(timer);
+        timer = setTimeout(function () {
+            window.webkit.messageHandlers.formikoScroll.postMessage("");
+        }, 500);
+    }, {passive: true});
+})();
+"""
+
 MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
     """Renderer widget, mainly based on Webkit."""
+
+    __gsignals__ = ImutableDict({
+        # Emitted when the user scrolls the rendered preview.
+        "user-scrolled": (GObject.SignalFlags.RUN_FIRST, None, ()),
+    })
 
     def __init__(self, win, parser="rst", writer="html4", style=""):
         super().__init__()
@@ -215,6 +238,13 @@ class Renderer(Overlay):
         self.webview.connect("context-menu", self.on_context_menu)
         self.webview.connect("load-changed", self.on_load_changed)
         self.webview.connect("decide-policy", self.on_decide_policy)
+
+        content_manager = self.webview.get_user_content_manager()
+        content_manager.register_script_message_handler("formikoScroll")
+        content_manager.connect(
+            "script-message-received::formikoScroll",
+            self._on_scroll_message,
+        )
 
         Adw.StyleManager.get_default().connect(
             "notify::dark",
@@ -699,7 +729,14 @@ class Renderer(Overlay):
             None,
             None,
         )
+        self.webview.evaluate_javascript(
+            JS_SCROLL_LISTENER, -1, None, None, None, None,
+        )
         self.scroll_to_position(None)
+
+    def _on_scroll_message(self, _content_manager, _js_result):
+        """Relay the debounced JS scroll event as "user-scrolled"."""
+        self.emit("user-scrolled")
 
     def do_next_match(self, text):
         """Find next metch."""

@@ -196,6 +196,26 @@ class Preferences(Gtk.Popover):
         )
         vbox.append(self.style_btn)
 
+        vbox.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+
+        self.wakatime_btn = Gtk.CheckButton(
+            label="Enable WakaTime",
+            action_name="win.wakatime-toggle",
+        )
+        self.wakatime_btn.connect("toggled", self.on_wakatime_toggle)
+        vbox.append(self.wakatime_btn)
+
+        self.wakatime_key_entry = Gtk.PasswordEntry(
+            show_peek_icon=True,
+            placeholder_text="WakaTime API key",
+            sensitive=user_preferences.wakatime_enabled,
+            text=user_preferences.wakatime_api_key,
+        )
+        self.wakatime_key_entry.connect(
+            "activate", self.on_wakatime_key_activate,
+        )
+        vbox.append(self.wakatime_key_entry)
+
     def set_parser(self, parser):
         """Set right parser."""
         btn = self.parser_group
@@ -215,3 +235,16 @@ class Preferences(Gtk.Popover):
     def on_custom_style_toggle(self, widget):
         """Set sensitive for own style."""
         self.style_btn.set_sensitive(widget.get_active())
+
+    def on_wakatime_toggle(self, widget):
+        """Set sensitive for the WakaTime API key entry."""
+        self.wakatime_key_entry.set_sensitive(widget.get_active())
+
+    def on_wakatime_key_activate(self, entry):
+        """Apply WakaTime API key on Enter."""
+        root = self.get_root()
+        if root:
+            root.activate_action(
+                "win.change-wakatime-key",
+                Variant("s", entry.get_text()),
+            )

@@ -15,6 +15,7 @@ from formiko.formatting_actions import FormattingActionGroup
 from formiko.renderer import EXTS, Renderer
 from formiko.sourceview import SourceView
 from formiko.user import UserPreferences, View
+from formiko.wakatime import CATEGORY_BROWSING
 from formiko.widgets import ImutableDict
 
 if get_required_version("Vte"):
@@ -64,6 +65,9 @@ class DocumentPage(Gtk.Box):
             self.preferences.parser = parser
             self.renderer.set_parser(parser)
             self.append(self.renderer)
+            self._window.wakatime.heartbeat(
+                file_name, parser, category=CATEGORY_BROWSING,
+            )
 
         GLib.timeout_add(200, self._check_in_thread)
 
@@ -79,6 +83,7 @@ class DocumentPage(Gtk.Box):
         if win_prefs.custom_style and win_prefs.style:
             self.renderer.set_style(win_prefs.style)
         self.renderer.set_tab_width(self.preferences.editor.tab_width)
+        self.renderer.connect("user-scrolled", self._on_preview_scrolled)
 
     def _create_editor_layout(self, file_name):
         ext = splitext(file_name)[1] if file_name else ""
@@ -117,6 +122,7 @@ class DocumentPage(Gtk.Box):
             self.editor.text_buffer.connect(
                 "modified-changed", self._on_modified_changed,
             )
+            self.editor.connect("file-saved", self._on_file_saved)
 
         if file_name:
             self.editor.read_from_file(file_name)
@@ -179,13 +185,29 @@ class DocumentPage(Gtk.Box):
                 self._window.file_browser.set_directory(directory)
         self._window.on_active_tab_parser_changed(self, parser)
         self.emit("doc-state-changed")
+        if self.editor_type == EditorType.SOURCE:
+            self._window.wakatime.heartbeat(self.file_path, parser)
 
     def _on_modified_changed(self, _buf):
         self.emit("doc-state-changed")
 
+    def _on_file_saved(self, _editor):
+        self._window.wakatime.heartbeat(
+            self.file_path, self.parser, is_write=True,
+        )
+
     def _on_scroll_changed(self, _widget, position):
         if self._window.preferences.auto_scroll:
             self.renderer.scroll_to_position(position)
+        if self.editor_type == EditorType.SOURCE:
+            self._window.wakatime.heartbeat(
+                self.file_path, self.parser, category=CATEGORY_BROWSING,
+            )
+
+    def _on_preview_scrolled(self, _renderer):
+        self._window.wakatime.heartbeat(
+            self.file_path, self.parser, category=CATEGORY_BROWSING,
+        )
 
     @property
     def words_count(self):
@@ -258,6 +280,9 @@ class DocumentPage(Gtk.Box):
                     self._words_count,
                     self._chars_count,
                 )
+                self._window.wakatime.heartbeat(
+                    self.editor.file_path, self.parser,
+                )
             GLib.timeout_add(100, self._check_in_thread)
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
@@ -289,6 +314,7 @@ class DocumentPage(Gtk.Box):
                     return
                 pos = self.editor.get_vim_scroll_pos(lines)
                 self.renderer.render(buff, file_path, pos)
+                # No wakatime heartbeat: neovim has its own vim-wakatime.
             GLib.timeout_add(100, self._check_in_thread)
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
@@ -306,6 +332,9 @@ class DocumentPage(Gtk.Box):
                         self._preview_file,
                         self.renderer.position,
                     )
+                self._window.wakatime.heartbeat(
+                    self._preview_file, self.parser, is_write=True,
+                )
         except BaseException:  # pylint: disable=broad-exception-caught
             print_exc()
         GLib.timeout_add(500, self._check_in_thread)

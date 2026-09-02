@@ -83,6 +83,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         {
             "file-type": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
             "scroll-changed": (GObject.SignalFlags.RUN_LAST, None, (float,)),
+            "file-saved": (GObject.SignalFlags.RUN_FIRST, None, ()),
         },
     )
 
@@ -531,6 +532,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
                 src.flush()
                 self.__last_ctime = fstat(src.fileno()).st_ctime
             self.text_buffer.set_modified(False)
+            self.emit("file-saved")
         except Exception:
             error = format_exc()
             if self.__win:

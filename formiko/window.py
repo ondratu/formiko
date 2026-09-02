@@ -23,6 +23,7 @@ from formiko.renderer import WebView as GtkWebView
 from formiko.sourceview import View as GtkSourceView
 from formiko.status_menu import Statusbar
 from formiko.user import UserCache, UserPreferences, View
+from formiko.wakatime import WakaTime, WakaTimeStatus
 from formiko.widgets import IconButton, connect_accel_tooltip
 
 NOT_SAVED_NAME = "Untitled Document"
@@ -94,6 +95,12 @@ class AppWindow(Adw.ApplicationWindow):
         self.search_way = SearchWay.NEXT
         self.cache = UserCache()
         self.preferences = UserPreferences()
+        self.wakatime = WakaTime(
+            self.preferences.wakatime_api_key
+            if self.preferences.wakatime_enabled
+            else "",
+            on_status=self._on_wakatime_status,
+        )
         self._action_groups = {}
         self._tabs_needing_paned_reset: set = set()
         self._last_active_doc = None
@@ -251,6 +258,17 @@ class AppWindow(Adw.ApplicationWindow):
             "s",
             pref.style,
             self._on_change_style,
+        )
+        self._create_toggle_action(
+            "wakatime-toggle",
+            pref.wakatime_enabled,
+            self._on_wakatime_toggle,
+        )
+        self._create_stateful_action(
+            "change-wakatime-key",
+            "s",
+            pref.wakatime_api_key,
+            self._on_change_wakatime_key,
         )
 
     def _register_json_actions(self):
@@ -572,6 +590,41 @@ class AppWindow(Adw.ApplicationWindow):
             effective = style if self.preferences.custom_style else ""
             for doc in self._iter_doc_pages():
                 doc.renderer.set_style(effective)
+            self.preferences.save()
+
+    def _on_wakatime_toggle(self, action, param):
+        """'wakatime-toggle' action handler."""
+        enabled = not action.get_state().get_boolean()
+        action.set_state(GLib.Variant("b", enabled))
+        self.preferences.wakatime_enabled = enabled
+        self.wakatime.api_key = (
+            self.preferences.wakatime_api_key if enabled else ""
+        )
+        if not enabled:
+            self._on_wakatime_status(WakaTimeStatus.OK)
+        self.preferences.save()
+
+    def _on_wakatime_status(self, status):
+        """Reflect a WakaTime heartbeat outcome in the status bar.
+
+        May be called from the background thread that sent the heartbeat.
+        """
+        GLib.idle_add(self._apply_wakatime_status, status)
+
+    def _apply_wakatime_status(self, status):
+        """Update the status bar's WakaTime indicator on the main loop."""
+        if hasattr(self, "status_bar"):
+            self.status_bar.wakatime_indicator.set_status(status)
+        return False
+
+    def _on_change_wakatime_key(self, action, param):
+        """'change-wakatime-key' action handler."""
+        if action.get_state() != param:
+            action.set_state(param)
+            api_key = param.get_string()
+            self.preferences.wakatime_api_key = api_key
+            if self.preferences.wakatime_enabled:
+                self.wakatime.api_key = api_key
             self.preferences.save()
 
     def _on_find_in_document(self, action, *param):
