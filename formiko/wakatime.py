@@ -12,9 +12,7 @@ import socket
 from base64 import b64encode
 from enum import Enum
 from json import dumps
-from os import environ
 from os.path import basename, dirname, isdir, join
-from sys import stderr
 from threading import Thread
 from time import time
 from traceback import print_exc
@@ -42,9 +40,6 @@ AUTH_ERROR_CODES = (401, 403)
 # https://wakatime.com/developers#heartbeats. Omitted (None) elsewhere,
 # which the API defaults to "coding".
 CATEGORY_BROWSING = "browsing"
-# Temporary debugging aid: set FORMIKO_WAKATIME_DEBUG=1 to log every
-# outgoing heartbeat (payload + wall-clock time) to stderr.
-DEBUG = bool(environ.get("FORMIKO_WAKATIME_DEBUG"))
 
 LANGUAGES = {
     "rst": "reStructuredText",
@@ -122,9 +117,6 @@ class WakaTime:
         language = LANGUAGES.get(parser)
         if language:
             payload["language"] = language
-        if DEBUG:
-            stderr.write(f"[wakatime] {now:.3f} {payload}\n")
-            stderr.flush()
         Thread(
             target=self._send,
             args=(payload, self.api_key, self.on_status),
