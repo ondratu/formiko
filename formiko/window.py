@@ -529,10 +529,20 @@ class AppWindow(Adw.ApplicationWindow):
         if action and action.get_state().get_boolean():
             action.activate(None)
 
+    def _sync_file_browser(self, doc=None):
+        """Show the active document's directory, or the default directory."""
+        if not hasattr(self, "file_browser"):
+            return
+        doc = doc or self.active_page
+        directory = dirname(doc.file_path) if doc and doc.file_path else None
+        self.file_browser.set_directory(directory)
+
     def _on_toggle_sidebar(self, action, *_):
         """'toggle-sidebar' action handler."""
         new_state = not action.get_state().get_boolean()
         action.set_state(GLib.Variant("b", new_state))
+        if new_state:
+            self._sync_file_browser()
         self.overlay_split.set_show_sidebar(new_state)
 
     def _on_scroll_changed(self, widget, position):
@@ -872,6 +882,7 @@ class AppWindow(Adw.ApplicationWindow):
         self._sync_tab_page_ui(doc)
         if doc is self.active_page:
             self._sync_active_window_ui(doc)
+            self._sync_file_browser(doc)
 
     def _on_doc_words_changed(self, doc, words, chars):
         if doc is self.active_page and hasattr(self, "status_bar"):
@@ -1258,10 +1269,7 @@ class AppWindow(Adw.ApplicationWindow):
             # Same GTK#1959 workaround: defer set_position until after layout.
             GLib.timeout_add(20, self._reset_active_paned)
 
-        if hasattr(self, "file_browser") and doc.file_path:
-            directory = dirname(doc.file_path)
-            if directory:
-                self.file_browser.set_directory(directory)
+        self._sync_file_browser(doc)
 
         if hasattr(self, "search") and self.search.get_search_mode():
             self.search.set_search_mode(False)

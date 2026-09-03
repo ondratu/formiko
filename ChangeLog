@@ -5,6 +5,7 @@ Version 2.1.0.dev
 
   * Add WakaTime support (https://wakatime.com), configurable in
     Preferences
+  * Keep the file browser up to date with the active document's folder
 
 Version 2.0.0
 

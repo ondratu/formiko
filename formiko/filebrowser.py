@@ -37,6 +37,7 @@ class FileBrowser(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, hexpand=False)
         self.add_css_class("sidebar")
         self._directory = ""
+        self._default_directory = ""
 
         self._dir_label = Gtk.Label()
         self._dir_label.add_css_class("caption")
@@ -61,14 +62,21 @@ class FileBrowser(Gtk.Box):
 
         docs = get_user_special_dir(UserDirectory.DIRECTORY_DOCUMENTS)
         if docs and isdir(docs):
+            self._default_directory = docs
             self.set_directory(docs)
 
     def set_directory(self, directory):
         """Switch the browser to show contents of *directory*."""
-        if not directory or directory == self._directory:
+        directory = directory or self._default_directory
+        if not directory:
             return
         self._directory = directory
         self._refresh()
+
+    def refresh(self):
+        """Reload the current directory from disk."""
+        if self._directory:
+            self._refresh()
 
     def _refresh(self):
         """Reload the file list from the current directory."""
