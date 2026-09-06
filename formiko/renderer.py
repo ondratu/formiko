@@ -41,6 +41,7 @@ from gi.repository.WebKit import (
 from formiko.dialogs import FileNotFoundDialog, run_alert_dialog
 from formiko.directives import HtmlPreview, Mark2Resturctured, TinyWriter
 from formiko.json_preview import JSONPreview
+from formiko.mistune_preview import MistunePreview
 from formiko.sourceview import LANG_BY_EXT
 from formiko.utils import Undefined
 from formiko.widgets import ImutableDict
@@ -71,6 +72,13 @@ PARSERS = {
         "class": Mark2Resturctured,
         "url": "https://github.com/crossnox/m2r2",
     },
+    "mistune": {
+        "key": "mistune",
+        "title": "Mistune Markdown",
+        "class": MistunePreview,
+        "package": "mistune",
+        "url": "https://github.com/lepture/mistune",
+    },
     "html": {
         "key": "html",
         "title": "HTML preview",
@@ -90,8 +98,29 @@ EXTS = {
     ".json": "json",
 }
 
-if not issubclass(Mark2Resturctured, Undefined):
-    EXTS[".md"] = "m2r"
+#: Parser keys that consume literal Markdown syntax.
+MARKDOWN_PARSERS = ("m2r", "mistune")
+
+for _md_key in MARKDOWN_PARSERS:
+    if not issubclass(PARSERS[_md_key]["class"], Undefined):
+        EXTS[".md"] = _md_key
+        break
+
+
+def resolve_ext_parser(ext, preferred):
+    """Return the parser key for *ext*, like :data:`EXTS`.
+
+    For ``.md``, *preferred* wins when it's an available markdown parser,
+    so a Mistune/m2r2 choice sticks across files.
+    """
+    if (
+        ext == ".md"
+        and preferred in MARKDOWN_PARSERS
+        and not issubclass(PARSERS[preferred]["class"], Undefined)
+    ):
+        return preferred
+    return EXTS.get(ext, preferred)
+
 
 WRITERS = {
     "html4": {
@@ -587,6 +616,10 @@ class Renderer(Overlay):
                 except (ValueError, TypeError) as e:
                     return False, DATA_ERROR % ("JSON", str(e)), "text/html"
                 return True, html, "text/html"
+            elif issubclass(self.__parser["class"], MistunePreview):
+                html = self.parser_instance.to_html(self.src, self.tab_width)
+                html = self._embed_stylesheet(html, self.style)
+                return True, html, "text/html"
             elif not issubclass(self.__parser["class"], HtmlPreview):
                 settings = {
                     "warning_stream": StringIO(),
@@ -624,6 +657,22 @@ class Renderer(Overlay):
 
         # output to file or html preview
         return False, self.src, "text/html"
+
+    @staticmethod
+    def _embed_stylesheet(html, style_path):
+        """Inline *style_path*'s CSS content into *html*'s ``<head>``.
+
+        Mirrors docutils' ``embed_stylesheet`` for parsers, like Mistune,
+        that don't go through ``publish_string``.
+        """
+        if not style_path:
+            return html
+        try:
+            with open(style_path, encoding="utf-8") as f:
+                css = f.read()
+        except OSError:
+            return html
+        return html.replace("</head>", f"<style>{css}</style></head>", 1)
 
     @staticmethod
     def _extract_body(html):

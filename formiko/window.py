@@ -497,7 +497,7 @@ class AppWindow(Adw.ApplicationWindow):
             page.fmt_actions.set_parser(parser)
             page.editor.change_mime_type(parser)
             page.editor.set_list_features_enabled(
-                parser in ("rst", "md", "m2r"),
+                parser in ("rst", "md", "m2r", "mistune"),
             )
 
         # Save as global default for new tabs
