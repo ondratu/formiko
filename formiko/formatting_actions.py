@@ -10,10 +10,20 @@ from formiko.format_utils import (
     build_known_formats,
     compute_link,
 )
+from formiko.renderer import MARKDOWN_PARSERS
 from formiko.widgets import IconButton
 
 #: Parsers that support inline and block formatting.
-FORMATTING_PARSERS = frozenset(("rst", "m2r", "html"))
+FORMATTING_PARSERS = frozenset(("rst", "html", *MARKDOWN_PARSERS))
+
+
+def _format_key(parser: str) -> str:
+    """Map a parser key to its formatting-markup key.
+
+    m2r2 and mistune both consume Markdown syntax, so they share the
+    "md" formatting rules below.
+    """
+    return "md" if parser in MARKDOWN_PARSERS else parser
 
 
 class FormattingActionGroup(Gio.SimpleActionGroup):
@@ -31,22 +41,22 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
     # ------------------------------------------------------------------ inline
     _MARKUP_BOLD: ClassVar = {
         "rst": ("**", "**"),
-        "m2r": ("**", "**"),
+        "md": ("**", "**"),
         "html": ("<b>", "</b>"),
     }
     _MARKUP_ITALIC: ClassVar = {
         "rst": ("*", "*"),
-        "m2r": ("*", "*"),
+        "md": ("*", "*"),
         "html": ("<i>", "</i>"),
     }
     _MARKUP_STRIKETHROUGH: ClassVar = {
         "rst": (":del:`", "`"),
-        "m2r": ("~~", "~~"),
+        "md": ("~~", "~~"),
         "html": ("<s>", "</s>"),
     }
     _MARKUP_CODE: ClassVar = {
         "rst": ("``", "``"),
-        "m2r": ("`", "`"),
+        "md": ("`", "`"),
         "html": ("<code>", "</code>"),
     }
 
@@ -88,7 +98,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
             " " * pref.tab_width if pref.spaces_instead_of_tabs else "\t",
             "",
         ),
-        "m2r": ("> ", ""),
+        "md": ("> ", ""),
         "html": ("<blockquote>", "</blockquote>"),
     }
 
@@ -268,9 +278,9 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
     def _make_inline_handler(self, markup_dict):
         """Return an activate callback for an inline format action."""
         def handler(_action, *_params):
-            parser = self._renderer.get_parser()
-            before, after = markup_dict[parser]
-            known = self._KNOWN_FORMATS.get(parser, [])
+            fmt = _format_key(self._renderer.get_parser())
+            before, after = markup_dict[fmt]
+            known = self._KNOWN_FORMATS.get(fmt, [])
             self._editor.toggle_format(before, after, known)
         return handler
 
@@ -278,19 +288,20 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
         """Return an activate callback for a block format action."""
         def handler(_action, *_params):
             parser = self._renderer.get_parser()
-            fmt = markup_dict[parser]
-            if callable(fmt):
-                before, after = fmt(self._editor_pref)
+            fmt = _format_key(parser)
+            markup = markup_dict[fmt]
+            if callable(markup):
+                before, after = markup(self._editor_pref)
             else:
-                before, after = fmt
-            if parser == "rst":
+                before, after = markup
+            if fmt == "rst":
                 # RST blockquote is indentation; strip bullet/ordered
                 self._editor.toggle_line_format(
                     before, after,
                     all_block_variants=(("- ", ""),),
                     strip_ordered=True,
                 )
-            elif parser == "m2r":
+            elif fmt == "md":
                 self._editor.toggle_line_format(
                     before, after,
                     all_block_variants=self._MD_BLOCK_VARIANTS,
@@ -307,7 +318,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
     @staticmethod
     def _header_markup(parser: str, level: int) -> "tuple[str, str]":
         """Return ``(before, after)`` for the given header *level*."""
-        if parser == "m2r":
+        if _format_key(parser) == "md":
             return "#" * level + " ", ""
         # html
         return f"<h{level}>", f"</h{level}>"
@@ -323,7 +334,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
             all_variants = [
                 self._header_markup(parser, lvl) for lvl in range(1, 7)
             ]
-            if parser == "m2r":
+            if _format_key(parser) == "md":
                 extra = (("> ", ""), ("- ", ""))
             else:  # html
                 extra = (("<blockquote>", "</blockquote>"), ("<li>", "</li>"))
@@ -357,7 +368,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
                 "- ", "", (), needs_blank=True,
                 strip_ordered=True,
             )
-        elif parser == "m2r":
+        elif _format_key(parser) == "md":
             self._editor.toggle_bullet(
                 "- ", "", self._MD_BLOCK_VARIANTS, needs_blank=True,
                 strip_ordered=True,
@@ -377,7 +388,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
                 needs_blank=True,
                 auto_number=True,
             )
-        elif parser == "m2r":
+        elif _format_key(parser) == "md":
             self._editor.toggle_ordered(
                 all_block_variants=self._MD_BLOCK_VARIANTS,
                 needs_blank=True,

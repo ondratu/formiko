@@ -27,6 +27,7 @@ LANG_BY_EXT = {
     ".rst": default_manager.get_language("rst"),
     ".md": default_manager.get_language("markdown"),
     ".m2r": default_manager.get_language("markdown"),  # parser compatibility
+    ".mistune": default_manager.get_language("markdown"),  # parser compat
     ".html": default_manager.get_language("html"),
     ".htm": default_manager.get_language("html"),
     ".json": default_manager.get_language("json"),

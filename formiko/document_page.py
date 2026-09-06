@@ -12,7 +12,7 @@ from gi.repository import GLib, GObject, Gtk
 from formiko.editor import EditorType
 from formiko.editor_actions import EditorActionGroup
 from formiko.formatting_actions import FormattingActionGroup
-from formiko.renderer import EXTS, Renderer
+from formiko.renderer import Renderer, resolve_ext_parser
 from formiko.sourceview import SourceView
 from formiko.user import UserPreferences, View
 from formiko.wakatime import CATEGORY_BROWSING
@@ -61,7 +61,7 @@ class DocumentPage(Gtk.Box):
             self.paned = None
             self._preview_file = file_name
             ext = splitext(file_name)[1] if file_name else ""
-            parser = EXTS.get(ext, self.preferences.parser)
+            parser = resolve_ext_parser(ext, self.preferences.parser)
             self.preferences.parser = parser
             self.renderer.set_parser(parser)
             self.append(self.renderer)
@@ -87,7 +87,7 @@ class DocumentPage(Gtk.Box):
 
     def _create_editor_layout(self, file_name):
         ext = splitext(file_name)[1] if file_name else ""
-        initial_parser = EXTS.get(ext, self.preferences.parser)
+        initial_parser = resolve_ext_parser(ext, self.preferences.parser)
         self.preferences.parser = initial_parser
         self.renderer.set_parser(initial_parser)
 
@@ -113,7 +113,7 @@ class DocumentPage(Gtk.Box):
                 self.preferences,
             )
             self.editor.set_list_features_enabled(
-                initial_parser in ("rst", "md", "m2r"),
+                initial_parser in ("rst", "md", "m2r", "mistune"),
             )
 
         self.editor.connect("file-type", self._on_file_type)
@@ -170,14 +170,14 @@ class DocumentPage(Gtk.Box):
         self._check_in_thread(True)
 
     def _on_file_type(self, _widget, ext):
-        parser = EXTS.get(ext, self.preferences.parser)
+        parser = resolve_ext_parser(ext, self.preferences.parser)
         self.preferences.parser = parser
         self.renderer.set_parser(parser)
         if self.editor_type == EditorType.SOURCE:
             self.fmt_actions.set_parser(parser)
             self.editor.change_mime_type(parser)
             self.editor.set_list_features_enabled(
-                parser in ("rst", "md", "m2r"),
+                parser in ("rst", "md", "m2r", "mistune"),
             )
         if hasattr(self._window, "file_browser") and self.file_path:
             directory = dirname(self.file_path)

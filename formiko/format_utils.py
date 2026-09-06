@@ -430,7 +430,7 @@ def compute_link(text: str, url: str, parser: str) -> str:
         return f'<a href="{url}">{inner}</a>'
     if not text.strip():
         return url
-    if parser == "m2r":
+    if parser in ("m2r", "mistune"):
         return f"[{text}]({url})"
     if parser == "rst":
         return f"`{text} <{url}>`_"
@@ -446,7 +446,7 @@ def parse_link(selected_text: str, parser: str) -> "tuple[str, str]":
     looks like a bare URL it is placed in the *URL* field instead.
     """
     stripped = selected_text.strip()
-    if parser == "m2r":
+    if parser in ("m2r", "mistune"):
         m = _re.match(r"^\[([^\]]*)\]\(([^)]+)\)$", stripped)
         if m:
             return m.group(1), m.group(2)
