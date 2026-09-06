@@ -530,7 +530,7 @@ class AppWindow(Adw.ApplicationWindow):
             action.activate(None)
 
     def _sync_file_browser(self, doc=None):
-        """Show the active document's directory, or the default directory."""
+        """Point the file browser at the active document's directory."""
         if not hasattr(self, "file_browser"):
             return
         doc = doc or self.active_page
@@ -543,6 +543,9 @@ class AppWindow(Adw.ApplicationWindow):
         action.set_state(GLib.Variant("b", new_state))
         if new_state:
             self._sync_file_browser()
+            self.file_browser.refresh()
+        else:
+            self.file_browser.clear()
         self.overlay_split.set_show_sidebar(new_state)
 
     def _on_scroll_changed(self, widget, position):

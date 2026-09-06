@@ -66,22 +66,18 @@ class FileBrowser(Gtk.Box):
             self.set_directory(docs)
 
     def set_directory(self, directory):
-        """Switch the browser to show contents of *directory*."""
-        directory = directory or self._default_directory
-        if not directory:
-            return
-        self._directory = directory
-        self._refresh()
+        """Record which directory to browse, without loading it.
+
+        Call :meth:`refresh` to actually (re)load it - typically once the
+        sidebar becomes visible.
+        """
+        self._directory = directory or self._default_directory
 
     def refresh(self):
-        """Reload the current directory from disk."""
-        if self._directory:
-            self._refresh()
-
-    def _refresh(self):
         """Reload the file list from the current directory."""
-        while child := self._list_box.get_first_child():
-            self._list_box.remove(child)
+        self.clear()
+        if not self._directory:
+            return
 
         self._dir_label.set_text(
             basename(self._directory) or self._directory,
@@ -100,6 +96,11 @@ class FileBrowser(Gtk.Box):
         for name in names:
             row = FileListBoxRow(name, self._directory)
             self._list_box.append(row)
+
+    def clear(self):
+        """Remove all displayed rows, e.g. while the sidebar is hidden."""
+        while child := self._list_box.get_first_child():
+            self._list_box.remove(child)
 
     def _on_row_activated(self, _list_box, row):
         self.emit("file-activated", row.file_path)
