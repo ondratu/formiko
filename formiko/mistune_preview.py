@@ -29,15 +29,27 @@ _MISTUNE_PLUGINS = [
     "speedup",
 ]
 
+
+def _available_mistune_plugins():
+    """Return plugins supported by the installed Mistune API."""
+    from mistune import plugins
+
+    registry = getattr(plugins, "PLUGINS", None)
+    if registry is None:
+        registry = getattr(plugins, "_plugins", {})
+    return [name for name in _MISTUNE_PLUGINS if name in registry]
+
+
 try:
     import mistune
 
     if hasattr(mistune, "create_markdown"):
+        _SUPPORTED_MISTUNE_PLUGINS = _available_mistune_plugins()
 
         def _make_markdown():
             return mistune.create_markdown(
                 escape=False,
-                plugins=_MISTUNE_PLUGINS,
+                plugins=_SUPPORTED_MISTUNE_PLUGINS,
             )
 
     else:

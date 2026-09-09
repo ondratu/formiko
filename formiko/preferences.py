@@ -7,7 +7,7 @@ from gi.repository import GLib, GObject, Gtk
 from gi.repository.GLib import Variant
 
 from formiko.dialogs import build_css_filters, open_file_dialog
-from formiko.renderer import PARSERS, WRITERS
+from formiko.renderer import PARSERS, WRITERS, component_available
 from formiko.widgets import ActionHelper
 
 PREFIX = commonprefix((argv[0], __file__))
@@ -143,7 +143,7 @@ class Preferences(Gtk.Popover):
 
         group = None
         for key, val in PARSERS.items():
-            enabled = val["class"] is not None
+            enabled = component_available(val)
             item = Gtk.CheckButton(
                 label=val["title"],
                 group=group,
@@ -164,7 +164,7 @@ class Preferences(Gtk.Popover):
 
         group = None
         for key, val in WRITERS.items():
-            enabled = val["class"] is not None
+            enabled = component_available(val)
             item = Gtk.CheckButton(
                 label=val["title"],
                 group=group,
