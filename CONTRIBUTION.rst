@@ -84,13 +84,21 @@ Tests live under ``tests/`` and run with ``pytest`` (see
 ``[tool.pytest.ini_options]`` in ``pyproject.toml``). Add or update tests
 for any behavioural change.
 
-Tests must pass with no graphical environment available — no X11, no
-Wayland (e.g. ``unset DISPLAY WAYLAND_DISPLAY`` before running them, as
-CI does). Widgets that only need to be constructed and manipulated (not
-shown, realized, or run through a main loop) work fine headless, so
+Tests must pass without a graphical session — no X11 or Wayland display
+server (e.g. ``unset DISPLAY WAYLAND_DISPLAY`` before running them, as CI
+does). This does not mean that GTK, GObject Introspection, or the GTK
+typelibs are optional: the test environment still needs the libraries
+used by the imported code. The suite must not require a display server,
+though. Widgets that only need to be constructed and manipulated (not
+shown, realized, or run through a main loop) can be used headlessly, so
 prefer building the real GTK objects a test touches (e.g. ``Gtk.ListBox``,
 ``Gtk.Label``) over mocking them. Reach for ``unittest.mock.Mock`` for
 everything a test does not itself exercise (e.g. the surrounding window).
+
+Unsetting ``DISPLAY`` and ``WAYLAND_DISPLAY`` is a guard against accidental
+display use, not a workaround that makes GTK tests headless. If a test
+needs to show or realize a widget, it belongs in a separate display-backed
+test job (for example with ``xvfb-run``), rather than weakening this suite.
 
 **Sanity check**: ``env -u DISPLAY -u WAYLAND_DISPLAY pytest -q`` should
 behave the same as a plain ``pytest -q`` run.
