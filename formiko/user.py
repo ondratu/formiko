@@ -12,7 +12,7 @@ from gi.repository.GLib import (
 )
 from gi.repository.Gtk import Orientation
 
-from formiko.renderer import PARSERS
+from formiko.renderer import PARSERS, WRITERS, component_available
 
 
 class View:
@@ -103,14 +103,27 @@ class UserPreferences:
         cp.smart_get(self, "auto_scroll", smart_bool)
 
         cp.smart_get(self, "parser")
-        if self.parser not in PARSERS:
+        if (
+            self.parser not in PARSERS
+            or not component_available(PARSERS[self.parser])
+        ):
             log_default_handler(
                 "Application",
-                LogLevelFlags.LEVEL_WARNING,
-                f"Unknown parser `{self.parser}' in config, set default.",
+                LogLevelFlags.LEVEL_MESSAGE,
+                f"Unavailable parser `{self.parser}' in config, set default.",
             )
             self.parser = "rst"
         cp.smart_get(self, "writer")
+        if (
+            self.writer not in WRITERS
+            or not component_available(WRITERS[self.writer])
+        ):
+            log_default_handler(
+                "Application",
+                LogLevelFlags.LEVEL_MESSAGE,
+                f"Unavailable writer `{self.writer}' in config, set default.",
+            )
+            self.writer = "html4"
         cp.smart_get(self, "style")
         cp.smart_get(self, "custom_style", smart_bool)
 

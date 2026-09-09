@@ -160,6 +160,12 @@ WRITERS = {
     },
 }
 
+
+def component_available(component):
+    """Return whether a parser or writer implementation is installed."""
+    return not issubclass(component["class"], Undefined)
+
+
 NOT_FOUND = """
 <html>
   <head></head>
