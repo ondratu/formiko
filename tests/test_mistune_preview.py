@@ -1,6 +1,15 @@
 """Tests for the direct Markdown-to-HTML mistune preview."""
 
+from importlib.util import find_spec
+
+import pytest
+
 from formiko.mistune_preview import MistunePreview
+
+pytestmark = pytest.mark.skipif(
+    find_spec("mistune") is None,
+    reason="Mistune is an optional dependency",
+)
 
 
 def test_to_html_renders_basic_markdown():
@@ -47,3 +56,35 @@ def test_to_html_honors_tab_width():
     text = "\tcode\n"
     assert "<pre><code>" in MistunePreview().to_html(text, tab_width=8)
     assert "<pre><code>" not in MistunePreview().to_html(text, tab_width=1)
+
+
+def test_to_html_renders_builtin_plugins_without_extra_dependencies():
+    """Mistune's dependency-free built-in plugins are enabled."""
+    mistune = pytest.importorskip("mistune")
+    if not hasattr(mistune, "create_markdown"):
+        pytest.skip("Mistune 2 or newer is required for optional plugins")
+    text = (
+        "HTML and W3C\n\n"
+        "*[HTML]: Hyper Text Markup Language\n"
+        "*[W3C]: World Wide Web Consortium\n\n"
+        "Term\n: Definition\n\n"
+        "Footnote[^1]\n\n"
+        "[^1]: Note\n\n"
+        "==marked== ^^inserted^^ 2^10^ H~2~O\n\n"
+        "$x + y$\n\n"
+        "[漢字(ㄏㄢˋㄗˋ)]\n\n"
+        "A >!hidden!< spoiler\n"
+    )
+    html = MistunePreview().to_html(text)
+    assert '<abbr title="Hyper Text Markup Language">HTML</abbr>' in html
+    assert '<abbr title="World Wide Web Consortium">W3C</abbr>' in html
+    assert "<dt>Term</dt>" in html
+    assert "<dd>Definition</dd>" in html
+    assert 'class="footnote-ref"' in html
+    assert "<mark>marked</mark>" in html
+    assert "<ins>inserted</ins>" in html
+    assert "<sup>10</sup>" in html
+    assert "<sub>2</sub>" in html
+    assert '<span class="math">\\(x + y\\)</span>' in html
+    assert "<ruby>漢字<rt>ㄏㄢˋㄗˋ</rt></ruby>" in html
+    assert '<span class="spoiler">hidden</span>' in html

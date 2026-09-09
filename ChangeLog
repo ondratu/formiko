@@ -8,6 +8,8 @@ Version 2.1.0.dev
     strikethrough, task lists and autolinked URLs, and supports a custom
     style stylesheet like the other previews. MarkDown-to-RST (m2r2) stays
     the default; switch to it in Preferences
+  * Support additional built-in Mistune Markdown extensions: abbreviations,
+    definition lists, footnotes, formatting, math, ruby and spoilers
   * Add WakaTime support (https://wakatime.com), configurable in
     Preferences
   * Keep the file browser up to date with the active document's folder
