@@ -1,0 +1,33 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  pytest:
+    name: Run pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            python3-docutils \
+            python3-gi \
+            python3-jsonpath-ng \
+            python3-pytest \
+            gir1.2-adw-1 \
+            gir1.2-gtksource-5 \
+            gir1.2-spelling-1 \
+            gir1.2-webkit-6.0
+      - name: Run tests
+        run: env -u DISPLAY -u WAYLAND_DISPLAY python3 -m pytest -q
