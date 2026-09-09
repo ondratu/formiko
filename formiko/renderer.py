@@ -1,5 +1,6 @@
 """Webkit based renderer."""
 
+from importlib.util import find_spec
 from io import StringIO
 from json import dumps
 from os.path import exists, splitext
@@ -50,6 +51,23 @@ from formiko.widgets import ImutableDict
 # WebKit font sizes are in CSS pixels; HiDPI scaling is handled internally
 # via the device pixel ratio, so this ratio is correct for all resolutions.
 _PT_TO_CSS_PX = 96 / 72
+_PYGMENTS_AVAILABLE = find_spec("pygments") is not None
+
+
+def _docutils_settings(tab_width, file_name, style):
+    """Build Docutils settings while handling optional Pygments."""
+    settings = {
+        "warning_stream": StringIO(),
+        "embed_stylesheet": True,
+        "tab_width": tab_width,
+        "file_name": file_name,
+    }
+    if not _PYGMENTS_AVAILABLE:
+        settings["syntax_highlight"] = "none"
+    if style:
+        settings["stylesheet"] = style
+        settings["stylesheet_path"] = []
+    return settings
 
 
 class Env:
@@ -627,15 +645,11 @@ class Renderer(Overlay):
                 html = self._embed_stylesheet(html, self.style)
                 return True, html, "text/html"
             elif not issubclass(self.__parser["class"], HtmlPreview):
-                settings = {
-                    "warning_stream": StringIO(),
-                    "embed_stylesheet": True,
-                    "tab_width": self.tab_width,
-                    "file_name": self.file_name,
-                }
-                if self.style:
-                    settings["stylesheet"] = self.style
-                    settings["stylesheet_path"] = []
+                settings = _docutils_settings(
+                    self.tab_width,
+                    self.file_name,
+                    self.style,
+                )
                 kwargs = {
                     "source": self.src,
                     "source_path": self.file_name,
