@@ -2,8 +2,8 @@
 
 Unlike the ``m2r2``-based parser, which converts Markdown to
 reStructuredText and renders that through docutils, this renders
-GitHub-flavored Markdown (tables, strikethrough, task lists, autolinked
-URLs) straight to HTML via mistune.
+GitHub-flavored Markdown and Mistune's built-in extensions straight to HTML
+via mistune.
 """
 
 import re
@@ -11,6 +11,23 @@ import re
 from formiko.utils import Undefined
 
 _TASK_ITEM_RE = re.compile(r"^\[([ xX])\]\s+")
+_MISTUNE_PLUGINS = [
+    "table",
+    "strikethrough",
+    "task_lists",
+    "url",
+    "abbr",
+    "def_list",
+    "footnotes",
+    "mark",
+    "insert",
+    "superscript",
+    "subscript",
+    "math",
+    "ruby",
+    "spoiler",
+    "speedup",
+]
 
 try:
     import mistune
@@ -20,7 +37,7 @@ try:
         def _make_markdown():
             return mistune.create_markdown(
                 escape=False,
-                plugins=["table", "strikethrough", "task_lists", "url"],
+                plugins=_MISTUNE_PLUGINS,
             )
 
     else:
