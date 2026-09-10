@@ -1,5 +1,6 @@
 """Preferences widget."""
 
+from math import pi
 from os.path import commonprefix
 from sys import argv
 
@@ -102,10 +103,42 @@ class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
             root.activate_action(self.action_name, self.action_target)
 
 
+class ColorSchemeIcon(Gtk.DrawingArea):
+    """Draw a symbolic circular icon for a color-scheme choice."""
+
+    def __init__(self, scheme):
+        super().__init__(content_width=16, content_height=16)
+        self.scheme = scheme
+        self.set_draw_func(self._draw)
+
+    def _draw(self, _widget, cr, width, height):
+        radius = min(width, height) / 2 - 1
+        cx, cy = width / 2, height / 2
+        cr.arc(cx, cy, radius, 0, 2 * pi)
+        cr.set_source_rgba(0.5, 0.5, 0.5, 0.35)
+        cr.fill_preserve()
+        cr.set_source_rgba(0.5, 0.5, 0.5, 0.9)
+        cr.stroke()
+        if self.scheme == "dark":
+            cr.arc(cx, cy, radius - 1, 0, 2 * pi)
+            cr.set_source_rgba(0.12, 0.12, 0.12, 1)
+            cr.fill()
+        elif self.scheme == "light":
+            cr.arc(cx, cy, radius - 1, 0, 2 * pi)
+            cr.set_source_rgba(1, 1, 1, 1)
+            cr.fill()
+        elif self.scheme == "default":
+            cr.move_to(cx, cy - radius)
+            cr.arc(cx, cy, radius - 1, -pi / 2, pi / 2)
+            cr.close_path()
+            cr.set_source_rgba(0.12, 0.12, 0.12, 1)
+            cr.fill()
+
+
 class Preferences(Gtk.Popover):
     """Preferences widget."""
 
-    def __init__(self, user_preferences):
+    def __init__(self, user_preferences):  # noqa: C901
         super().__init__()
         self.set_margin_top(20)
         self.set_margin_bottom(20)
@@ -113,6 +146,35 @@ class Preferences(Gtk.Popover):
         self.set_margin_end(20)
         vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
         self.set_child(vbox)
+
+        vbox.append(Gtk.Label(label="Appearance", xalign=0))
+        theme_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 6)
+        theme_box.add_css_class("linked")
+        theme_buttons = (
+            ("default", "Use system appearance"),
+            ("light", "Use light appearance"),
+            ("dark", "Use dark appearance"),
+        )
+        theme_group = None
+        theme_box.set_homogeneous(True)
+        for scheme, tooltip in theme_buttons:
+            button = Gtk.ToggleButton()
+            button.set_child(ColorSchemeIcon(scheme))
+            button.set_tooltip_text(tooltip)
+            button.set_action_name("win.change-color-scheme")
+            button.set_action_target_value(Variant("s", scheme))
+            if theme_group is not None:
+                button.set_group(theme_group)
+            else:
+                theme_group = button
+            button.set_active(user_preferences.color_scheme == scheme)
+            button.set_hexpand(True)
+            button.set_halign(Gtk.Align.FILL)
+            theme_box.append(button)
+        theme_box.set_hexpand(True)
+        vbox.set_size_request(360, -1)
+        vbox.append(theme_box)
+        vbox.append(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.vert_btn = Gtk.CheckButton(
             label="Vertical preview",

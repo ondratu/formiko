@@ -101,6 +101,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.search_way = SearchWay.NEXT
         self.cache = UserCache()
         self.preferences = UserPreferences()
+        self._apply_color_scheme(self.preferences.color_scheme)
         self.wakatime = WakaTime(
             self.preferences.wakatime_api_key
             if self.preferences.wakatime_enabled
@@ -136,6 +137,18 @@ class AppWindow(Adw.ApplicationWindow):
         self._register_view_actions()
         self._register_renderer_actions()
         self._register_json_actions()
+
+    @staticmethod
+    def _apply_color_scheme(scheme):
+        """Apply the persisted application color scheme."""
+        color_schemes = {
+            "default": Adw.ColorScheme.DEFAULT,
+            "light": Adw.ColorScheme.FORCE_LIGHT,
+            "dark": Adw.ColorScheme.FORCE_DARK,
+        }
+        Adw.StyleManager.get_default().set_color_scheme(
+            color_schemes.get(scheme, Adw.ColorScheme.DEFAULT),
+        )
 
     def _register_document_actions(self):
         action = Gio.SimpleAction.new("new-tab", None)
@@ -191,6 +204,12 @@ class AppWindow(Adw.ApplicationWindow):
         self.add_action(action)
 
     def _register_view_actions(self):
+        self._create_stateful_action(
+            "change-color-scheme",
+            "s",
+            self.preferences.color_scheme,
+            self._on_change_color_scheme,
+        )
         self.refresh_preview_action = Gio.SimpleAction.new(
             "refresh-preview",
             None,
@@ -239,6 +258,17 @@ class AppWindow(Adw.ApplicationWindow):
                 False,
                 self._on_toggle_sidebar,
             )
+
+    def _on_change_color_scheme(self, action, param):
+        """Apply and persist the selected application color scheme."""
+        scheme = param.get_string()
+        if scheme not in UserPreferences.COLOR_SCHEMES:
+            return
+        if action.get_state() != param:
+            action.set_state(param)
+        self.preferences.color_scheme = scheme
+        self.preferences.save()
+        self._apply_color_scheme(scheme)
 
     def _register_renderer_actions(self):
         pref = self.preferences

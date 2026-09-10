@@ -81,8 +81,10 @@ class EditorPreferences:
 class UserPreferences:
     """User preferences settings."""
 
+    COLOR_SCHEMES = ("default", "light", "dark")
     preview = Orientation.HORIZONTAL.numerator
     auto_scroll = True
+    color_scheme = "default"
     parser = "rst"
     writer = "html4"
     style = ""
@@ -101,6 +103,9 @@ class UserPreferences:
         cp.read(f"{directory}/formiko.ini")
         cp.smart_get(self, "preview", int)
         cp.smart_get(self, "auto_scroll", smart_bool)
+        cp.smart_get(self, "color_scheme")
+        if self.color_scheme not in self.COLOR_SCHEMES:
+            self.color_scheme = "default"
 
         cp.smart_get(self, "parser")
         if (
@@ -156,6 +161,7 @@ class UserPreferences:
         cp.add_section("main")
         cp.set("main", "preview", str(int(self.preview)))
         cp.smart_set(self, "auto_scroll")
+        cp.smart_set(self, "color_scheme")
 
         cp.smart_set(self, "parser")
         cp.smart_set(self, "writer")
