@@ -3,6 +3,8 @@ Changelog
 
 Version 2.1.0.dev
 
+  * Add desktop actions to open documents in a new window or as new tabs
+    in an existing window
   * Add a "Mistune Markdown" parser option: renders Markdown straight to
     HTML instead of going through reStructuredText, so it can show tables,
     strikethrough, task lists and autolinked URLs, and supports a custom

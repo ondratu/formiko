@@ -61,6 +61,22 @@ class Application(Adw.Application):
             "Use SourceView as editor (default)",
             None,
         )
+        self.add_main_option(
+            "new-window",
+            0,
+            OptionFlags.NONE,
+            OptionArg.NONE,
+            "Open files in a new window",
+            None,
+        )
+        self.add_main_option(
+            "new-tab",
+            0,
+            OptionFlags.NONE,
+            OptionArg.NONE,
+            "Open files in an existing window as new tabs",
+            None,
+        )
 
     def do_startup(self):
         """'do_startup' application handler."""
@@ -96,7 +112,11 @@ class Application(Adw.Application):
         """'do_command_line' application handler."""
         options = command_line.get_options_dict()
         arguments = command_line.get_arguments()[1:]
-        last = arguments[-1:][0] if arguments else ""
+        file_names = [
+            join(command_line.get_cwd(), argument)
+            for argument in arguments
+            if argument and argument != "-" and not argument.startswith("-")
+        ]
 
         if options.contains("vim"):
             log_default_handler(
@@ -137,17 +157,29 @@ class Application(Adw.Application):
             # vim have disabled accels for conflict itself
             self.set_accels()
 
-        if options.contains("preview") and last and last != "-":
-            self.new_window(
-                EditorType.PREVIEW,
-                join(command_line.get_cwd(), last),
-            )
-        elif last and last[0] != "-":
-            self.new_window(editor_type, join(command_line.get_cwd(), last))
-        else:
-            self.new_window(editor_type)
+        self._open_command_line_files(
+            options,
+            editor_type,
+            file_names,
+        )
 
         return 0
+
+    def _open_command_line_files(self, options, editor_type, file_names):
+        """Open command-line files according to the requested mode."""
+        if options.contains("preview"):
+            editor_type = EditorType.PREVIEW
+
+        if options.contains("new-window"):
+            self.open_files_in_new_window(editor_type, file_names)
+        elif options.contains("new-tab"):
+            self.open_files_in_new_tab(editor_type, file_names)
+        elif file_names:
+            # Keep the historical command-line behavior for the default
+            # desktop entry, which opens the last supplied file.
+            self.new_window(editor_type, file_names[-1])
+        else:
+            self.new_window(editor_type)
 
     def on_quit(self, action, *params):
         """'quit' action handler."""
@@ -205,6 +237,33 @@ class Application(Adw.Application):
             win.present()
         except Exception:  # pylint: disable=broad-exception-caught
             print_exc()
+            return None
+        else:
+            return win
+
+    def open_files_in_new_window(self, editor_type, file_names):
+        """Open all *file_names* in one newly created window."""
+        first_file = file_names[0] if file_names else ""
+        win = self.new_window(editor_type, first_file)
+        if win:
+            for file_name in file_names[1:]:
+                win.new_tab(file_name)
+        return win
+
+    def open_files_in_new_tab(self, editor_type, file_names):
+        """Open files as tabs in the active window, or create one."""
+        win = self.get_active_window()
+        if not isinstance(win, AppWindow):
+            return self.open_files_in_new_window(editor_type, file_names)
+
+        if not file_names:
+            win.new_tab()
+            win.present()
+            return win
+
+        for file_name in file_names:
+            win.open_document(file_name)
+        return win
 
     def set_accels(self):
         """Pair keyboard shorts to actions."""

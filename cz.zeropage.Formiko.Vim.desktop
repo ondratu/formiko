@@ -9,3 +9,12 @@ Terminal=false
 MimeType=text/plain;text/html;text/x-markdown;text/x-rst;application/json;text/json;
 Categories=Office;WordProcessor;GNOME;GTK;
 Keywords=Text;Editor;MarkDown;reStructuredText;
+Actions=NewWindow;NewTab;
+
+[Desktop Action NewWindow]
+Name=New Window
+Exec=formiko-vim --new-window %F
+
+[Desktop Action NewTab]
+Name=New Tab
+Exec=formiko-vim --new-tab %F
