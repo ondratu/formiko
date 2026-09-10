@@ -30,4 +30,33 @@ jobs:
             gir1.2-spelling-1 \
             gir1.2-webkit-6.0
       - name: Run tests
-        run: env -u DISPLAY -u WAYLAND_DISPLAY python3 -m pytest -q
+        run: env -u DISPLAY -u WAYLAND_DISPLAY python3 -m pytest -m "not gtk_integration" -q
+  gtk-integration:
+    name: Run GTK integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            dbus \
+            mutter \
+            python3-docutils \
+            python3-gi \
+            python3-jsonpath-ng \
+            python3-pytest \
+            gir1.2-adw-1 \
+            gir1.2-gtksource-5 \
+            gir1.2-spelling-1 \
+            gir1.2-webkit-6.0
+      - name: Run GTK integration tests in headless Mutter
+        run: |
+          runtime_dir="$RUNNER_TEMP/mutter-runtime"
+          mkdir -m 700 "$runtime_dir"
+          env -u DISPLAY -u WAYLAND_DISPLAY \
+            XDG_RUNTIME_DIR="$runtime_dir" \
+            dbus-run-session -- \
+            mutter --wayland --no-x11 --sm-disable --headless -- \
+            python3 -m pytest -m gtk_integration -q

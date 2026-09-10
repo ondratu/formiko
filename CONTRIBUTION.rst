@@ -88,20 +88,22 @@ Tests must pass without a graphical session — no X11 or Wayland display
 server (e.g. ``unset DISPLAY WAYLAND_DISPLAY`` before running them, as CI
 does). This does not mean that GTK, GObject Introspection, or the GTK
 typelibs are optional: the test environment still needs the libraries
-used by the imported code. The suite must not require a display server,
-though. Widgets that only need to be constructed and manipulated (not
-shown, realized, or run through a main loop) can be used headlessly, so
-prefer building the real GTK objects a test touches (e.g. ``Gtk.ListBox``,
-``Gtk.Label``) over mocking them. Reach for ``unittest.mock.Mock`` for
-everything a test does not itself exercise (e.g. the surrounding window).
+used by the imported code. Keep application state and file-discovery logic
+separate from GTK widgets so it can be tested in this job.
 
-Unsetting ``DISPLAY`` and ``WAYLAND_DISPLAY`` is a guard against accidental
-display use, not a workaround that makes GTK tests headless. If a test
-needs to show or realize a widget, it belongs in a separate display-backed
-test job (for example with ``xvfb-run``), rather than weakening this suite.
+GTK integration tests are marked ``gtk_integration`` and run in a separate
+job under a private headless Mutter Wayland compositor. They use real GTK
+objects, but do not connect to or display anything in the user's desktop.
+Run them locally with the same kind of isolated compositor used by CI:
+``dbus-run-session -- mutter --wayland --no-x11 --sm-disable --headless --
+python3 -m pytest -m gtk_integration -q``. The normal test job keeps
+``DISPLAY`` and ``WAYLAND_DISPLAY`` unset and excludes these integration
+tests.
 
-**Sanity check**: ``env -u DISPLAY -u WAYLAND_DISPLAY pytest -q`` should
-behave the same as a plain ``pytest -q`` run.
+**Sanity check**: ``env -u DISPLAY -u WAYLAND_DISPLAY python3 -m pytest
+-m "not gtk_integration" -q`` should pass without a graphical session. The
+full suite, including GTK integration tests, requires the private Mutter
+headless compositor described above.
 
 Commit messages
 ----------------

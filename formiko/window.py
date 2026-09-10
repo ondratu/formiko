@@ -535,7 +535,15 @@ class AppWindow(Adw.ApplicationWindow):
             return
         doc = doc or self.active_page
         directory = dirname(doc.file_path) if doc and doc.file_path else None
+        previous_directory = self.file_browser.directory
         self.file_browser.set_directory(directory)
+        action = self.lookup_action("toggle-sidebar")
+        if (
+            previous_directory != self.file_browser.directory
+            and action
+            and action.get_state().get_boolean()
+        ):
+            self.file_browser.refresh()
 
     def _on_toggle_sidebar(self, action, *_):
         """'toggle-sidebar' action handler."""

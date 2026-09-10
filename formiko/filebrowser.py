@@ -1,12 +1,12 @@
 """File browser sidebar widget."""
 
-from os import listdir
-from os.path import basename, isdir, join
+from os.path import isdir, join
 
 from gi.repository import GObject, Gtk
 from gi.repository.GLib import UserDirectory, get_user_special_dir
 
 from formiko.dialogs import is_known_file
+from formiko.filebrowser_model import FileBrowserModel
 from formiko.widgets import ImutableDict
 
 
@@ -24,7 +24,7 @@ class FileListBoxRow(Gtk.ListBoxRow):
         self.file_path = join(directory, name)
 
 
-class FileBrowser(Gtk.Box):
+class FileBrowser(FileBrowserModel, Gtk.Box):
     """Sidebar showing filtered file list for the current directory."""
 
     __gsignals__ = ImutableDict(
@@ -34,10 +34,13 @@ class FileBrowser(Gtk.Box):
     )
 
     def __init__(self):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, hexpand=False)
+        Gtk.Box.__init__(
+            self,
+            orientation=Gtk.Orientation.VERTICAL,
+            hexpand=False,
+        )
+        FileBrowserModel.__init__(self, file_filter=is_known_file)
         self.add_css_class("sidebar")
-        self._directory = ""
-        self._default_directory = ""
 
         self._dir_label = Gtk.Label()
         self._dir_label.add_css_class("caption")
@@ -79,26 +82,16 @@ class FileBrowser(Gtk.Box):
         if not self._directory:
             return
 
-        self._dir_label.set_text(
-            basename(self._directory) or self._directory,
-        )
+        self._dir_label.set_text(self.directory_name)
         self._dir_label.set_tooltip_text(self._directory)
 
-        try:
-            names = sorted(
-                name
-                for name in listdir(self._directory)
-                if is_known_file(name)
-            )
-        except OSError:
-            return
-
-        for name in names:
+        for name in FileBrowserModel.refresh(self):
             row = FileListBoxRow(name, self._directory)
             self._list_box.append(row)
 
     def clear(self):
         """Remove all displayed rows, e.g. while the sidebar is hidden."""
+        FileBrowserModel.clear(self)
         while child := self._list_box.get_first_child():
             self._list_box.remove(child)
 
