@@ -149,6 +149,7 @@ def _build_debug_info(prefs=None):
         "docutils-tinyhtmlwriter",
         "jsonpath-ng",
         "m2r2",
+        "mistune",
         "pynvim",
         "Pygments",
     )
@@ -261,6 +262,21 @@ class FileNotFoundDialog(Adw.AlertDialog):
         super().__init__(
             heading="File not found",
             body=f"Document `{filename}` not found.",
+        )
+        self.add_response("ok", "OK")
+        self.set_close_response("ok")
+
+
+class MissingDependencyDialog(Adw.AlertDialog):
+    """Dialog shown when an optional feature dependency is unavailable."""
+
+    def __init__(self, dependency):
+        super().__init__(
+            heading="Missing dependency",
+            body=(
+                f"Vim support requires the Python package '{dependency}'. "
+                "Install it and try again."
+            ),
         )
         self.add_response("ok", "OK")
         self.set_close_response("ok")

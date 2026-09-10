@@ -150,6 +150,24 @@ class WakaTimeIndicator(Gtk.Image):
             self.set_visible(True)
 
 
+class PygmentsIndicator(Gtk.Label):
+    """Status bar warning for missing syntax highlighting support."""
+
+    def __init__(self):
+        super().__init__(label="Pygments is not installed", visible=False)
+        self.add_css_class("error")
+        self.set_margin_start(6)
+        self.set_margin_end(6)
+        self.set_tooltip_text(
+            "Syntax highlighting is unavailable because Pygments is not "
+            "installed",
+        )
+
+    def set_warning(self, visible):
+        """Show or hide the missing-Pygments warning."""
+        self.set_visible(visible)
+
+
 class Statusbar(Gtk.Box):
     """Status bar widget."""
 
@@ -179,6 +197,9 @@ class Statusbar(Gtk.Box):
         self.info_bar.set_margin_start(10)
         self.info_bar.set_margin_end(10)
         self.append(self.info_bar)
+
+        self.pygments_indicator = PygmentsIndicator()
+        self.append(self.pygments_indicator)
 
         self.wakatime_indicator = WakaTimeIndicator()
         self.append(self.wakatime_indicator)

@@ -19,7 +19,13 @@ from formiko.filebrowser import FileBrowser
 from formiko.formatting_actions import FormattingActionGroup
 from formiko.menu import AppMenu
 from formiko.preferences import Preferences
-from formiko.renderer import WebView as GtkWebView
+from formiko.renderer import (
+    _PYGMENTS_AVAILABLE,
+    pygments_required,
+)
+from formiko.renderer import (
+    WebView as GtkWebView,
+)
 from formiko.sourceview import View as GtkSourceView
 from formiko.status_menu import Statusbar
 from formiko.user import UserCache, UserPreferences, View
@@ -505,6 +511,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.preferences.save()
 
         self._apply_parser_ui(parser)
+        self._apply_pygments_ui(parser)
 
     def on_active_tab_parser_changed(self, doc, parser):
         """Update window UI when the active tab's parser changes."""
@@ -514,6 +521,7 @@ class AppWindow(Adw.ApplicationWindow):
         if action:
             action.set_state(GLib.Variant("s", parser))
         self._apply_parser_ui(parser)
+        self._apply_pygments_ui(parser)
 
     def _apply_parser_ui(self, parser):
         """Update header-bar visibility for JSON vs markup parsers."""
@@ -521,6 +529,14 @@ class AppWindow(Adw.ApplicationWindow):
         self.json_fold_box.set_visible(parser == "json")
         if self.editor_type == EditorType.SOURCE:
             self.fmt_bar.set_visible(parser != "json")
+
+    def _apply_pygments_ui(self, parser):
+        """Update the missing-Pygments warning for the active parser."""
+        if hasattr(self, "status_bar"):
+            self.status_bar.pygments_indicator.set_warning(
+                not _PYGMENTS_AVAILABLE
+                and pygments_required(parser),
+            )
 
     def _on_browser_file_activated(self, _browser, file_path):
         """Open a file selected in the file browser."""
@@ -887,6 +903,7 @@ class AppWindow(Adw.ApplicationWindow):
         ):
             self.status_bar.set_words_count(doc.words_count)
             self.status_bar.set_chars_count(doc.chars_count)
+            self._apply_pygments_ui(doc.parser)
 
     def _on_doc_state_changed(self, doc):
         """Update tab UI and window title on name/modified state change."""

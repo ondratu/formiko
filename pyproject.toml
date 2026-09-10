@@ -36,7 +36,6 @@ extra = [
     "Pygments",
     "docutils-tinyhtmlwriter",
     "docutils-htmlwriter",
-    "docutils-html5-writer",
 ]
 
 [project.urls]

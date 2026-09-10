@@ -75,7 +75,8 @@ Version 2.0.0
   * JSON preview:
     * Add collapsible folding view
     * Add JSON path filter
-  * Use `docutils` HTML5 Writer instead of deprecated `docutils-html5-writer`
+  * Use the HTML5 Writer built into `docutils` instead of a deprecated
+    external writer
   * Fix #42: Prevent "reload from storage" popup during editing
   * Fix #45: Fix `pip3 install` error
   * Migrate from GTK3 to GTK4

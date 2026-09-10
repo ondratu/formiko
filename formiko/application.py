@@ -1,5 +1,6 @@
 """Gtk.Application implementation."""
 
+from importlib.util import find_spec
 from os.path import join
 from traceback import print_exc
 
@@ -15,7 +16,11 @@ from gi.repository.GLib import (
 )
 from gi.repository.Gtk import Application as GtkApplication  # noqa: F401
 
-from formiko.dialogs import TraceBackDialog, about_dialog
+from formiko.dialogs import (
+    MissingDependencyDialog,
+    TraceBackDialog,
+    about_dialog,
+)
 from formiko.editor import EditorType
 from formiko.shortcuts import ShortcutsWindow
 from formiko.window import AppWindow
@@ -124,6 +129,10 @@ class Application(Adw.Application):
             )
             return 1
 
+        if editor_type == EditorType.VIM and find_spec("pynvim") is None:
+            self.show_missing_dependency("pynvim")
+            return 0
+
         if editor_type == EditorType.SOURCE:
             # vim have disabled accels for conflict itself
             self.set_accels()
@@ -177,6 +186,16 @@ class Application(Adw.Application):
         """'traceback' action handler."""
         dialog = TraceBackDialog(self.get_active_window(), param.get_string())
         dialog.present()
+
+    def show_missing_dependency(self, dependency):
+        """Show a user-facing error for a missing optional dependency."""
+        window = Adw.ApplicationWindow(application=self)
+        window.set_title("Formiko")
+        window.set_default_size(500, 220)
+        window.present()
+        dialog = MissingDependencyDialog(dependency)
+        dialog.connect("response", lambda *_: self.quit())
+        dialog.present(window)
 
     def new_window(self, editor_type: EditorType, file_name=""):
         """Create new application window."""

@@ -19,7 +19,12 @@ from formiko.wakatime import CATEGORY_BROWSING
 from formiko.widgets import ImutableDict
 
 if get_required_version("Vte"):
-    from formiko.vim import VimEditor
+    try:
+        from formiko.vim import VimEditor
+    except ModuleNotFoundError as error:
+        if error.name != "pynvim":
+            raise
+        VimEditor = None
 
 RE_WORD = re.compile(r"([\w]+)", re.U)
 RE_CHAR = re.compile(r'[\w \t\.,\?\(\)"\']', re.U)

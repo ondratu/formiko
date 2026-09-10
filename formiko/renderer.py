@@ -54,6 +54,11 @@ _PT_TO_CSS_PX = 96 / 72
 _PYGMENTS_AVAILABLE = find_spec("pygments") is not None
 
 
+def pygments_required(parser):
+    """Return whether *parser* uses Docutils syntax highlighting."""
+    return parser in ("rst", "m2r")
+
+
 def _docutils_settings(tab_width, file_name, style):
     """Build Docutils settings while handling optional Pygments."""
     settings = {
