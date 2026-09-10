@@ -357,8 +357,9 @@ class Renderer(Overlay):
         self.tab_width = 8
         self.__position = -1
         self.file_name = None
-        self._loaded_context = None  # (file_name, mime_type) of last finished
-        self._pending_context = None  # context of the load in progress
+        # Render context includes all values that can affect the page head.
+        self._loaded_context = None
+        self._pending_context = None
         self.pos = 0
         self.src = None  # None = no content yet; prevents spurious renders
 
@@ -735,7 +736,14 @@ class Renderer(Overlay):
                         f"</style>"
                     )
                     html = html.replace("</head>", theme_css + "</head>", 1)
-                context = (self.file_name, mime_type)
+                context = (
+                    self.file_name,
+                    mime_type,
+                    self.style,
+                    self.bgcolor,
+                    self.fgcolor,
+                    self.linkcolor,
+                )
                 if self._loaded_context == context:
                     body_html = self._extract_body(html)
                     if body_html is not None:
@@ -757,7 +765,14 @@ class Renderer(Overlay):
                         self.scroll_to_position(self.pos)
                         return
             file_name = self.file_name or get_home_dir()
-            self._pending_context = (self.file_name, mime_type)
+            self._pending_context = (
+                self.file_name,
+                mime_type,
+                self.style,
+                self.bgcolor,
+                self.fgcolor,
+                self.linkcolor,
+            )
             self.webview.load_bytes(
                 Bytes(html.encode("utf-8")),
                 mime_type,
