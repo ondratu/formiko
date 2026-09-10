@@ -30,6 +30,8 @@ merely convenient in Python:
   govern *how the app behaves and is structured*, PEP 8 / PEP 257 still
   govern *how the Python code is written* (see below). The two are not in
   conflict; when they appear to be, ask before picking one over the other.
+* When a design choice cannot satisfy every guideline, apply this priority:
+  GNOME HIG first, then GTK4 conventions, then Python conventions.
 
 Flatpak
 -------
@@ -58,6 +60,9 @@ Formiko targets Python 3 and follows PEP 8 / PEP 257 conservatively.
 Linting is enforced locally and in CI — please run it *before* opening a
 PR, not after:
 
+* Respect the repository configuration in ``pyproject.toml`` and the
+  tool-specific configuration files. Do not bypass a configured check merely
+  to make a change pass.
 * ``ruff`` (see ``ruff.toml``) — a fairly wide rule set (pyflakes,
   pycodestyle, pydocstyle, bugbear, simplify, pylint subset, …),
   79-column line length. Fix what ruff reports rather than adding new
@@ -71,6 +76,9 @@ PR, not after:
 * ``rst-linter`` (pre-commit-hooks-markup) — for ``.rst`` documentation.
 * Standard pre-commit hygiene: no trailing whitespace, files end with a
   newline, YAML stays valid.
+* Resolve errors and warnings where practical instead of suppressing them
+  in configuration or on individual lines. Use an exception only when the
+  warning is understood, intentional, and specific to the affected code.
 
 Install and enable the hooks once per checkout::
 
