@@ -58,6 +58,9 @@ include = ["formiko*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "gtk_integration: tests that require a headless GTK display backend",
+]
 
 [tool.codespell]
 # Ref: https://github.com/codespell-project/codespell#using-a-config-file
