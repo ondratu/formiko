@@ -581,6 +581,7 @@ class Renderer(Overlay):
         self.__writer = WRITERS[writer]
         klass = self.__writer["class"]
         self.writer_instance = klass() if klass is not None else None
+        self._loaded_context = None
         idle_add(self.do_render)
 
     def get_writer(self):
@@ -593,6 +594,7 @@ class Renderer(Overlay):
         self.__parser = PARSERS[parser]
         klass = self.__parser["class"]
         self.parser_instance = klass() if klass is not None else None
+        self._loaded_context = None
         if isinstance(self.parser_instance, JSONPreview):
             self.parser_instance.webview = self.webview
             self.parser_instance._win = self.__win  # noqa: SLF001
