@@ -73,3 +73,37 @@ def test_open_files_in_new_tab_creates_empty_tab_without_files():
     assert result is window
     window.new_tab.assert_called_once_with()
     window.present.assert_called_once_with()
+
+
+def test_missing_dependency_does_not_quit_existing_window(monkeypatch):
+    """A dependency error from a second invocation keeps the main window."""
+    class ExistingWindow:
+        pass
+
+    monkeypatch.setattr("formiko.application.AppWindow", ExistingWindow)
+    app = Application()
+    app.get_windows = Mock(return_value=[ExistingWindow()])
+    app.quit = Mock()
+    error_window = Mock()
+
+    app._close_missing_dependency_window(error_window)
+
+    error_window.close.assert_called_once_with()
+    app.quit.assert_not_called()
+
+
+def test_missing_dependency_quits_without_existing_window(monkeypatch):
+    """A standalone dependency error closes its application."""
+    class ExistingWindow:
+        pass
+
+    monkeypatch.setattr("formiko.application.AppWindow", ExistingWindow)
+    app = Application()
+    app.get_windows = Mock(return_value=[])
+    app.quit = Mock()
+    error_window = Mock()
+
+    app._close_missing_dependency_window(error_window)
+
+    error_window.close.assert_called_once_with()
+    app.quit.assert_called_once_with()

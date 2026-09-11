@@ -226,8 +226,17 @@ class Application(Adw.Application):
         window.set_default_size(500, 220)
         window.present()
         dialog = MissingDependencyDialog(dependency)
-        dialog.connect("response", lambda *_: self.quit())
+        dialog.connect(
+            "response",
+            lambda *_: self._close_missing_dependency_window(window),
+        )
         dialog.present(window)
+
+    def _close_missing_dependency_window(self, window):
+        """Close the error without quitting another Formiko window."""
+        window.close()
+        if not any(isinstance(win, AppWindow) for win in self.get_windows()):
+            self.quit()
 
     def new_window(self, editor_type: EditorType, file_name=""):
         """Create new application window."""
