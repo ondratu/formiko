@@ -22,6 +22,7 @@ Version 2.1.0.dev
   * Fix preview colors not updating after switching the application theme
   * Fix word and character counts not updating when opening a file in an
     empty tab
+  * Fix links to files in parent directories not opening from the preview
 
 Version 2.0.0
 

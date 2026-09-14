@@ -269,6 +269,22 @@ JS_SCROLL_LISTENER = """
 })();
 """
 
+JS_LINK_LISTENER = """
+(function () {
+    if (window.__formikoLinksHooked) return;
+    window.__formikoLinksHooked = true;
+    document.addEventListener("click", function (event) {
+        const target = event.target instanceof Element
+            ? event.target
+            : event.target.parentElement;
+        const link = target && target.closest("a[href]");
+        if (!link) return;
+        event.preventDefault();
+        window.webkit.messageHandlers.formikoLink.postMessage(link.href);
+    }, true);
+})();
+"""
+
 MARKUP = """<span background="#ddd"> %s </span>"""
 
 
@@ -299,9 +315,14 @@ class Renderer(Overlay):
 
         content_manager = self.webview.get_user_content_manager()
         content_manager.register_script_message_handler("formikoScroll")
+        content_manager.register_script_message_handler("formikoLink")
         content_manager.connect(
             "script-message-received::formikoScroll",
             self._on_scroll_message,
+        )
+        content_manager.connect(
+            "script-message-received::formikoLink",
+            self._on_link_message,
         )
 
         Adw.StyleManager.get_default().connect(
@@ -823,11 +844,28 @@ class Renderer(Overlay):
         self.webview.evaluate_javascript(
             JS_SCROLL_LISTENER, -1, None, None, None, None,
         )
+        self.webview.evaluate_javascript(
+            JS_LINK_LISTENER, -1, None, None, None, None,
+        )
         self.scroll_to_position(None)
 
     def _on_scroll_message(self, _content_manager, _js_result):
         """Relay the debounced JS scroll event as "user-scrolled"."""
         self.emit("user-scrolled")
+
+    def _on_link_message(self, _content_manager, js_result):
+        """Handle links whose navigation policy WebKit does not emit."""
+        uri = js_result.to_string()
+        if uri.startswith("file://"):
+            parts = uri[7:].split("#", 1)
+            file_path = unquote(parts[0])
+            anchor = unquote(parts[1]) if len(parts) > 1 else None
+            if anchor and file_path == self.file_name:
+                self.scroll_to_anchor(anchor)
+            else:
+                self.find_and_opendocument(file_path)
+        else:
+            Gtk.show_uri(None, uri, Gdk.CURRENT_TIME)
 
     def do_next_match(self, text):
         """Find next metch."""
