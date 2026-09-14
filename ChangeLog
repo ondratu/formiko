@@ -20,6 +20,8 @@ Version 2.1.0.dev
   * Preserve custom preview styles when switching parsers or writers
   * Add a light/dark/system appearance switch in Preferences
   * Fix preview colors not updating after switching the application theme
+  * Fix word and character counts not updating when opening a file in an
+    empty tab
 
 Version 2.0.0
 

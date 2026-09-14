@@ -169,6 +169,11 @@ class DocumentPage(Gtk.Box):
         self.renderer.pos = self.editor.position
         self._words_count = sum(1 for _ in RE_WORD.finditer(text))
         self._chars_count = sum(1 for _ in RE_CHAR.finditer(text))
+        self.emit(
+            "words-count-changed",
+            self._words_count,
+            self._chars_count,
+        )
 
     def refresh(self):
         """Force an immediate re-render."""

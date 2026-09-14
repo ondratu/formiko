@@ -1,18 +1,4 @@
-"""Regression test for GH issue #59: automatic parser selection by file type.
-
-In Formiko <= 1.5.0, ``Window.on_file_type()`` only updated the
-preferences-menu display (``self.pref_menu.set_parser(parser)``) but never
-told the renderer about the new parser, and never persisted it to
-``self.preferences.parser``.  As a result, once the ``parser`` config
-value was set to something other than the file's own extension (e.g.
-after ``parser = rst`` was stored while a ``.md`` file was open), opening
-a new file with a different extension kept using the stale parser instead
-of switching automatically based on the file's extension.
-
-This was fixed in the ``DocumentPage._on_file_type`` rewrite (part of the
-2.0.0 tab-support refactor): it now calls ``self.renderer.set_parser(...)``
-and updates ``self.preferences.parser`` for every file-type change.
-"""
+"""Regression tests for DocumentPage."""
 
 import contextlib
 from unittest.mock import Mock
@@ -94,3 +80,20 @@ def test_on_file_type_keeps_current_parser_for_unknown_extension():
 
     page.renderer.set_parser.assert_called_once_with("rst")
     assert page.preferences.parser == "rst"
+
+
+def test_load_file_emits_updated_word_and_character_counts():
+    """Loading a file updates the status bar through the count signal."""
+    page = Mock()
+    page.editor_type = EditorType.SOURCE
+    page.editor = Mock(
+        changes=1,
+        text="Two words\nand more.",
+        file_path="example.md",
+        position=0.0,
+    )
+    page.renderer = Mock()
+
+    DocumentPage.load_file(page, "example.md")
+
+    page.emit.assert_called_once_with("words-count-changed", 4, 18)
