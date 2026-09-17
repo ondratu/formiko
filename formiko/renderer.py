@@ -1,8 +1,7 @@
-"""Webkit based renderer."""
+"""HTML preview renderer, backend-independent via :mod:`formiko.browser`."""
 
 from importlib.util import find_spec
 from io import StringIO
-from json import dumps
 from os.path import exists, splitext
 from traceback import format_exc
 from urllib.parse import unquote
@@ -16,29 +15,22 @@ from docutils.writers.pep_html import Writer as WriterPep
 from docutils.writers.s5_html import Writer as WriterS5
 from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 from gi.repository.GLib import (
-    MAXUINT,
-    Bytes,
-    Error,
-    LogLevelFlags,
-    MainContext,
     get_home_dir,
     idle_add,
-    log_default_handler,
 )
 from gi.repository.Gtk import (
     Align,
     Label,
     Overlay,
 )
-from gi.repository.WebKit import (
-    FindOptions,
-    LoadEvent,
-    NavigationPolicyDecision,
-    NavigationType,
-    PrintOperation,
-    WebView,
-)
 
+from formiko.browser import (
+    EVENT_HOVER_CHANGED,
+    EVENT_LINK_CLICKED,
+    EVENT_LOAD_FINISHED,
+    EVENT_USER_SCROLLED,
+    create_browser_view,
+)
 from formiko.dialogs import FileNotFoundDialog, run_alert_dialog
 from formiko.directives import HtmlPreview, Mark2Resturctured, TinyWriter
 from formiko.json_preview import JSONPreview
@@ -234,62 +226,11 @@ EXCEPTION_ERROR = """
 </html>
 """
 
-SCROLL = """
-<script>
-    window.scrollTo(
-        0,
-        (document.documentElement.scrollHeight-window.innerHeight)*%f)
-</script>
-"""
-
-JS_SCROLL = """
-    window.scrollTo(
-        0,
-        (document.documentElement.scrollHeight-window.innerHeight)*%f);
-"""
-
-JS_POSITION = """
-window.scrollY/(document.documentElement.scrollHeight-window.innerHeight)
-"""
-
-# Debounced scroll listener, re-injected after every page load (each load
-# is a fresh JS context). Used to emit "user-scrolled" for WakaTime -
-# reading/scrolling is considered activity same as editing.
-JS_SCROLL_LISTENER = """
-(function () {
-    if (window.__formikoScrollHooked) return;
-    window.__formikoScrollHooked = true;
-    let timer;
-    window.addEventListener("scroll", function () {
-        clearTimeout(timer);
-        timer = setTimeout(function () {
-            window.webkit.messageHandlers.formikoScroll.postMessage("");
-        }, 500);
-    }, {passive: true});
-})();
-"""
-
-JS_LINK_LISTENER = """
-(function () {
-    if (window.__formikoLinksHooked) return;
-    window.__formikoLinksHooked = true;
-    document.addEventListener("click", function (event) {
-        const target = event.target instanceof Element
-            ? event.target
-            : event.target.parentElement;
-        const link = target && target.closest("a[href]");
-        if (!link) return;
-        event.preventDefault();
-        window.webkit.messageHandlers.formikoLink.postMessage(link.href);
-    }, true);
-})();
-"""
-
 MARKUP = """<span background="#ddd"> %s </span>"""
 
 
 class Renderer(Overlay):
-    """Renderer widget, mainly based on Webkit."""
+    """Renderer widget; delegates HTML display to a :class:`BrowserView`."""
 
     __gsignals__ = ImutableDict({
         # Emitted when the user scrolls the rendered preview.
@@ -307,22 +248,12 @@ class Renderer(Overlay):
         self.mono_family = "monospace"
         self.mono_size_px = 13  # WebKit default for monospace
 
-        self.webview = WebView()
-        self.webview.connect("mouse-target-changed", self.on_mouse)
-        self.webview.connect("context-menu", self.on_context_menu)
-        self.webview.connect("load-changed", self.on_load_changed)
-        self.webview.connect("decide-policy", self.on_decide_policy)
-
-        content_manager = self.webview.get_user_content_manager()
-        content_manager.register_script_message_handler("formikoScroll")
-        content_manager.register_script_message_handler("formikoLink")
-        content_manager.connect(
-            "script-message-received::formikoScroll",
-            self._on_scroll_message,
-        )
-        content_manager.connect(
-            "script-message-received::formikoLink",
-            self._on_link_message,
+        self.webview = create_browser_view()
+        self.webview.connect(EVENT_HOVER_CHANGED, self._on_hover_changed)
+        self.webview.connect(EVENT_LOAD_FINISHED, self._on_load_finished)
+        self.webview.connect(EVENT_LINK_CLICKED, self._on_link_clicked)
+        self.webview.connect(
+            EVENT_USER_SCROLLED, lambda: self.emit("user-scrolled"),
         )
 
         Adw.StyleManager.get_default().connect(
@@ -350,16 +281,9 @@ class Renderer(Overlay):
         except Exception:
             self._desktop_settings = None  # non-GNOME desktop
 
-        self.set_child(self.webview)
+        self.set_child(self.webview.widget)
 
-        web_settings = self.webview.get_settings()
-        web_settings.set_enable_javascript_markup(False)  # XSS Fix
         self._apply_system_font()
-
-        controller = self.webview.get_find_controller()
-        self.search_done = None
-        controller.connect("found-text", self.on_found_text)
-        controller.connect("failed-to-find-text", self.on_faild_to_find_text)
 
         self.label = Label()
         self.label.set_halign(Align.START)
@@ -376,13 +300,13 @@ class Renderer(Overlay):
 
         self.style = style
         self.tab_width = 8
-        self.__position = -1
         self.file_name = None
         # Render context includes all values that can affect the page head.
         self._loaded_context = None
         self._pending_context = None
         self.pos = 0
         self.src = None  # None = no content yet; prevents spurious renders
+        self._scrolled_to_pos = None  # last applied pos; see do_render()
 
     @staticmethod
     def _rgba_to_hex(rgba):
@@ -444,13 +368,14 @@ class Renderer(Overlay):
             )
 
     def _apply_system_font(self):
-        """Apply system document and monospace fonts to WebKit settings."""
+        """Apply system document and monospace fonts to the browser view."""
         self._read_system_font()
-        web_settings = self.webview.get_settings()
-        web_settings.set_default_font_family(self.font_family)
-        web_settings.set_default_font_size(self.font_size_px)
-        web_settings.set_monospace_font_family(self.mono_family)
-        web_settings.set_default_monospace_font_size(self.mono_size_px)
+        self.webview.set_fonts(
+            self.font_family,
+            self.font_size_px,
+            self.mono_family,
+            self.mono_size_px,
+        )
 
     def _on_system_font_changed(self, _settings, _key):
         """React to system font change and re-render the preview."""
@@ -481,69 +406,33 @@ class Renderer(Overlay):
         recalculating before lookup_color() is invoked.
         """
         self._read_theme_colors()
-        background = Gdk.RGBA()
-        background.parse(self.bgcolor)
-        self.webview.set_background_color(background)
+        self.webview.set_background_color(self.bgcolor)
+        self.webview.set_foreground_color(self.fgcolor)
         self.do_render()
 
     @property
     def position(self):
         """Return cursor position."""
-        self.__position = -1
-        self.webview.evaluate_javascript(
-            JS_POSITION,
-            -1,
-            None,
-            None,
-            None,
-            self.on_position_callback,
-        )
-        while self.__position < 0:
-            Gtk.main_iteration()
-        return self.__position
+        return self.webview.get_scroll_fraction()
 
-    def on_position_callback(self, webview, result):
-        """Set cursor position value."""
-        try:
-            js_res = webview.evaluate_javascript_finish(result)
-            self.__position = js_res.get_js_value().to_double()
-        except Error:
-            self.__position = 0
-
-    def on_mouse(self, webview, hit_test_result, modifiers):
+    def _on_hover_changed(self, target):
         """Show url links on mouse over."""
-        self.link_uri = None
-        if hit_test_result.context_is_link():
-            self.link_uri = hit_test_result.get_link_uri()
-            text = "link: " + self.link_uri
-        elif hit_test_result.context_is_image():
-            text = "image:" + hit_test_result.get_image_uri()
-        elif hit_test_result.context_is_media():
-            text = "media: " + hit_test_result.get_media_uri()
-        else:
+        self.link_uri = target.uri if target else None
+        if target is None:
             if self.label.is_visible():
                 self.label.hide()
             return
+        prefix = {"link": "link: ", "image": "image:", "media": "media: "}
+        text = prefix[target.kind] + target.uri
         self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
         self.label.show()
 
-    def on_context_menu(self, _webview, _menu, _hit_test_result):
-        """No action on webkit context menu."""
-        return True  # disable context menu for now
-
-    def on_decide_policy(self, _webview, decision, _decision_type):
-        """Intercept link navigation.
+    def _on_link_clicked(self, uri):
+        """Handle a link click reported by the browser view.
 
         Open files internally, others externally.
         Scroll to anchor for internal same-file links.
         """
-        if not isinstance(decision, NavigationPolicyDecision):
-            return False
-        action = decision.get_navigation_action()
-        if action.get_navigation_type() != NavigationType.LINK_CLICKED:
-            return False
-        uri = action.get_request().get_uri()
-        decision.ignore()
         if uri.startswith("file://"):
             parts = uri[7:].split("#", 1)
             file_path = unquote(parts[0])
@@ -553,24 +442,11 @@ class Renderer(Overlay):
             else:
                 self.find_and_opendocument(file_path)
         else:
-            Gtk.show_uri(None, uri, Gdk.CURRENT_TIME)
-        return True
+            Gtk.show_uri(self.__win, uri, Gdk.CURRENT_TIME)
 
     def scroll_to_anchor(self, anchor):
         """Scroll to a named anchor in the current document."""
-        anchor_js = dumps(anchor)
-        self.webview.evaluate_javascript(
-            (
-                f"var el = document.getElementById({anchor_js})"
-                f" || document.querySelector('a[name={anchor_js}]');"
-                " if (el) el.scrollIntoView();"
-            ),
-            -1,
-            None,
-            None,
-            None,
-            None,
-        )
+        self.webview.scroll_to_anchor(anchor)
 
     def find_and_opendocument(self, file_path):
         """Find file on disk and open it."""
@@ -592,7 +468,7 @@ class Renderer(Overlay):
         if ext in LANG_BY_EXT:
             self.__win.open_document(file_path)
         elif exists(file_path):
-            Gtk.show_uri(None, "file://" + file_path, Gdk.CURRENT_TIME)
+            Gtk.show_uri(self.__win, "file://" + file_path, Gdk.CURRENT_TIME)
         else:
             dialog = FileNotFoundDialog(file_path)
             run_alert_dialog(dialog, self.__win)
@@ -767,23 +643,13 @@ class Renderer(Overlay):
                 )
                 if self._loaded_context == context:
                     body_html = self._extract_body(html)
-                    if body_html is not None:
-                        fgcolor = dumps(self.fgcolor)
-                        body_html = dumps(body_html)
-                        self.webview.evaluate_javascript(
-                            (
-                                f"document.fgColor={fgcolor};"
-                                f"document.body.innerHTML={body_html};"
-                            ),
-                            -1,
-                            None,
-                            None,
-                            None,
-                            None,
-                        )
+                    patched = body_html is not None and (
+                        self.webview.render_incremental(body_html)
+                    )
+                    if patched:
                         if hasattr(self.parser_instance, "inject_fold_js"):
                             self.parser_instance.inject_fold_js(self.webview)
-                        self.scroll_to_position(self.pos)
+                        self._scroll_to_pos_if_changed()
                         return
             file_name = self.file_name or get_home_dir()
             self._pending_context = (
@@ -794,14 +660,24 @@ class Renderer(Overlay):
                 self.fgcolor,
                 self.linkcolor,
             )
-            self.webview.load_bytes(
-                Bytes(html.encode("utf-8")),
-                mime_type,
-                "UTF-8",
-                "file://" + file_name,
-            )
+            # A full load resets scroll to the top regardless of self.pos,
+            # so invalidate the cache below or it wrongly thinks nothing
+            # needs restoring.
+            self._scrolled_to_pos = None
+            self.webview.load(html, mime_type, "file://" + file_name)
         if state:
-            self.scroll_to_position(self.pos)
+            self._scroll_to_pos_if_changed()
+
+    def _scroll_to_pos_if_changed(self):
+        """Sync the preview to ``self.pos``, but only when it changed.
+
+        Otherwise every unrelated re-render would re-apply it and stomp
+        on scrolling the user just did in the preview by hand.
+        """
+        if self.pos == self._scrolled_to_pos:
+            return
+        self._scrolled_to_pos = self.pos
+        self.scroll_to_position(self.pos)
 
     def render(self, src, file_name, pos=0):
         """Add render task to ui queue."""
@@ -812,103 +688,38 @@ class Renderer(Overlay):
 
     def print_page(self):
         """Print the rendered page."""
-        po = PrintOperation.new(self.webview)
-        po.connect("failed", self.on_print_failed)
-        po.run_dialog(self.__win)
+        self.webview.print_page(self.__win)
 
-    def on_print_failed(self, _, error):
-        """Log error when print failed."""
-        # FIXME: if dialog is used, application will lock :-(
-        log_default_handler(
-            "Application",
-            LogLevelFlags.LEVEL_WARNING,
-            error.message,
-        )
-
-    def on_load_changed(self, _webview, load_event):
-        """On page load handler.
-
-        Set foreground color and restore scroll when page finishes loading.
-        """
-        if load_event != LoadEvent.FINISHED:
-            return
+    def _on_load_finished(self):
+        """Restore scroll position once a freshly loaded page is ready."""
         self._loaded_context = self._pending_context
-        self.webview.evaluate_javascript(
-            f"document.fgColor='{self.fgcolor}'",
-            -1,
-            None,
-            None,
-            None,
-            None,
-        )
-        self.webview.evaluate_javascript(
-            JS_SCROLL_LISTENER, -1, None, None, None, None,
-        )
-        self.webview.evaluate_javascript(
-            JS_LINK_LISTENER, -1, None, None, None, None,
-        )
-        self.scroll_to_position(None)
+        self._scroll_to_pos_if_changed()
 
-    def _on_scroll_message(self, _content_manager, _js_result):
-        """Relay the debounced JS scroll event as "user-scrolled"."""
-        self.emit("user-scrolled")
+    def owns_focus_widget(self, widget):
+        """Return whether *widget* is this renderer's own focus target.
 
-    def _on_link_message(self, _content_manager, js_result):
-        """Handle links whose navigation policy WebKit does not emit."""
-        uri = js_result.to_string()
-        if uri.startswith("file://"):
-            parts = uri[7:].split("#", 1)
-            file_path = unquote(parts[0])
-            anchor = unquote(parts[1]) if len(parts) > 1 else None
-            if anchor and file_path == self.file_name:
-                self.scroll_to_anchor(anchor)
-            else:
-                self.find_and_opendocument(file_path)
-        else:
-            Gtk.show_uri(None, uri, Gdk.CURRENT_TIME)
+        Some backends expose an embeddable widget (``webview.widget``)
+        that isn't itself the focusable/interactive part - e.g. the
+        litehtml backend's is a ``Gtk.ScrolledWindow`` wrapping the
+        actual ``Gtk.DrawingArea`` that receives focus - so a plain
+        identity check against ``webview.widget`` misses those.
+        """
+        if widget is None:
+            return False
+        root = self.webview.widget
+        return widget is root or widget.is_ancestor(root)
 
     def do_next_match(self, text):
-        """Find next metch."""
-        controller = self.webview.get_find_controller()
-        if controller.get_search_text() != text:
-            self.search_done = None
-            controller.search(text, FindOptions.WRAP_AROUND, MAXUINT)
-            while self.search_done is None:
-                MainContext.default().iteration(False)
-        elif self.search_done:
-            controller.search_next()
-
-        return self.search_done
+        """Find next match."""
+        return self.webview.find_next(text)
 
     def do_previous_match(self, text):
         """Find previous match."""
-        controller = self.webview.get_find_controller()
-        if controller.get_search_text() != text:
-            self.search_done = None
-            controller.search(
-                text,
-                FindOptions.WRAP_AROUND | FindOptions.BACKWARDS,
-                MAXUINT,
-            )
-            while self.search_done is None:
-                MainContext.default().iteration(False)
-        elif self.search_done:
-            controller.search_previous()
-
-        return self.search_done
+        return self.webview.find_previous(text)
 
     def stop_search(self):
         """Stop searching."""
-        controller = self.webview.get_find_controller()
-        controller.search_finish()
-
-    def on_found_text(self, *_):
-        """Mark search as done."""
-        self.search_done = True
-
-    def on_faild_to_find_text(self, _):
-        """Mark search as not done."""
-        self.search_done = False
+        self.webview.stop_search()
 
     def scroll_to_position(self, position):
         """Scroll to right cursor position."""
@@ -921,11 +732,4 @@ class Renderer(Overlay):
         else:
             position = self.pos
 
-        self.webview.evaluate_javascript(
-            JS_SCROLL % position,
-            -1,
-            None,
-            None,
-            None,
-            None,
-        )
+        self.webview.scroll_to_fraction(position)
