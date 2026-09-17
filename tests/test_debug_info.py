@@ -124,3 +124,33 @@ def test_debug_info_starts_with_the_system(monkeypatch):
 
     assert first == "System: Windows"
     assert second.startswith("  Release:")
+
+
+def test_debug_info_names_the_preview_backend(monkeypatch):
+    """The backend in use is listed, whichever way it was chosen."""
+    monkeypatch.setenv("FORMIKO_BROWSER", "litehtml")
+
+    assert "Preview backend: litehtml" in dialogs._build_debug_info()
+
+    monkeypatch.setenv("FORMIKO_BROWSER", "webkit")
+
+    assert "Preview backend: webkit" in dialogs._build_debug_info()
+
+
+def test_debug_info_lists_the_litehtmlpy_version_when_installed(monkeypatch):
+    """The litehtml package version is shown, and only when present."""
+    versions = {"litehtmlpy": "1.2.3"}
+
+    def version(package):
+        try:
+            return versions[package]
+        except KeyError:
+            raise dialogs.metadata.PackageNotFoundError(package) from None
+
+    monkeypatch.setattr(dialogs.metadata, "version", version)
+
+    assert "  litehtmlpy: 1.2.3" in dialogs._build_debug_info().splitlines()
+
+    versions.clear()
+
+    assert "litehtmlpy" not in dialogs._build_debug_info()

@@ -2,12 +2,17 @@
 
 :class:`BrowserView` decouples :class:`formiko.renderer.Renderer` from any
 particular HTML rendering engine. ``formiko.webkit_browser.WebKitBrowserView``
-implements it; :func:`create_browser_view` instantiates the backend to use.
+and ``formiko.litehtml_browser.LitehtmlBrowserView`` (experimental) both
+implement it; :func:`create_browser_view` picks between them, defaulting to
+WebKit on Linux and to litehtml on Windows/macOS, where WebKitGTK isn't a
+realistic dependency. ``$FORMIKO_BROWSER`` overrides the choice either way.
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, NamedTuple
 
@@ -17,6 +22,15 @@ if TYPE_CHECKING:
     from gi.repository import Gtk
 
 logger = logging.getLogger(__name__)
+
+#: Environment variable selecting the backend; see :func:`create_browser_view`.
+ENV_BACKEND = "FORMIKO_BROWSER"
+
+#: Platforms without a realistic WebKitGTK story default to litehtml
+#: instead; everywhere else (Linux) keeps defaulting to WebKit.
+_PLATFORM_DEFAULT_BACKEND = (
+    "litehtml" if sys.platform in ("win32", "darwin") else "webkit"
+)
 
 #: Emitted once a freshly loaded document has finished rendering. No payload.
 EVENT_LOAD_FINISHED = "load-finished"
@@ -194,8 +208,43 @@ class BrowserView(ABC):
         raise NotImplementedError(msg)
 
 
+def selected_backend() -> str:
+    """Return the name of the backend in use: ``webkit`` or ``litehtml``.
+
+    Reads ``$FORMIKO_BROWSER`` (see :data:`ENV_BACKEND`): unset or empty
+    picks the platform default (see :data:`_PLATFORM_DEFAULT_BACKEND`);
+    ``"webkit"``/``"litehtml"`` pick that backend explicitly, regardless
+    of platform. Anything else falls back to WebKit.
+    """
+    backend = (
+        os.environ.get(ENV_BACKEND, "").strip().lower()
+        or _PLATFORM_DEFAULT_BACKEND
+    )
+    if backend not in ("webkit", "litehtml"):
+        logger.warning(
+            "Unknown %s=%r, falling back to the webkit backend",
+            ENV_BACKEND,
+            backend,
+        )
+        return "webkit"
+    return backend
+
+
 def create_browser_view() -> BrowserView:
-    """Instantiate the :class:`BrowserView` backend to use."""
+    """Instantiate the :class:`BrowserView` backend to use.
+
+    See :func:`selected_backend` for how it is chosen; the result is
+    :class:`WebKitBrowserView <formiko.webkit_browser.WebKitBrowserView>`
+    or :class:`LitehtmlBrowserView
+    <formiko.litehtml_browser.LitehtmlBrowserView>`.
+    """
+    if selected_backend() == "litehtml":
+        # Imported lazily so choosing this backend never requires WebKit,
+        # and vice versa.
+        from formiko.litehtml_browser import LitehtmlBrowserView
+
+        return LitehtmlBrowserView()
+
     from formiko.webkit_browser import WebKitBrowserView
 
     return WebKitBrowserView()
