@@ -38,7 +38,7 @@ from formiko.format_utils import (
     compute_toggle_ordered,
     compute_toggle_rst_header,
 )
-from formiko.widgets import ActionHelper, ImutableDict
+from formiko.widgets import ActionHelper, ImutableDict, ScrollDriftGuard
 
 try:
     from gi.repository import Spelling
@@ -107,8 +107,12 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view = View.new_with_buffer(self.text_buffer)
         self.setup_list_features()
 
-        adj = self.get_vadjustment()
-        adj.connect("value-changed", self.on_scroll_changed)
+        # GTK drifts this scroll position on its own (see ScrollDriftGuard),
+        # which - via "scroll-changed" below and auto_scroll - would drag
+        # the preview along with it. Connected before on_scroll_changed so
+        # the preview only ever sees the corrected value.
+        self._scroll_guard = ScrollDriftGuard(self, self.get_vadjustment())
+        self.get_vadjustment().connect("value-changed", self.on_scroll_changed)
 
         # Set monospace font from system settings (GNOME monospace-font-name)
         self._font_css = Gtk.CssProvider()
@@ -519,8 +523,23 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             idle_add(self.scroll_to_cursor, cursor)
 
     def scroll_to_cursor(self, cursor):
-        """Scroll to cursor position."""
-        self.source_view.scroll_to_iter(cursor, 0, 1, 1, 1)
+        """Scroll to cursor position.
+
+        ``yalign=0`` (top-align) rather than ``1`` (bottom-align): for a
+        cursor at/near the top of a freshly opened file, bottom-aligning
+        it still leaves a small non-zero scroll offset (there's very
+        little content above the cursor to align against), which then
+        propagates to the preview via auto_scroll as a small, spurious
+        "scrolled just past the top" jump.
+        """
+        self.source_view.scroll_to_iter(cursor, 0, 1, 1, 0)
+        # Its effect on the adjustment can be deferred, so read back the
+        # settled value rather than assume it, then defend it.
+        idle_add(self._defend_scroll_after_iter)
+
+    def _defend_scroll_after_iter(self):
+        self._scroll_guard.apply(self.get_vadjustment().get_value())
+        return False
 
     def save_to_file(self):
         """Save text to file."""
