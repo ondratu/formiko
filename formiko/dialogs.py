@@ -12,7 +12,6 @@ from traceback import print_exc
 
 from gi.repository import Adw, Gio, GLib, Gtk
 from gi.repository import GtkSource as GtkSourceModule
-from gi.repository import WebKit as WebKitModule
 from gi.repository.GtkSource import LanguageManager
 from gi.repository.Pango import AttrFontDesc, AttrList, FontDescription
 
@@ -125,6 +124,24 @@ def run_alert_dialog(dialog, parent):
     return result[0]
 
 
+def _webkit_version() -> str:
+    """Return the installed WebKitGTK version, or why it's unavailable.
+
+    Imported lazily: WebKit is optional (see formiko.browser).
+    """
+    try:
+        from gi import require_version
+
+        require_version("WebKit", "6.0")
+        from gi.repository import WebKit
+    except (ImportError, ValueError):
+        return "not installed"
+    return (
+        f"{WebKit.MAJOR_VERSION}."
+        f"{WebKit.MINOR_VERSION}.{WebKit.MICRO_VERSION}"
+    )
+
+
 #: Present in every Flatpak sandbox; describes the app and its runtime.
 FLATPAK_INFO = "/.flatpak-info"
 
@@ -176,7 +193,7 @@ def _build_debug_info(prefs=None):
         f"  Adw:       {gv(Adw)}",
         f"  GLib:      {gv(GLib)}",
         f"  GtkSource: {gv(GtkSourceModule)}",
-        f"  WebKit:    {gv(WebKitModule)}",
+        f"  WebKit:    {_webkit_version()}",
         "",
         f"Python: {sys.version.split()[0]}",
         "",

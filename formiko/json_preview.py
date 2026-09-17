@@ -1,7 +1,5 @@
 """JSON preview with folding, expanding, and highlighting in WebKit."""
 
-from __future__ import annotations
-
 import contextlib
 from concurrent.futures import ThreadPoolExecutor
 from html import escape
@@ -10,31 +8,11 @@ from json import dumps, loads
 from typing import Any
 
 from gi.repository import GLib, Gtk
-from gi.repository.WebKit import LoadEvent, WebView
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse as json_parse
 from jsonpath_ng.jsonpath import Root
 
-JS_EXPAND_HIGHLIGHT = r"""
-const highlights = __HIGHLIGHTS__;
-const expands = __EXPANDS__;
-
-document
-  .querySelectorAll('.jblock')
-  .forEach(el =>
-    el.classList.add('collapsed')
-  );
-
-expands.forEach(p => {
-  const el = document.querySelector(`[data-jpath="${p}"]`);
-  if (el) el.classList.remove('collapsed');
-});
-
-highlights.forEach(p => {
-  const el = document.querySelector(`[data-jpath="${p}"]`);
-  if (el) el.classList.add('jhighlight');
-});
-"""
+from formiko.browser import EVENT_LOAD_FINISHED, BrowserView
 
 JS_EXPAND_ALL = """
 document.querySelectorAll('.jblock').forEach(
@@ -135,9 +113,10 @@ class JSONPreview:
         self._json_data: Any = None
 
         # These are set externally by the caller (e.g., Renderer)
-        self.webview: WebView | None = None
+        self.webview: BrowserView | None = None
         self._win: Gtk.Window | None = None
 
+        self._fold_handler_id: int | None = None
         self._tab_width = 2
         self.filter_callback = None  # optional callback: (expr, match_count)
 
@@ -157,54 +136,52 @@ class JSONPreview:
         self._schedule_fold_injection()
         return self._generate_html(self._json_data)
 
-    def inject_fold_js(self, webview: WebView) -> None:
-        """Inject jsonfold.js into the current page via evaluate_javascript.
+    def inject_fold_js(self, webview: BrowserView) -> None:
+        """Inject jsonfold.js into the current page via a script run.
 
-        Called from ``load-changed`` handlers instead of relying on the
-        inline ``<script>`` tag, which is blocked by the XSS protection
-        setting ``enable-javascript-markup = False``.
+        Called after the page loads instead of relying on the inline
+        ``<script>`` tag, which is blocked by the WebKit backend's XSS
+        protection setting ``enable-javascript-markup = False``.  A no-JS
+        backend simply renders the JSON tree fully expanded, without
+        folding.
         """
+        if not webview.can_run_script():
+            return
         _, js = self._resources()
-        webview.evaluate_javascript(js, -1, None, None, None, None)
+        webview.run_script(js)
 
     def expand_all(self) -> None:
         """Expand all collapsed elements."""
-        if self.webview:
-            self.webview.evaluate_javascript(
-                JS_EXPAND_ALL, -1, None, None, None, None,
-            )
+        if self.webview and self.webview.can_run_script():
+            self.webview.run_script(JS_EXPAND_ALL)
 
     def collapse_all(self) -> None:
         """Collapse all elements except root."""
-        if self.webview:
-            self.webview.evaluate_javascript(
-                JS_COLLAPSE_ALL, -1, None, None, None, None,
-            )
+        if self.webview and self.webview.can_run_script():
+            self.webview.run_script(JS_COLLAPSE_ALL)
 
     def _schedule_fold_injection(self) -> None:
-        """Register a one-shot load-changed handler on the webview.
+        """Register a one-shot load-finished handler on the webview.
 
-        Injects the fold JS after the renderer calls ``load_bytes()`` for
-        the initial render.  Any previous pending handler is disconnected
-        first so that rapid re-renders do not accumulate stale handlers.
+        Injects the fold JS after the renderer loads the initial render.
+        Any previous pending handler is disconnected first so that rapid
+        re-renders do not accumulate stale handlers.
         """
-        if self.webview is None:
+        if self.webview is None or not self.webview.can_run_script():
             return
-        handler_id = getattr(self, "_fold_handler_id", None)
-        if handler_id is not None:
+        if self._fold_handler_id is not None:
             with contextlib.suppress(Exception):
-                self.webview.disconnect(handler_id)
+                self.webview.disconnect(self._fold_handler_id)
             self._fold_handler_id = None
 
-        def on_loaded(webview: WebView, load_event: LoadEvent) -> None:
-            if load_event == LoadEvent.FINISHED:
-                self.inject_fold_js(webview)
-                if self._fold_handler_id is not None:
-                    webview.disconnect(self._fold_handler_id)
-                    self._fold_handler_id = None
+        def on_loaded() -> None:
+            self.inject_fold_js(self.webview)
+            if self._fold_handler_id is not None:
+                self.webview.disconnect(self._fold_handler_id)
+                self._fold_handler_id = None
 
         self._fold_handler_id = self.webview.connect(
-            "load-changed", on_loaded,
+            EVENT_LOAD_FINISHED, on_loaded,
         )
 
     def apply_path_filter(self, expression: str | None) -> None:
@@ -247,8 +224,20 @@ class JSONPreview:
         dialog.show(self._win)
         return False
 
-    def _generate_html(self, data: Any) -> str:
-        """Generate the full HTML document for the given JSON data."""
+    def _generate_html(
+        self,
+        data: Any,
+        expands: set[str] | None = None,
+        highlights: frozenset[str] = frozenset(),
+    ) -> str:
+        """Generate the full HTML document for the given JSON data.
+
+        *expands*/*highlights* bake a JSONPath filter's result directly
+        into which nodes render collapsed/highlighted, so filtering works
+        under a backend without scripting too (can_run_script() False,
+        e.g. litehtml). *expands* is None for the unfiltered view, which
+        keeps the original line-count-based auto-collapse heuristic.
+        """
         pretty = dumps(
             data,
             indent=self._tab_width,
@@ -260,7 +249,7 @@ class JSONPreview:
             self.collapse_lines is not None
             and line_count > self.collapse_lines
         )
-        body = self._value_to_html(data, collapse, 0, "")
+        body = self._value_to_html(data, collapse, 0, "", expands, highlights)
         css, _ = self._resources()
         return (
             "<html><head><meta charset='utf-8'>"
@@ -277,76 +266,115 @@ class JSONPreview:
             self._js = (data_dir / "jsonfold.js").read_text(encoding="utf-8")
         return self._css, self._js
 
+    @staticmethod
+    def _is_collapsed(
+        collapse: bool, level: int, path: str, expands: set[str] | None,
+    ) -> bool:
+        """Whether the node at *path* should render collapsed.
+
+        With a JSONPath filter active (*expands* is not None), collapse
+        everything except the paths it says to expand, ignoring the
+        generic line-count heuristic - see _generate_html.
+        """
+        if expands is not None:
+            return level > 0 and path not in expands
+        return collapse and level > 0
+
     def _value_to_html(
         self,
         value: Any,
         collapse: bool,
         level: int,
         path: str,
+        expands: set[str] | None = None,
+        highlights: frozenset[str] = frozenset(),
     ) -> str:
-        # Dictionary: use dot notation for child keys, store data-jpath for
-        #             JSONPath lookup
+        # Plain loops, as before Python 3.12 a comprehension is a stack
+        # frame of its own and would halve the nesting depth we can render.
         if isinstance(value, dict):
-            css_classes = ["jblock"]
-            if collapse and level > 0:
-                css_classes.append("collapsed")
             items = []
-            for _key, val in value.items():
-                new_path = f"{path}.{_key}" if path else _key
-                child_html = self._value_to_html(
+            for key, val in value.items():
+                child = self._value_to_html(
                     val,
                     collapse,
                     level + 1,
-                    new_path,
+                    f"{path}.{key}" if path else key,
+                    expands,
+                    highlights,
                 )
-                items.append(
-                    '<div class="jitem">'
-                    '<span class="jkey">'
-                    f'"{escape(str(_key))}"'
-                    "</span>: "
-                    f"{child_html}"
-                    "</div>",
-                )
-            children = "".join(items)
-            return (
-                f'<div class="{" ".join(css_classes)}" data-jpath="{path}">'
-                "<span class='jtoggler'></span>{"
-                f"<div class='children'>{children}</div>}}</div>"
+                items.append(self._item_to_html(escape(str(key)), child))
+            return self._block_to_html(
+                "{", "}", items, collapse, level, path, expands, highlights,
             )
-
-        # List: use [i] notation, and dot prefix if not at the root
         if isinstance(value, list):
-            css_classes = ["jblock"]
-            if collapse and level > 0:
-                css_classes.append("collapsed")
             items = []
-            for i, v in enumerate(value):
-                new_path = f"{path}.[{i}]" if path else f"[{i}]"
-                child_html = self._value_to_html(
-                    v,
+            for i, val in enumerate(value):
+                child = self._value_to_html(
+                    val,
                     collapse,
                     level + 1,
-                    new_path,
+                    f"{path}.[{i}]" if path else f"[{i}]",
+                    expands,
+                    highlights,
                 )
-                items.append(f'<div class="jitem">{child_html}</div>')
-            children = "".join(items)
-            return (
-                f'<div class="{" ".join(css_classes)}" data-jpath="{path}">'
-                '<span class="jtoggler"></span>['
-                f'<div class="children">{children}</div>]</div>'
+                items.append(self._item_to_html(None, child))
+            return self._block_to_html(
+                "[", "]", items, collapse, level, path, expands, highlights,
             )
+        return self._leaf_to_html(value, path, path in highlights)
 
-        # Primitive values: wrap with a span, assign class by type, and store
-        #                   data-jpath
+    def _block_to_html(
+        self,
+        open_char: str,
+        close_char: str,
+        items: list[str],
+        collapse: bool,
+        level: int,
+        path: str,
+        expands: set[str] | None,
+        highlights: frozenset[str],
+    ) -> str:
+        """Wrap the rendered *items* of a dict or list (a JSON "block").
+
+        Both store ``data-jpath`` for JSONPath lookup and use the same
+        collapse/highlight/toggler shell; they differ only in the bracket
+        characters and in whether an item has a ``jkey`` label.
+        """
+        css_classes = ["jblock"]
+        if self._is_collapsed(collapse, level, path, expands):
+            css_classes.append("collapsed")
+        if path in highlights:
+            css_classes.append("jhighlight")
+        children = "".join(items)
+        return (
+            f'<div class="{" ".join(css_classes)}" data-jpath="{path}">'
+            f"<span class='jtoggler'></span>{open_char}"
+            f"<div class='children'>{children}</div>{close_char}</div>"
+        )
+
+    @staticmethod
+    def _item_to_html(key: str | None, child_html: str) -> str:
+        if key is None:  # list item: no key label
+            return f'<div class="jitem">{child_html}</div>'
+        return (
+            f'<div class="jitem"><span class="jkey">"{key}"</span>: '
+            f"{child_html}</div>"
+        )
+
+    @staticmethod
+    def _leaf_to_html(value: Any, path: str, is_highlighted: bool) -> str:
+        """Render a primitive value: a span assigning its class and path."""
         if isinstance(value, str):
-            esc = escape(value)
-            return f'<span class="jstr" data-jpath="{path}">"{esc}"</span>'
-        if value is True or value is False:
-            val_str = str(value).lower()
-            return f'<span class="jbool" data-jpath="{path}">{val_str}</span>'
-        if value is None:
-            return f'<span class="jnull" data-jpath="{path}">null</span>'
-        return f'<span class="jnum" data-jpath="{path}">{value}</span>'
+            base_class, text = "jstr", f'"{escape(value)}"'
+        elif value is True or value is False:
+            base_class, text = "jbool", str(value).lower()
+        elif value is None:
+            base_class, text = "jnull", "null"
+        else:
+            base_class, text = "jnum", str(value)
+        if is_highlighted:
+            base_class = f"{base_class} jhighlight"
+        return f'<span class="{base_class}" data-jpath="{path}">{text}</span>'
 
     def _render(
         self,
@@ -356,35 +384,20 @@ class JSONPreview:
         expr: str,
         count: int,
     ) -> bool:
-        """Generate and load HTML, then run JS to fold and highlight."""
-        html = self._generate_html(data)
+        """Generate and load HTML with the filter's expand/highlight state."""
+        html = self._generate_html(
+            data,
+            expands=expands if expr else None,
+            highlights=frozenset(highlights),
+        )
 
         if not self.webview:
             return False
 
-        # Prevent leftover handlers from triggering multiple times
-        if hasattr(self.webview, "highlight_handler_id"):
-            self.webview.disconnect(self.webview.highlight_handler_id)
-
-        def on_load_finished(webview: WebView, load_event: LoadEvent):
-            if load_event == LoadEvent.FINISHED:
-                # jsonfold.js must be injected first because inline <script>
-                # is blocked by enable-javascript-markup = False (XSS fix)
-                self.inject_fold_js(webview)
-                if expr:
-                    js = JS_EXPAND_HIGHLIGHT.replace(
-                        "__HIGHLIGHTS__",
-                        dumps(highlights),
-                    ).replace("__EXPANDS__", dumps(list(expands)))
-                    webview.evaluate_javascript(js, -1, None, None, None, None)
-
-                if hasattr(webview, "highlight_handler_id"):
-                    webview.disconnect(webview.highlight_handler_id)
-                    del webview.highlight_handler_id
-
-        handler_id = self.webview.connect("load-changed", on_load_finished)
-        self.webview.highlight_handler_id = handler_id
-        self.webview.load_html(html, "file:///")
+        # The filter itself is already baked into the loaded HTML (see
+        # _generate_html); only the click-to-fold script needs injecting.
+        self._schedule_fold_injection()
+        self.webview.load(html, "text/html", "file:///")
 
         if self.filter_callback:
             self.filter_callback(expr, count)

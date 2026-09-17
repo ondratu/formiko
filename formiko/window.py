@@ -23,9 +23,6 @@ from formiko.renderer import (
     _PYGMENTS_AVAILABLE,
     pygments_required,
 )
-from formiko.renderer import (
-    WebView as GtkWebView,
-)
 from formiko.sourceview import View as GtkSourceView
 from formiko.status_menu import Statusbar
 from formiko.user import UserCache, UserPreferences, View
@@ -740,9 +737,8 @@ class AppWindow(Adw.ApplicationWindow):
                 if isinstance(self.focused, GtkSourceView):
                     if editor:
                         editor.stop_search()
-                elif isinstance(self.focused, GtkWebView):
-                    if renderer:
-                        renderer.stop_search()
+                elif renderer and renderer.owns_focus_widget(self.focused):
+                    renderer.stop_search()
                 elif (
                     page
                     and page.editor_type == EditorType.SOURCE
@@ -783,7 +779,7 @@ class AppWindow(Adw.ApplicationWindow):
 
             if isinstance(self.focused, GtkSourceView):
                 res = editor.do_next_match(text) if editor else False
-            elif isinstance(self.focused, GtkWebView):
+            elif renderer.owns_focus_widget(self.focused):
                 res = renderer.do_next_match(text)
             elif (
                 page.editor_type == EditorType.SOURCE
@@ -808,7 +804,7 @@ class AppWindow(Adw.ApplicationWindow):
 
             if isinstance(self.focused, GtkSourceView):
                 res = editor.do_previous_match(text) if editor else False
-            elif isinstance(self.focused, GtkWebView):
+            elif renderer.owns_focus_widget(self.focused):
                 res = renderer.do_previous_match(text)
             elif (
                 page.editor_type == EditorType.SOURCE

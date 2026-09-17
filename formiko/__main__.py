@@ -11,7 +11,8 @@ require_version("Gdk", "4.0")
 require_version("Adw", "1")
 require_version("GtkSource", "5")
 require_version("Pango", "1.0")
-require_version("WebKit", "6.0")
+# WebKit's version is required by formiko.webkit_browser, the concrete
+# BrowserView backend, so a future non-WebKit backend doesn't force it.
 
 with suppress(ValueError):
     require_version("Spelling", "1")
