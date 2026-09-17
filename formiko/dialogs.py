@@ -22,6 +22,7 @@ from formiko import (
     __url__,
     __version__,
 )
+from formiko.browser import selected_backend
 from formiko.format_utils import parse_link
 
 default_manager = LanguageManager.get_default()
@@ -187,6 +188,7 @@ def _build_debug_info(prefs=None):
 
     lines = [
         *_system_info(),
+        f"Preview backend: {selected_backend()}",
         "",
         "GTK libraries:",
         f"  GTK:       {gv(Gtk)}",
@@ -203,6 +205,7 @@ def _build_debug_info(prefs=None):
         "docutils",
         "docutils-tinyhtmlwriter",
         "jsonpath-ng",
+        "litehtmlpy",
         "m2r2",
         "mistune",
         "pynvim",
