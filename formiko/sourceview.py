@@ -38,7 +38,7 @@ from formiko.format_utils import (
     compute_toggle_ordered,
     compute_toggle_rst_header,
 )
-from formiko.widgets import ActionHelper, ImutableDict
+from formiko.widgets import ActionHelper, ImutableDict, ScrollDriftGuard
 
 try:
     from gi.repository import Spelling
@@ -107,8 +107,10 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         self.source_view = View.new_with_buffer(self.text_buffer)
         self.setup_list_features()
 
-        adj = self.get_vadjustment()
-        adj.connect("value-changed", self.on_scroll_changed)
+        # Connected before on_scroll_changed, so the preview only sees
+        # values already corrected by the guard.
+        self._scroll_guard = ScrollDriftGuard(self, self.get_vadjustment())
+        self.get_vadjustment().connect("value-changed", self.on_scroll_changed)
 
         # Set monospace font from system settings (GNOME monospace-font-name)
         self._font_css = Gtk.CssProvider()
@@ -519,8 +521,19 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             idle_add(self.scroll_to_cursor, cursor)
 
     def scroll_to_cursor(self, cursor):
-        """Scroll to cursor position."""
-        self.source_view.scroll_to_iter(cursor, 0, 1, 1, 1)
+        """Scroll so that the cursor is at the top of the view.
+
+        Top-aligned rather than bottom-aligned: for a cursor near the
+        start of a file the latter leaves a small offset, which would
+        reach the preview as a spurious jump.
+        """
+        self.source_view.scroll_to_iter(cursor, 0, 1, 1, 0)
+        # The scroll may be applied later, so defend the settled value.
+        idle_add(self._defend_scroll_after_iter)
+
+    def _defend_scroll_after_iter(self):
+        self._scroll_guard.apply(self.get_vadjustment().get_value())
+        return False
 
     def save_to_file(self):
         """Save text to file."""

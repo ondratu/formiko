@@ -1,5 +1,7 @@
 """Gtk Widgets extensions."""
 
+from time import monotonic
+
 from gi.repository import GObject, Gtk
 from gi.repository.GLib import Variant
 
@@ -129,3 +131,68 @@ class ActionableSpinButton(Gtk.SpinButton, Gtk.Actionable, ActionHelper):
         root = self.get_root()
         if root:
             root.activate_action(self.action_name, self.action_target)
+
+
+class ScrollDriftGuard:
+    """Keep a scroll position from being changed by GTK on its own.
+
+    GTK moves a ``Gtk.Adjustment`` unprompted after a widget is first
+    shown or becomes visible again. The editor's scroll position is also
+    passed on to the preview, so this drift would drag it along.
+
+    The drift takes an unpredictable number of steps, so for a short
+    window after :meth:`apply` every ``value-changed`` that differs from
+    the defended value is snapped back. A wheel scroll cancels the
+    defense; scrollbar drags and keyboard scrolling within the window
+    are not covered.
+    """
+
+    _DEFENSE_SECONDS = 1.5
+
+    def __init__(self, widget: Gtk.Widget, adjustment: Gtk.Adjustment) -> None:
+        self._adjustment = adjustment
+        self._defended_value: float | None = None
+        self._preserved_value: float | None = None
+        self._defense_until = 0.0
+
+        adjustment.connect("value-changed", self._on_value_changed)
+        widget.connect("unmap", self._on_unmap)
+        widget.connect("map", self._on_map)
+
+        wheel = Gtk.EventControllerScroll.new(
+            Gtk.EventControllerScrollFlags.VERTICAL,
+        )
+        wheel.connect("scroll", self._on_wheel_scroll)
+        widget.add_controller(wheel)
+
+    def apply(self, value: float) -> None:
+        """Scroll to *value* and defend it against drift for a while."""
+        self._defended_value = value
+        self._preserved_value = value
+        self._defense_until = monotonic() + self._DEFENSE_SECONDS
+        self._adjustment.set_value(value)
+
+    def _on_value_changed(self, adj) -> None:
+        if self._defended_value is None or monotonic() > self._defense_until:
+            return
+        if adj.get_value() != self._defended_value:
+            adj.set_value(self._defended_value)  # triggers this again, at rest
+
+    def _on_unmap(self, _widget) -> None:
+        """Remember a manual scroll from before the widget is hidden."""
+        self._preserved_value = self._adjustment.get_value()
+
+    def _on_map(self, _widget) -> None:
+        """Re-defend the position saved on unmap, or the last defended one.
+
+        The very first "map" has neither, so it defends the top (0).
+        """
+        saved = self._preserved_value
+        self._preserved_value = None
+        fallback = self._defended_value or 0.0
+        self.apply(saved if saved is not None else fallback)
+
+    def _on_wheel_scroll(self, _controller, _dx, _dy) -> bool:
+        """Cancel the defense on a wheel scroll; the event stays unhandled."""
+        self._defended_value = None
+        return False
