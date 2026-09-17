@@ -40,6 +40,12 @@ extra = [
     "docutils-tinyhtmlwriter",
     "docutils-htmlwriter",
 ]
+# litehtmlpy isn't published on PyPI; pull it straight from upstream
+# (see formiko/litehtml_browser.py). Needs a C++ toolchain and CMake to
+# build from source.
+litehtml = [
+    "litehtmlpy @ git+https://github.com/m32/litehtmlpy.git",
+]
 
 [project.urls]
 Homepage = "https://formiko.zeropage.cz"
