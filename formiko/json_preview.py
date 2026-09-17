@@ -13,6 +13,7 @@ from gi.repository import GLib, Gtk
 from gi.repository.WebKit import LoadEvent, WebView
 from jsonpath_ng.exceptions import JsonPathParserError
 from jsonpath_ng.ext import parse as json_parse
+from jsonpath_ng.jsonpath import Root
 
 JS_EXPAND_HIGHLIGHT = r"""
 const highlights = __HIGHLIGHTS__;
@@ -48,6 +49,26 @@ document.querySelectorAll('.jblock:not([data-jpath=""])').forEach(
 """
 
 _EXECUTOR = ThreadPoolExecutor(max_workers=2)
+
+
+def _datum_path(datum) -> str:
+    """Return *datum*'s path as our own plain dot notation (e.g. "a.b").
+
+    ``str(datum.full_path)`` can't be used for this: jsonpath_ng wraps
+    paths 2+ levels deep in parentheses (e.g. "((a.b).c)" for $.a.b.c),
+    which never matched ``_value_to_html``'s ``data-jpath`` and silently
+    broke expand/highlight for any nested match. Built instead by
+    joining each level's own single-segment ``str(path)`` root-to-leaf.
+    """
+    segments = []
+    current = datum
+    while current is not None and not isinstance(current.path, Root):
+        segments.append(str(current.path))
+        current = current.context
+    path = ""
+    for segment in reversed(segments):
+        path = f"{path}.{segment}" if path else segment
+    return path
 
 
 def compute_jsonpath_view(json_data, expression: str | None):  # noqa: C901
@@ -88,16 +109,12 @@ def compute_jsonpath_view(json_data, expression: str | None):  # noqa: C901
     for m in matches:
         # expand ancestors
         current = m
-        while current:
-            p = str(current.full_path)
-            if p == "$":
-                p = ""
-            expands.add(p)
+        while current is not None and not isinstance(current.path, Root):
+            expands.add(_datum_path(current))
             current = current.context
 
         # expand matched + descendants
-        p = str(m.full_path)
-        p = "" if p == "$" else p
+        p = _datum_path(m)
         expands |= collect_descendant_paths(m.value, p)
 
         highlights.append(p)
