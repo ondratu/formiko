@@ -1,15 +1,13 @@
 """TEMPORARY diagnostic script - reproduces the writer-switch crash headlessly.
 
-Mirrors formiko/litehtml_browser.py's LitehtmlBrowserView: a single
-_lhpango.document_container is reused across renders (as
-LitehtmlBrowserView reuses self._container across every load()), and
-_extract_surface()'s zero-copy path wraps the container's own buffer
-directly via cairo.ImageSurface.create_for_data(container.get_data(), ...).
-
-Renders README.rst first with the HTML4 writer, then with the HTML5
-writer using the SAME container - the same sequence that froze/crashed
-the real app when switching the writer in the UI - to check whether this
-is a litehtml/litehtmlpy bug independent of GTK.
+Drives the real formiko.litehtml_browser.LitehtmlBrowserView directly (no
+GTK main loop, no visible window): load()s README.rst rendered with the
+HTML4 writer, invokes its real _on_draw() against a plain cairo.ImageSurface
+target (exactly how GTK's own DrawingArea draw callback would), then
+load()s it again rendered with the HTML5 writer and draws again - the same
+sequence that froze/crashed the real app when switching the writer in the
+UI. Loops a few times in case the underlying bug is a heap-corruption
+effect that doesn't reproduce on the very first switch.
 """
 
 from io import StringIO
@@ -18,8 +16,15 @@ import cairo
 from docutils.core import publish_string
 from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
-from litehtmlpy import litehtmlpango as _lhpango
-from litehtmlpy import litehtmlpy as _lh
+from gi import require_version
+
+require_version("Gtk", "4.0")
+require_version("Gdk", "4.0")
+require_version("Adw", "1")
+require_version("GtkSource", "5")
+require_version("Pango", "1.0")
+
+from formiko.litehtml_browser import LitehtmlBrowserView
 
 with open("README.rst", encoding="utf-8") as f:
     src = f.read()
@@ -45,60 +50,26 @@ html4 = render_html(Writer4css1)
 print("Rendering HTML5 writer output...", flush=True)
 html5 = render_html(Html5Writer)
 
-
-class Container(_lhpango.document_container):
-    def __init__(self):
-        super().__init__(parent=None)
-        self.set_dpi(96)
-
-    def load_image(self, src, baseurl, redraw_on_ready):
-        pass
-
-    def on_anchor_click(self, url, el):
-        pass
-
-    def set_base_url(self, url):
-        pass
-
-    def on_mouse_event(self, el, event):
-        pass
-
-    def set_cursor(self, cursor):
-        pass
+view = LitehtmlBrowserView()
+width, height = 800, 600
+target = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+cr = cairo.Context(target)
 
 
-def render_once(container, html, width=800, label=""):
-    print(f"[{label}] fromString...", flush=True)
-    container.size = _lh.size(width, 1)
-    doc = container.fromString(html, None, None)
-    print(f"[{label}] render...", flush=True)
-    doc.render(_lh.pixel_float_t(width), _lh.render_all)
-    doc_width = max(1, int(doc.width().value))
-    doc_height = max(1, int(doc.height().value))
-    print(f"[{label}] surface {doc_width}x{doc_height}...", flush=True)
-    hdc = container.surface(doc_width, doc_height)
-    clip = _lh.position(0, 0, doc_width, doc_height)
-    print(f"[{label}] draw...", flush=True)
-    doc.draw(hdc, _lh.pixel_float_t(0), _lh.pixel_float_t(0), clip)
-    print(f"[{label}] get_data + create_for_data...", flush=True)
-    stride = cairo.ImageSurface.format_stride_for_width(
-        cairo.FORMAT_ARGB32, doc_width,
-    )
-    surface = cairo.ImageSurface.create_for_data(
-        container.get_data(),
-        cairo.FORMAT_ARGB32,
-        doc_width,
-        doc_height,
-        stride,
-    )
-    print(f"[{label}] done", flush=True)
-    return surface
+def do_draw(label):
+    print(f"[{label}] load()...", flush=True)
+    print(f"[{label}] _on_draw()...", flush=True)
+    view._on_draw(view._area, cr, width, height)  # noqa: SLF001
+    print(f"[{label}] drawn", flush=True)
 
 
-c = Container()
-s1 = render_once(c, html4, label="html4")
-print("Rendering html5 with the SAME container now...", flush=True)
-s2 = render_once(c, html5, label="html5")
-print("Dropping the old (html4) surface now...", flush=True)
-del s1
+for i in range(10):
+    print(f"=== iteration {i} ===", flush=True)
+    view.load(html4, "text/html", "file://README.rst")
+    do_draw(f"html4-{i}")
+    do_draw(f"html4-{i}-redraw")  # same width - exercises the cached path
+    view.load(html5, "text/html", "file://README.rst")
+    do_draw(f"html5-{i}")
+    do_draw(f"html5-{i}-redraw")
+
 print("SUCCESS: no crash", flush=True)
