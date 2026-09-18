@@ -1,0 +1,83 @@
+name: macOS installer build (WIP, disabled)
+
+# Packages the litehtml + SourceView variant (no WebKit, no Vte/vim) as a
+# macOS .dmg via PyInstaller. Unlike the Windows build, this has not
+# actually been run/verified end-to-end yet - it's the macOS counterpart
+# of the same fixes, ported over by inspection rather than tested on real
+# hardware. Left workflow_dispatch-only (no push trigger) until it's been
+# debugged the same way the Windows build was.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build macOS installer
+    runs-on: macos-latest
+    continue-on-error: true  # experimental and untested - don't block on this
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install system dependencies
+        run: |
+          brew install gtk4 gtksourceview5 libadwaita pygobject3 \
+            adwaita-icon-theme gobject-introspection cmake
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m venv .venv
+          source .venv/bin/activate
+          pip install \
+            mistune Pygments Pillow \
+            pyinstaller pyinstaller-hooks-contrib
+          # See the Windows workflow: litehtmlpy's setup.py only enables
+          # its Cairo container class for sys.platform "linux", so macOS
+          # needs the same override.
+          export CMAKE_ARGS="-DLITEHTMLPY_INCLUDE_CAIRO_CONTAINERS=ON"
+          pip install -e '.[litehtml]'
+
+      - name: Build .icns from the SVG icon
+        run: |
+          source .venv/bin/activate
+          python3 -c "
+          from PIL import Image
+          Image.open('icons/512x512/formiko.png').save('formiko.icns')
+          "
+
+      # See the Windows workflow: rename the compiled extension to the
+      # bare ".so" fallback suffix so Python's FileFinder can find it
+      # regardless of the platform tag it was actually built with.
+      - name: Fix litehtmlpy extension filename
+        run: |
+          source .venv/bin/activate
+          litehtmlpy_dir=$(python3 -c "import litehtmlpy, os; print(os.path.dirname(litehtmlpy.__file__))")
+          mv "$litehtmlpy_dir"/litehtmlpy.*.so "$litehtmlpy_dir"/litehtmlpy.so
+
+      - name: Build with PyInstaller
+        run: |
+          source .venv/bin/activate
+          pyinstaller --noconfirm --windowed --name Formiko \
+            --collect-all gi \
+            --collect-all gtksourceview5 \
+            --collect-all litehtmlpy \
+            --icon formiko.icns \
+            formiko/__main__.py
+
+      - name: Build .dmg
+        run: |
+          mkdir dmg-src
+          cp -R dist/Formiko.app dmg-src/
+          ln -s /Applications dmg-src/Applications
+          hdiutil create -volname Formiko -srcfolder dmg-src -ov -format UDZO dist/Formiko.dmg
+
+      - name: Upload macOS installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: formiko-macos-installer
+          path: dist/Formiko.dmg
+          if-no-files-found: warn
