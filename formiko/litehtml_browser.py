@@ -20,10 +20,9 @@ it's missing; the default WebKit backend is unaffected either way.
 
 Also depends on patches merged into upstream litehtmlpy via
 https://github.com/m32/litehtmlpy/pull/3. An older, unpatched build still
-mostly works (worse font rendering, no hover status, no search/selection,
-slower rendering); the exception is the ``on_mouse_event`` fix, whose
-absence is guarded against in :meth:`LitehtmlBrowserView._on_click`
-instead of crashing.
+mostly works (worse font rendering, no hover status, no search/selection);
+the exception is the ``on_mouse_event`` fix, whose absence is guarded
+against in :meth:`LitehtmlBrowserView._on_click` instead of crashing.
 """
 
 from __future__ import annotations
@@ -841,24 +840,16 @@ class LitehtmlBrowserView(BrowserView):
     ) -> cairo.ImageSurface:
         """Get the just-drawn page as a ``cairo.ImageSurface``.
 
-        Zero-copy on a litehtmlpy build with the ``get_data()`` patch:
-        wraps litehtml's own ARGB32 buffer directly (valid only until the
-        next ``surface()`` call, which is fine since we always rebuild
-        ``self._surface`` right alongside it). Falls back to a PNG
-        encode/decode round trip - slower, but keeps this backend usable
-        against a plain upstream build.
+        Always goes through a PNG encode/decode round trip. A patched
+        litehtmlpy build also offers a zero-copy path via ``get_data()``,
+        wrapping litehtml's own ARGB32 buffer directly instead of copying
+        it - tried first, but dropped after it caused an intermittent,
+        hard-to-reproduce Windows access violation right after a render
+        (self._container reuses that buffer across every render, and
+        get_data()'s lifetime guarantees didn't hold up in practice). The
+        PNG round trip is slower but never aliases litehtml's own memory.
         """
-        if hasattr(self._container, "get_data"):
-            stride = cairo.ImageSurface.format_stride_for_width(
-                cairo.FORMAT_ARGB32, pixel_width,
-            )
-            return cairo.ImageSurface.create_for_data(
-                self._container.get_data(),
-                cairo.FORMAT_ARGB32,
-                pixel_width,
-                pixel_height,
-                stride,
-            )
+        del pixel_width, pixel_height
         png_bytes = io.BytesIO()
         self._container.savestream(png_bytes.write)
         png_bytes.seek(0)
