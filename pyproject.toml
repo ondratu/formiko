@@ -9,6 +9,7 @@ description = "Formiko is reStructuredText and MarkDown editor and live previewe
 authors = [{name = "Ondrej Tuma", email = "mcbig@zeropage.cz"}]
 license = "BSD-3-Clause"
 keywords = ["doc", "html", "rst", "docutils", "md", "markdown", "editor"]
+requires-python = ">=3.11"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: X11 Applications :: GTK",
@@ -17,6 +18,8 @@ classifiers = [
     "Natural Language :: English",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Documentation",
     "Topic :: Software Development :: Documentation",
     "Topic :: Text Editors :: Documentation",

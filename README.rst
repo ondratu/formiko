@@ -99,7 +99,7 @@ preview pane in that mode.
 
 Requirements:
 -------------
-* Python 3
+* Python 3.11+
 * GTK 4
 * gobject-introspection
 * PyGObject
