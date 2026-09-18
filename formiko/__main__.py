@@ -7,11 +7,13 @@ from signal import SIGINT, signal
 
 if sys.platform == "win32" and getattr(sys, "frozen", False):
     # MSYS2's GTK4/Pango stack uses the fontconfig/FreeType backend rather
-    # than native DirectWrite, and libadwaita/GTK look up the
+    # than native DirectWrite, libadwaita/GTK look up the
     # org.gnome.desktop.interface GSettings schema internally even on
-    # Windows (an unknown schema is a fatal GLib error, not a warning).
-    # Neither has a "look next to the exe" fallback on Windows, so point
-    # them at the copies bundled alongside the frozen app (see
+    # Windows (an unknown schema is a fatal GLib error, not a warning),
+    # and GtkSourceView looks up the RelaxNG schemas it validates its
+    # language files against as real files under share/gtksourceview-5/.
+    # None of these has a "look next to the exe" fallback on Windows, so
+    # point them at the copies bundled alongside the frozen app (see
     # build-windows-installer.yml's "Stage runtime files" step) before
     # anything - including gi's own typelib loading - can touch them.
     _bundle_dir = sys._MEIPASS  # noqa: SLF001
@@ -20,6 +22,9 @@ if sys.platform == "win32" and getattr(sys, "frozen", False):
     )
     os.environ.setdefault(
         "GSETTINGS_SCHEMA_DIR", os.path.join(_bundle_dir, "glib-schemas"),
+    )
+    os.environ.setdefault(
+        "XDG_DATA_DIRS", os.path.join(_bundle_dir, "share"),
     )
 
 from gi import require_version  # noqa: E402
