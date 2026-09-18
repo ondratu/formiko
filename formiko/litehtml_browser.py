@@ -31,6 +31,7 @@ from __future__ import annotations
 import ctypes
 import io
 import logging
+import sys
 import urllib.request
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -83,7 +84,14 @@ Box = tuple[float, float, float, float]
 _IMAGE_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 _HTTP_TIMEOUT = 10  # seconds
 
-_libcairo = ctypes.CDLL("libcairo.so.2")
+if sys.platform == "win32":
+    _CAIRO_SONAME = "libcairo-2.dll"
+elif sys.platform == "darwin":
+    _CAIRO_SONAME = "libcairo.2.dylib"
+else:
+    _CAIRO_SONAME = "libcairo.so.2"
+
+_libcairo = ctypes.CDLL(_CAIRO_SONAME)
 _libcairo.cairo_scale.argtypes = (
     ctypes.c_void_p,
     ctypes.c_double,
