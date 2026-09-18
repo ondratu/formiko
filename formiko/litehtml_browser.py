@@ -20,9 +20,10 @@ it's missing; the default WebKit backend is unaffected either way.
 
 Also depends on patches merged into upstream litehtmlpy via
 https://github.com/m32/litehtmlpy/pull/3. An older, unpatched build still
-mostly works (worse font rendering, no hover status, no search/selection);
-the exception is the ``on_mouse_event`` fix, whose absence is guarded
-against in :meth:`LitehtmlBrowserView._on_click` instead of crashing.
+mostly works (worse font rendering, no hover status, no search/selection,
+slower rendering); the exception is the ``on_mouse_event`` fix, whose
+absence is guarded against in :meth:`LitehtmlBrowserView._on_click`
+instead of crashing.
 """
 
 from __future__ import annotations
@@ -840,16 +841,27 @@ class LitehtmlBrowserView(BrowserView):
     ) -> cairo.ImageSurface:
         """Get the just-drawn page as a ``cairo.ImageSurface``.
 
-        Always goes through a PNG encode/decode round trip. A patched
-        litehtmlpy build also offers a zero-copy path via ``get_data()``,
-        wrapping litehtml's own ARGB32 buffer directly instead of copying
-        it - tried first, but dropped after it caused an intermittent,
-        hard-to-reproduce Windows access violation right after a render
-        (self._container reuses that buffer across every render, and
-        get_data()'s lifetime guarantees didn't hold up in practice). The
-        PNG round trip is slower but never aliases litehtml's own memory.
+        On a litehtmlpy build patched with ``get_data()``, copies its
+        raw ARGB32 buffer into our own ``bytearray`` up front - a plain
+        memcpy, not the PNG encode/decode round trip the plain-upstream
+        fallback below needs, so this stays fast. It does NOT wrap
+        ``get_data()``'s buffer directly (zero-copy): self._container
+        reuses that buffer across every render, and aliasing it caused
+        an intermittent, hard-to-reproduce Windows access violation
+        right after a render (faulthandler pinned it to the very next
+        "self._surface = surface", i.e. destroying the *previous*
+        surface once its backing memory had already been reused).
+        Copying now, while the buffer is still this render's own, costs
+        one memcpy and avoids that aliasing entirely.
         """
-        del pixel_width, pixel_height
+        if hasattr(self._container, "get_data"):
+            stride = cairo.ImageSurface.format_stride_for_width(
+                cairo.FORMAT_ARGB32, pixel_width,
+            )
+            data = bytearray(self._container.get_data())
+            return cairo.ImageSurface.create_for_data(
+                data, cairo.FORMAT_ARGB32, pixel_width, pixel_height, stride,
+            )
         png_bytes = io.BytesIO()
         self._container.savestream(png_bytes.write)
         png_bytes.seek(0)
