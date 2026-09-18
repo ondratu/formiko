@@ -43,6 +43,8 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-python-pillow
             mingw-w64-x86_64-gsettings-desktop-schemas
+            mingw-w64-x86_64-adwaita-icon-theme
+            mingw-w64-x86_64-hicolor-icon-theme
             git
 
       - name: Install Python dependencies
@@ -88,11 +90,12 @@ jobs:
       # to find any fonts at all), the compiled GSettings schemas
       # (libadwaita/GTK look up org.gnome.desktop.interface internally
       # even on Windows, and an unknown schema is a fatal GLib error), and
-      # GtkSourceView's own share dir (its .lang files load fine from its
-      # GResource bundle, but the RelaxNG schemas used to validate them
-      # are real files, looked up under share/gtksourceview-5/) - none of
-      # these has a "look next to the exe" fallback, so all get pointed at
-      # via env vars in formiko/__main__.py instead.
+      # a share/ dir with GtkSourceView's RelaxNG schemas (its .lang files
+      # load fine from its GResource bundle, but the schemas used to
+      # validate them are real files) and the icon themes (toolbar/menu
+      # icons come from GTK's icon theme lookup, not any resource bundle)
+      # - none of these has a "look next to the exe" fallback, so all get
+      # pointed at via env vars in formiko/__main__.py instead.
       - name: Stage runtime files
         shell: msys2 {0}
         run: |
@@ -103,6 +106,7 @@ jobs:
           glib-compile-schemas "$MINGW_PREFIX/share/glib-2.0/schemas"
           cp -r "$MINGW_PREFIX"/share/glib-2.0/schemas dist-runtime/glib-schemas
           cp -r "$MINGW_PREFIX"/share/gtksourceview-5 dist-runtime/share/gtksourceview-5
+          cp -r "$MINGW_PREFIX"/share/icons dist-runtime/share/icons
 
       - name: Build with PyInstaller
         shell: msys2 {0}
