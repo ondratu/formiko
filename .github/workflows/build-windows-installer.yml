@@ -1,0 +1,126 @@
+name: Windows installer build
+
+# Packages the litehtml + SourceView variant (no WebKit, no Vte/vim) as a
+# Windows installer via PyInstaller + Inno Setup. Neither the installer nor
+# formiko.exe is code-signed, so SmartScreen will flag it as untrusted
+# until that's set up - "More info -> Run anyway" to run it the first time.
+
+on:
+  workflow_dispatch:
+  # workflow_dispatch only works once this file exists on the default
+  # branch; until this is merged, push to this dev branch to trigger a run.
+  push:
+    branches: [fallback-render]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows installer
+    runs-on: windows-latest
+    continue-on-error: true  # experimental - don't block on this yet
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gtk4
+            mingw-w64-x86_64-libadwaita
+            mingw-w64-x86_64-gtksourceview5
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-gobject
+            mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-python-setuptools
+            mingw-w64-x86_64-gobject-introspection
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-python-pillow
+            git
+
+      - name: Install Python dependencies
+        shell: msys2 {0}
+        run: |
+          pip install \
+            mistune Pygments \
+            pyinstaller pyinstaller-hooks-contrib
+          # litehtmlpy's CMake build must link against the mingw import
+          # library the interpreter actually uses (its own Python
+          # detection otherwise falls back to the standard CPython name,
+          # which doesn't exist on MSYS2 and silently links a second,
+          # uninitialized copy of the runtime). It also needs its Cairo
+          # container class explicitly enabled outside Linux.
+          py_dot=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+          export CMAKE_ARGS="-DPython_LIBRARY=$MINGW_PREFIX/lib/libpython${py_dot}.dll.a -DLITEHTMLPY_INCLUDE_CAIRO_CONTAINERS=ON"
+          pip install -e '.[litehtml]'
+
+      # litehtmlpy's compiled extension ships under the standard CPython
+      # Windows platform tag, which MSYS2's Python doesn't recognize.
+      # Rename it to the bare ".pyd" fallback every build recognizes.
+      - name: Fix litehtmlpy extension filename
+        shell: msys2 {0}
+        run: |
+          litehtmlpy_dir=$(python -c "import litehtmlpy, os; print(os.path.dirname(litehtmlpy.__file__))")
+          mv "$litehtmlpy_dir"/litehtmlpy.*.pyd "$litehtmlpy_dir"/litehtmlpy.pyd
+
+      - name: Build .ico from the SVG icon
+        shell: msys2 {0}
+        run: |
+          python -c "
+          from PIL import Image
+          Image.open('icons/512x512/formiko.png').save(
+              'formiko.ico',
+              sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+          )
+          "
+
+      # GTK4's native DLLs and GI typelibs live in the MSYS2 prefix, outside
+      # any pip package, so stage them for PyInstaller separately.
+      - name: Stage GTK4 runtime files
+        shell: msys2 {0}
+        run: |
+          mkdir -p dist-runtime/dlls
+          cp "$MINGW_PREFIX"/bin/*.dll dist-runtime/dlls/
+          cp -r "$MINGW_PREFIX"/lib/girepository-1.0 dist-runtime/gi_typelibs
+
+      - name: Build with PyInstaller
+        shell: msys2 {0}
+        run: |
+          # --add-data takes a single "src;dest" argument; MSYS2's
+          # automatic POSIX->Windows path mangling corrupts that.
+          export MSYS2_ARG_CONV_EXCL="*"
+          pyinstaller --noconfirm --windowed --name formiko \
+            --collect-all gi \
+            --collect-all gtksourceview5 \
+            --collect-all litehtmlpy \
+            --add-data "dist-runtime/dlls;." \
+            --add-data "dist-runtime/gi_typelibs;gi_typelibs" \
+            --icon formiko.ico \
+            formiko/__main__.py
+
+      - name: Read Formiko version
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path formiko\__init__.py -Pattern '__version__\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
+          "FORMIKO_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: iscc /DMyAppVersion="$env:FORMIKO_VERSION" packaging\windows\formiko.iss
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: formiko-windows-installer
+          path: dist/installer/*.exe
+          if-no-files-found: warn
