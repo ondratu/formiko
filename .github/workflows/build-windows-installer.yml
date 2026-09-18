@@ -42,6 +42,7 @@ jobs:
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-python-pillow
+            mingw-w64-x86_64-gsettings-desktop-schemas
             git
 
       - name: Install Python dependencies
@@ -81,13 +82,23 @@ jobs:
           "
 
       # GTK4's native DLLs and GI typelibs live in the MSYS2 prefix, outside
-      # any pip package, so stage them for PyInstaller separately.
-      - name: Stage GTK4 runtime files
+      # any pip package, so stage them for PyInstaller separately. Also
+      # stage fontconfig's config (MSYS2's Pango uses the fontconfig/
+      # FreeType backend, not native DirectWrite, so it needs fonts.conf
+      # to find any fonts at all) and the compiled GSettings schemas
+      # (libadwaita/GTK look up org.gnome.desktop.interface internally
+      # even on Windows, and an unknown schema is a fatal GLib error) -
+      # neither has a "look next to the exe" fallback, so both get pointed
+      # at via env vars in formiko/__main__.py instead.
+      - name: Stage runtime files
         shell: msys2 {0}
         run: |
           mkdir -p dist-runtime/dlls
           cp "$MINGW_PREFIX"/bin/*.dll dist-runtime/dlls/
           cp -r "$MINGW_PREFIX"/lib/girepository-1.0 dist-runtime/gi_typelibs
+          cp -r "$MINGW_PREFIX"/etc/fonts dist-runtime/fontconfig
+          glib-compile-schemas "$MINGW_PREFIX/share/glib-2.0/schemas"
+          cp -r "$MINGW_PREFIX"/share/glib-2.0/schemas dist-runtime/glib-schemas
 
       - name: Build with PyInstaller
         shell: msys2 {0}
@@ -101,6 +112,8 @@ jobs:
             --collect-all litehtmlpy \
             --add-data "dist-runtime/dlls;." \
             --add-data "dist-runtime/gi_typelibs;gi_typelibs" \
+            --add-data "dist-runtime/fontconfig;fontconfig" \
+            --add-data "dist-runtime/glib-schemas;glib-schemas" \
             --icon formiko.ico \
             formiko/__main__.py
 
