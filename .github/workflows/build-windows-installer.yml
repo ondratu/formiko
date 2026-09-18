@@ -72,6 +72,22 @@ jobs:
           litehtmlpy_dir=$(python -c "import litehtmlpy, os; print(os.path.dirname(litehtmlpy.__file__))")
           mv "$litehtmlpy_dir"/litehtmlpy.*.pyd "$litehtmlpy_dir"/litehtmlpy.pyd
 
+      # TEMPORARY diagnostic step - remove once the writer-switch crash
+      # (litehtml_browser.py's LitehtmlBrowserView, access violation
+      # reported at "self._surface = surface" right after a full content
+      # reload) is understood. repro_crash.py (repo root, also temporary)
+      # reproduces it headlessly by reusing one _lhpango.document_container
+      # across two structurally different renders, the same way
+      # LitehtmlBrowserView reuses self._container across a load() -
+      # isolates whether this is a litehtml/litehtmlpy bug independent of
+      # GTK, and gets a real native backtrace via gdb.
+      - name: "Debug: repro writer-switch crash"
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm mingw-w64-x86_64-gdb
+          gdb --batch -ex run -ex "bt full" -ex "thread apply all bt" \
+            --args python repro_crash.py
+
       - name: Build .ico from the SVG icon
         shell: msys2 {0}
         run: |
