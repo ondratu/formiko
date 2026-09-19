@@ -87,6 +87,10 @@ jobs:
         shell: msys2 {0}
         run: python packaging/windows/make_wizard_images.py
 
+      - name: Generate version info and installer metadata
+        shell: msys2 {0}
+        run: python packaging/windows/generate_metadata.py
+
       # GTK4's native DLLs and GI typelibs live in the MSYS2 prefix, outside
       # any pip package, so stage them for PyInstaller separately. Also
       # stage fontconfig's config (MSYS2's Pango uses the fontconfig/
@@ -102,6 +106,9 @@ jobs:
       # pointed at via env vars in formiko/__main__.py instead. The app's
       # own icon (About dialog) and the few symbolic toolbar icons the
       # MSYS2 Adwaita theme lacks are added to the hicolor fallback theme.
+      # The MSYS2 packages' licence texts are staged for the installer, and
+      # formiko/data (About dialog authors, JSON folding assets) is added
+      # to the bundle since PyInstaller only collects Python modules.
       - name: Stage runtime files
         shell: msys2 {0}
         run: |
@@ -118,6 +125,7 @@ jobs:
           cp icons/formiko.svg "$hicolor"/scalable/apps/
           cp icons/symbolic/*.svg "$hicolor"/scalable/actions/
           rm -f "$hicolor"/icon-theme.cache
+          cp -r "$MINGW_PREFIX"/share/licenses dist-runtime/licenses
 
       - name: Build with PyInstaller
         shell: msys2 {0}
@@ -140,14 +148,10 @@ jobs:
             --add-data "dist-runtime/fontconfig;fontconfig" \
             --add-data "dist-runtime/glib-schemas;glib-schemas" \
             --add-data "dist-runtime/share;share" \
+            --add-data "formiko/data;formiko/data" \
+            --version-file version_info.txt \
             --icon formiko.ico \
             formiko/__main__.py
-
-      - name: Read Formiko version
-        shell: pwsh
-        run: |
-          $version = (Select-String -Path formiko\__init__.py -Pattern '__version__\s*=\s*"([^"]+)"').Matches[0].Groups[1].Value
-          "FORMIKO_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install Inno Setup
         shell: pwsh
@@ -155,7 +159,7 @@ jobs:
 
       - name: Build installer with Inno Setup
         shell: pwsh
-        run: iscc /DMyAppVersion="$env:FORMIKO_VERSION" packaging\windows\formiko.iss
+        run: iscc packaging\windows\formiko.iss
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v7
