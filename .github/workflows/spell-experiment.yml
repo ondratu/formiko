@@ -23,10 +23,10 @@ jobs:
       - name: Probe
         shell: msys2 {0}
         run: |
-          for order in winspell hunspell; do
+          for order in winspell; do
             dir=/tmp/enchant-$order
             mkdir -p $dir
             echo "*:$order" > $dir/enchant.ordering
             echo "################ ordering: $order"
-            ENCHANT_CONFIG_DIR=$(cygpath -w $dir) python packaging/windows/spell_experiment.py en_US 2>&1 || true
+            ENCHANT_CONFIG_DIR=$(cygpath -w $dir) python packaging/windows/spell_experiment.py en_LR 2>&1 || true
           done
