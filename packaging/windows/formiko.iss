@@ -30,9 +30,6 @@ SetupIconFile=..\..\formiko.ico
 WizardImageFile=..\..\wizard-large-202.png,..\..\wizard-large-336.png,..\..\wizard-large-430.png
 WizardSmallImageFile=..\..\wizard-small-58.png,..\..\wizard-small-97.png,..\..\wizard-small-124.png
 UninstallDisplayIcon={app}\{#MyAppExeName}
-; Per-user install: no UAC prompt for setup or for unins000.exe (whose
-; name Inno Setup does not let you change).
-PrivilegesRequired=lowest
 DisableProgramGroupPage=yes
 ArchitecturesInstallIn64BitMode=x64compatible
 
