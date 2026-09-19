@@ -20,11 +20,16 @@ except ImportError:
 
 
 try:
-    from m2r2 import MdInclude  # type: ignore[import]
-    from m2r2 import convert as m2r_convert
+    from m2r2 import convert as m2r_convert  # type: ignore[import]
+
+    try:
+        from m2r2 import MdInclude  # type: ignore[import]
+    except ImportError:  # m2r2 >= 1.0 moved it out of the top-level package
+        from m2r2.sphinx.directives import MdInclude  # type: ignore[import]
 
     class _M2RConfig:
         no_underscore_emphasis = False
+        m2r_no_underscore_emphasis = False
         m2r_parse_relative_links = False
         m2r_anonymous_references = False
         m2r_disable_inline_math = False
