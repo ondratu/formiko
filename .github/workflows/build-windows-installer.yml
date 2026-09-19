@@ -83,6 +83,10 @@ jobs:
           )
           "
 
+      - name: Build installer wizard images
+        shell: msys2 {0}
+        run: python packaging/windows/make_wizard_images.py
+
       # GTK4's native DLLs and GI typelibs live in the MSYS2 prefix, outside
       # any pip package, so stage them for PyInstaller separately. Also
       # stage fontconfig's config (MSYS2's Pango uses the fontconfig/
