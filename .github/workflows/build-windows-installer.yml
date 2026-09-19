@@ -128,6 +128,9 @@ jobs:
             --collect-all docutils \
             --collect-all docutils_tinyhtml \
             --collect-submodules mistune \
+            --copy-metadata Pygments \
+            --copy-metadata mistune \
+            --copy-metadata jsonpath-ng \
             --add-data "dist-runtime/dlls;." \
             --add-data "dist-runtime/gi_typelibs;gi_typelibs" \
             --add-data "dist-runtime/fontconfig;fontconfig" \
