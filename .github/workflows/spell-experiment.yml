@@ -1,0 +1,32 @@
+name: Spell experiment (temporary)
+
+on:
+  push:
+    branches: [fallback-render]
+    paths: [".github/workflows/spell-experiment.yml"]
+
+jobs:
+  experiment:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-gobject
+            mingw-w64-x86_64-libspelling
+            mingw-w64-x86_64-hunspell-en
+
+      - name: Probe
+        shell: msys2 {0}
+        run: |
+          for order in winspell hunspell; do
+            dir=/tmp/enchant-$order
+            mkdir -p $dir
+            echo "*:$order" > $dir/enchant.ordering
+            echo "################ ordering: $order"
+            ENCHANT_CONFIG_DIR=$(cygpath -w $dir) python packaging/windows/spell_experiment.py en_US 2>&1 || true
+          done
