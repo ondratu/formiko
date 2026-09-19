@@ -6,12 +6,13 @@ import sys
 from contextlib import suppress
 from signal import SIGINT, signal
 
-# A crash inside a native dependency (GTK, litehtml, cairo, ...) would
-# otherwise just vanish - there's no console attached to a --windowed
-# frozen build. This dumps the Python-level stack of whichever call was
-# in progress to stderr, which at least identifies it even though the
-# fault itself is outside Python's own control.
-faulthandler.enable()
+# Dumps the Python-level stack of whichever call was in progress when a
+# native dependency (GTK, litehtml, cairo, ...) crashes, which would
+# otherwise just vanish. Needs a real stderr: a --windowed frozen build
+# started from the Windows menu has none (sys.stderr is None), and
+# faulthandler.enable() raises instead of skipping it.
+if sys.stderr is not None:
+    faulthandler.enable()
 
 if sys.platform == "win32" and getattr(sys, "frozen", False):
     # MSYS2's GTK4/Pango stack uses the fontconfig/FreeType backend rather
