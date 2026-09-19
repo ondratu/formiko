@@ -24,7 +24,10 @@ jobs:
       - name: Build patched winspell provider
         shell: msys2 {0}
         run: |
-          ls "$MINGW_PREFIX"/include/enchant-2
+          ver=$(pacman -Q mingw-w64-x86_64-enchant | cut -d" " -f2 | cut -d- -f1)
+          echo "enchant $ver"
+          mkdir -p /tmp/build
+          curl -fsSL "https://raw.githubusercontent.com/rrthomas/enchant/v$ver/lib/enchant-provider.h" -o /tmp/build/enchant-provider.h
           src="$PWD/packaging/windows/enchant_winspell.cpp"
           mkdir -p /tmp/build && cd /tmp/build && : > config.h
           g++ -shared -O2 -std=c++17 -I/tmp/build -I"$MINGW_PREFIX/include/enchant-2" \
