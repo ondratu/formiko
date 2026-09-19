@@ -43,6 +43,8 @@ jobs:
             mingw-w64-x86_64-toolchain
             mingw-w64-x86_64-python-pillow
             mingw-w64-x86_64-gsettings-desktop-schemas
+            mingw-w64-x86_64-libspelling
+            mingw-w64-x86_64-hunspell-en
             mingw-w64-x86_64-adwaita-icon-theme
             mingw-w64-x86_64-hicolor-icon-theme
             git
@@ -109,6 +111,16 @@ jobs:
       # The MSYS2 packages' licence texts are staged for the installer, and
       # formiko/data (About dialog authors, JSON folding assets) is added
       # to the bundle since PyInstaller only collects Python modules.
+      #
+      # Enchant (spell checking) has no environment variable for its
+      # provider modules: it finds them relative to libenchant's own DLL,
+      # and only if that sits in a directory named "bin" with lib/enchant-2
+      # next to it (MSYS2's own layout - verified: in a flat directory it
+      # reports "no providers found"). Hence PyInstaller's --contents-
+      # directory bin, and copying the enchant prefix tree beside it. Its
+      # "winspell" provider is the Windows spell checker API, so the
+      # dictionaries are the languages installed in Windows itself; hunspell
+      # with en_US/en_GB is only a fallback for English.
       - name: Stage runtime files
         shell: msys2 {0}
         run: |
@@ -126,6 +138,13 @@ jobs:
           cp icons/symbolic/*.svg "$hicolor"/scalable/actions/
           rm -f "$hicolor"/icon-theme.cache
           cp -r "$MINGW_PREFIX"/share/licenses dist-runtime/licenses
+          # Spell checking (libspelling -> Enchant): laid out like an
+          # install prefix, copied next to the PyInstaller output below.
+          enchant=dist-runtime/enchant
+          mkdir -p "$enchant"/lib/enchant-2 "$enchant"/share/enchant-2 "$enchant"/share/hunspell
+          cp "$MINGW_PREFIX"/lib/enchant-2/enchant_winspell.dll "$MINGW_PREFIX"/lib/enchant-2/enchant_hunspell.dll "$enchant"/lib/enchant-2/
+          cp "$MINGW_PREFIX"/share/hunspell/en_US.* "$MINGW_PREFIX"/share/hunspell/en_GB.* "$enchant"/share/hunspell/
+          echo '*:winspell,hunspell' > "$enchant"/share/enchant-2/enchant.ordering
 
       - name: Build with PyInstaller
         shell: msys2 {0}
@@ -150,8 +169,10 @@ jobs:
             --add-data "dist-runtime/share;share" \
             --add-data "formiko/data;formiko/data" \
             --version-file version_info.txt \
+            --contents-directory bin \
             --icon formiko.ico \
             formiko/__main__.py
+          cp -r dist-runtime/enchant/. dist/formiko/
 
       - name: Install Inno Setup
         shell: pwsh
