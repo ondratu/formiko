@@ -42,6 +42,7 @@ SetupIconFile=..\..\formiko.ico
 WizardImageFile=..\..\wizard-large-202.png,..\..\wizard-large-336.png,..\..\wizard-large-430.png
 WizardSmallImageFile=..\..\wizard-small-58.png,..\..\wizard-small-97.png,..\..\wizard-small-124.png
 DisableProgramGroupPage=yes
+ChangesAssociations=yes
 ; GTK4 needs Windows 10 or later; x64compatible also covers Windows on ARM.
 MinVersion=10.0
 ArchitecturesAllowed=x64compatible
@@ -63,6 +64,74 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Comment: 
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "associate"; Description: "Open .&rst and .md files with Formiko (only where no other program is set yet)"; GroupDescription: "File associations:"
+
+[Registry]
+; Formiko always registers itself as a program that can open .rst, .md and
+; .json files: it shows up under "Open with" and in Settings > Default
+; apps, but never replaces a program the user already chose. .json gets
+; nothing beyond that; .rst and .md may additionally become the default
+; when the "associate" task is selected (see [Code]).
+Root: HKA; Subkey: "Software\Classes\Formiko.rst"; ValueType: string; ValueName: ""; ValueData: "reStructuredText document"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Formiko.rst\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKA; Subkey: "Software\Classes\Formiko.rst\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\.rst\OpenWithProgids"; ValueType: string; ValueName: "Formiko.rst"; ValueData: ""; Flags: uninsdeletevalue
+
+Root: HKA; Subkey: "Software\Classes\Formiko.md"; ValueType: string; ValueName: ""; ValueData: "Markdown document"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Formiko.md\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKA; Subkey: "Software\Classes\Formiko.md\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\.md\OpenWithProgids"; ValueType: string; ValueName: "Formiko.md"; ValueData: ""; Flags: uninsdeletevalue
+
+Root: HKA; Subkey: "Software\Classes\Formiko.json"; ValueType: string; ValueName: ""; ValueData: "JSON document"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\Formiko.json\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},0"
+Root: HKA; Subkey: "Software\Classes\Formiko.json\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\.json\OpenWithProgids"; ValueType: string; ValueName: "Formiko.json"; ValueData: ""; Flags: uninsdeletevalue
+
+Root: HKA; Subkey: "Software\Formiko\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#MyAppName}"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Formiko\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "{#MyAppComments}"
+Root: HKA; Subkey: "Software\Formiko\Capabilities\FileAssociations"; ValueType: string; ValueName: ".rst"; ValueData: "Formiko.rst"
+Root: HKA; Subkey: "Software\Formiko\Capabilities\FileAssociations"; ValueType: string; ValueName: ".md"; ValueData: "Formiko.md"
+Root: HKA; Subkey: "Software\Formiko\Capabilities\FileAssociations"; ValueType: string; ValueName: ".json"; ValueData: "Formiko.json"
+Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "{#MyAppName}"; ValueData: "Software\Formiko\Capabilities"; Flags: uninsdeletevalue
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch Formiko"; Flags: nowait postinstall skipifsilent
+
+[Code]
+{ Make Formiko the default for Ext, but only if nothing is set yet. }
+procedure SetDefaultIfUnset(Ext: String);
+var
+  Key, Current: String;
+begin
+  Key := 'Software\Classes\' + Ext;
+  if not RegQueryStringValue(HKA, Key, '', Current) or (Current = '') then
+    RegWriteStringValue(HKA, Key, '', 'Formiko' + Ext);
+end;
+
+{ Undo SetDefaultIfUnset, leaving a default that another program set alone. }
+procedure ClearDefaultIfOurs(Ext: String);
+var
+  Key, Current: String;
+begin
+  Key := 'Software\Classes\' + Ext;
+  if RegQueryStringValue(HKA, Key, '', Current) and (Current = 'Formiko' + Ext) then
+    RegDeleteValue(HKA, Key, '');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if (CurStep = ssPostInstall) and WizardIsTaskSelected('associate') then
+  begin
+    SetDefaultIfUnset('.rst');
+    SetDefaultIfUnset('.md');
+  end;
+end;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usPostUninstall then
+  begin
+    ClearDefaultIfOurs('.rst');
+    ClearDefaultIfOurs('.md');
+  end;
+end;
