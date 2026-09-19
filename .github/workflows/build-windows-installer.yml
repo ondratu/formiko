@@ -51,7 +51,7 @@ jobs:
         shell: msys2 {0}
         run: |
           pip install \
-            mistune Pygments \
+            mistune Pygments m2r2 docutils-tinyhtmlwriter \
             pyinstaller pyinstaller-hooks-contrib
           # litehtmlpy's CMake build must link against the mingw import
           # library the interpreter actually uses (its own Python
@@ -95,7 +95,9 @@ jobs:
       # validate them are real files) and the icon themes (toolbar/menu
       # icons come from GTK's icon theme lookup, not any resource bundle)
       # - none of these has a "look next to the exe" fallback, so all get
-      # pointed at via env vars in formiko/__main__.py instead.
+      # pointed at via env vars in formiko/__main__.py instead. The app's
+      # own icon (About dialog) and the few symbolic toolbar icons the
+      # MSYS2 Adwaita theme lacks are added to the hicolor fallback theme.
       - name: Stage runtime files
         shell: msys2 {0}
         run: |
@@ -107,6 +109,11 @@ jobs:
           cp -r "$MINGW_PREFIX"/share/glib-2.0/schemas dist-runtime/glib-schemas
           cp -r "$MINGW_PREFIX"/share/gtksourceview-5 dist-runtime/share/gtksourceview-5
           cp -r "$MINGW_PREFIX"/share/icons dist-runtime/share/icons
+          hicolor=dist-runtime/share/icons/hicolor
+          mkdir -p "$hicolor"/scalable/apps "$hicolor"/scalable/actions
+          cp icons/formiko.svg "$hicolor"/scalable/apps/
+          cp icons/symbolic/*.svg "$hicolor"/scalable/actions/
+          rm -f "$hicolor"/icon-theme.cache
 
       - name: Build with PyInstaller
         shell: msys2 {0}
@@ -118,6 +125,9 @@ jobs:
             --collect-all gi \
             --collect-all gtksourceview5 \
             --collect-all litehtmlpy \
+            --collect-all docutils \
+            --collect-all docutils_tinyhtml \
+            --collect-submodules mistune \
             --add-data "dist-runtime/dlls;." \
             --add-data "dist-runtime/gi_typelibs;gi_typelibs" \
             --add-data "dist-runtime/fontconfig;fontconfig" \
