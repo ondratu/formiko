@@ -156,7 +156,7 @@ jobs:
           ver=$(pacman -Q mingw-w64-x86_64-enchant | cut -d' ' -f2 | cut -d- -f1)
           curl -fsSL "https://raw.githubusercontent.com/rrthomas/enchant/v$ver/lib/enchant-provider.h" -o "$build"/enchant-provider.h
           : > "$build"/config.h
-          g++ -shared -O2 -std=c++17 -I"$build" $(pkg-config --cflags glib-2.0) \
+          g++ -shared -O2 -std=c++17 -I"$build" -I"$MINGW_PREFIX"/include/enchant-2 $(pkg-config --cflags glib-2.0) \
             -D_WIN32_WINNT=0x0602 -DNTDDI_VERSION=0x06020000 -D_ENCHANT_BUILD=1 \
             -o "$enchant"/lib/enchant-2/enchant_winspell.dll packaging/windows/enchant_winspell.cpp \
             -L"$MINGW_PREFIX"/lib -lenchant-2 $(pkg-config --libs glib-2.0) \
