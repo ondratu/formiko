@@ -87,6 +87,7 @@ Root: HKA; Subkey: "Software\Classes\Formiko.json\DefaultIcon"; ValueType: strin
 Root: HKA; Subkey: "Software\Classes\Formiko.json\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
 Root: HKA; Subkey: "Software\Classes\.json\OpenWithProgids"; ValueType: string; ValueName: "Formiko.json"; ValueData: ""; Flags: uninsdeletevalue
 
+Root: HKA; Subkey: "Software\Formiko"; ValueType: none; Flags: uninsdeletekeyifempty
 Root: HKA; Subkey: "Software\Formiko\Capabilities"; ValueType: string; ValueName: "ApplicationName"; ValueData: "{#MyAppName}"; Flags: uninsdeletekey
 Root: HKA; Subkey: "Software\Formiko\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "{#MyAppComments}"
 Root: HKA; Subkey: "Software\Formiko\Capabilities\FileAssociations"; ValueType: string; ValueName: ".rst"; ValueData: "Formiko.rst"
@@ -98,14 +99,14 @@ Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueNa
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch Formiko"; Flags: nowait postinstall skipifsilent
 
 [Code]
-{ Make Formiko the default for Ext, but only if nothing is set yet. }
+{ Make Formiko the default for Ext, but only if nothing is set yet - in
+  HKCR, the merged per-user and per-machine view Windows itself reads. }
 procedure SetDefaultIfUnset(Ext: String);
 var
-  Key, Current: String;
+  Current: String;
 begin
-  Key := 'Software\Classes\' + Ext;
-  if not RegQueryStringValue(HKA, Key, '', Current) or (Current = '') then
-    RegWriteStringValue(HKA, Key, '', 'Formiko' + Ext);
+  if not RegQueryStringValue(HKCR, Ext, '', Current) or (Current = '') then
+    RegWriteStringValue(HKA, 'Software\Classes\' + Ext, '', 'Formiko' + Ext);
 end;
 
 { Undo SetDefaultIfUnset, leaving a default that another program set alone. }
