@@ -727,6 +727,29 @@ class AppWindow(Adw.ApplicationWindow):
         if self.search.get_search_mode():
             self.search.set_search_mode(False)
 
+    def _search_target(self, page, editor, renderer):
+        """Return whichever of *editor*/*renderer* owns search right now.
+
+        Preference order, shared by every search action: the widget that
+        currently has keyboard focus, falling back to the source editor
+        (if it's the visible pane) and then the renderer/preview.
+        Returns None only when neither applies (e.g. no *page*).
+        """
+        if isinstance(self.focused, GtkSourceView):
+            return editor
+        if renderer and renderer.owns_focus_widget(self.focused):
+            return renderer
+        if (
+            page
+            and page.editor_type == EditorType.SOURCE
+            and editor
+            and editor.props.visible
+        ):
+            return editor
+        if renderer and renderer.props.visible:
+            return renderer
+        return None
+
     def _on_search_mode_changed(self, search_bar, param):
         """'search-mode-enabled' notify event handler."""
         if not self.search.get_search_mode():
@@ -734,20 +757,9 @@ class AppWindow(Adw.ApplicationWindow):
             editor = getattr(page, "editor", None) if page else None
             renderer = page.renderer if page else None
             if not self.search_text:
-                if isinstance(self.focused, GtkSourceView):
-                    if editor:
-                        editor.stop_search()
-                elif renderer and renderer.owns_focus_widget(self.focused):
-                    renderer.stop_search()
-                elif (
-                    page
-                    and page.editor_type == EditorType.SOURCE
-                    and editor
-                    and editor.props.visible
-                ):
-                    editor.stop_search()
-                elif renderer and renderer.props.visible:
-                    renderer.stop_search()
+                target = self._search_target(page, editor, renderer)
+                if target:
+                    target.stop_search()
 
             if self.focused:
                 self.focused.grab_focus()
@@ -766,55 +778,31 @@ class AppWindow(Adw.ApplicationWindow):
         else:
             Gtk.StyleContext.remove_class(ctx, "error")
 
+    def _dispatch_find(self, method_name):
+        """Run *method_name* on whichever of editor/renderer owns search.
+
+        *method_name* is 'do_next_match' or 'do_previous_match'; see
+        :meth:`_search_target` for how the target is chosen.
+        """
+        if not self.search.get_search_mode():
+            return False
+        page = self.active_page
+        if not page:
+            return False
+        editor = getattr(page, "editor", None)
+        renderer = page.renderer
+        target = self._search_target(page, editor, renderer)
+        if not target:
+            return False
+        return getattr(target, method_name)(self.search_entry.get_text())
+
     def _on_find_next_match(self, action, *params):
         """'find-next-match' action handler."""
-        res = False
-        if self.search.get_search_mode():
-            text = self.search_entry.get_text()
-            page = self.active_page
-            if not page:
-                return res
-            editor = getattr(page, "editor", None)
-            renderer = page.renderer
-
-            if isinstance(self.focused, GtkSourceView):
-                res = editor.do_next_match(text) if editor else False
-            elif renderer.owns_focus_widget(self.focused):
-                res = renderer.do_next_match(text)
-            elif (
-                page.editor_type == EditorType.SOURCE
-                and editor
-                and editor.props.visible
-            ):
-                res = editor.do_next_match(text)
-            elif renderer.props.visible:
-                res = renderer.do_next_match(text)
-        return res
+        return self._dispatch_find("do_next_match")
 
     def _on_find_previous_match(self, action, *params):
         """'find-previous-match' action handler."""
-        res = False
-        if self.search.get_search_mode():
-            text = self.search_entry.get_text()
-            page = self.active_page
-            if not page:
-                return res
-            editor = getattr(page, "editor", None)
-            renderer = page.renderer
-
-            if isinstance(self.focused, GtkSourceView):
-                res = editor.do_previous_match(text) if editor else False
-            elif renderer.owns_focus_widget(self.focused):
-                res = renderer.do_previous_match(text)
-            elif (
-                page.editor_type == EditorType.SOURCE
-                and editor
-                and editor.props.visible
-            ):
-                res = editor.do_previous_match(text)
-            elif renderer.props.visible:
-                res = renderer.do_previous_match(text)
-        return res
+        return self._dispatch_find("do_previous_match")
 
     def _on_refresh_preview(self, action, *params):
         """'refresh-preview' action handler."""
