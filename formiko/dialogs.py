@@ -1,9 +1,12 @@
 """Formiko dialog widgets."""
 
+import configparser
 import contextlib
+import platform
 import sys
 from importlib import metadata
 from importlib.resources import files
+from os.path import exists as path_exists
 from os.path import splitext
 from traceback import print_exc
 
@@ -122,16 +125,51 @@ def run_alert_dialog(dialog, parent):
     return result[0]
 
 
+#: Present in every Flatpak sandbox; describes the app and its runtime.
+FLATPAK_INFO = "/.flatpak-info"
+
+
+def _flatpak_runtime() -> str | None:
+    """Return the Flatpak runtime this app runs on, if it can be read."""
+    parser = configparser.ConfigParser(interpolation=None)
+    try:
+        parser.read(FLATPAK_INFO)
+        return parser["Application"]["runtime"]
+    except (OSError, configparser.Error, KeyError):
+        return None
+
+
+def _system_info() -> list[str]:
+    """Describe the operating system, and the Flatpak sandbox if any."""
+    system = platform.system() or "unknown"
+    is_flatpak = path_exists(FLATPAK_INFO)
+    lines = [f"System: {system}{' (Flatpak)' if is_flatpak else ''}"]
+    release = None
+    if system == "Windows":
+        version, build = platform.win32_ver()[:2]
+        release = f"Windows {version} ({build})".replace("  ", " ")
+    elif system == "Darwin":
+        release = f"macOS {platform.mac_ver()[0]}"
+    elif system == "Linux":
+        with contextlib.suppress(OSError):
+            release = platform.freedesktop_os_release().get("PRETTY_NAME")
+        lines.append(f"  Kernel:  {platform.release()}")
+    if release:
+        lines.insert(1, f"  Release: {release}")
+    runtime = _flatpak_runtime() if is_flatpak else None
+    if runtime:
+        lines.append(f"  Flatpak runtime: {runtime}")
+    return lines
+
+
 def _build_debug_info(prefs=None):
     """Collect library and package versions for bug reports."""
-    from os.path import exists as path_exists
 
     def gv(mod):
         return f"{mod.MAJOR_VERSION}.{mod.MINOR_VERSION}.{mod.MICRO_VERSION}"
 
-    is_flatpak = path_exists("/.flatpak-info")
     lines = [
-        f"Flatpak: {'yes' if is_flatpak else 'no'}",
+        *_system_info(),
         "",
         "GTK libraries:",
         f"  GTK:       {gv(Gtk)}",
@@ -151,6 +189,7 @@ def _build_debug_info(prefs=None):
         "m2r2",
         "mistune",
         "pynvim",
+        "PyGObject",
         "Pygments",
     )
     for pkg in pkgs:
