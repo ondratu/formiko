@@ -1,6 +1,7 @@
 """Tests for the JSON preview HTML and its folding script."""
 
 import sys
+from html.parser import HTMLParser
 from json import loads
 
 from formiko.browser import EVENT_LOAD_FINISHED
@@ -30,6 +31,21 @@ class _ScriptingBrowser(_Minimal):
         self._emit(EVENT_LOAD_FINISHED)
 
 
+class _JPathCollector(HTMLParser):
+    """Collect ``data-jpath`` values and the tags of a document."""
+
+    def __init__(self):
+        super().__init__()
+        self.paths = []
+        self.tags = set()
+
+    def handle_starttag(self, tag, attrs):
+        self.tags.add(tag)
+        for name, value in attrs:
+            if name == "data-jpath":
+                self.paths.append(value)
+
+
 def test_nested_json_can_be_rendered_as_deep_as_it_can_be_parsed():
     """Rendering must not use up the stack sooner than parsing does."""
     depth = int(sys.getrecursionlimit() * 0.7)
@@ -38,6 +54,18 @@ def test_nested_json_can_be_rendered_as_deep_as_it_can_be_parsed():
     html = JSONPreview()._generate_html(data)
 
     assert html.count('class="jblock"') == depth
+
+
+def test_node_paths_are_escaped_in_attributes():
+    """A key with quotes or markup must not break out of ``data-jpath``."""
+    data = {'a"b': {"<i>": [1]}}
+
+    html = JSONPreview()._generate_html(data)
+
+    collector = _JPathCollector()
+    collector.feed(html)
+    assert collector.paths == ["", 'a"b', 'a"b.<i>', 'a"b.<i>.[0]']
+    assert "i" not in collector.tags
 
 
 def _preview_with_browser():
