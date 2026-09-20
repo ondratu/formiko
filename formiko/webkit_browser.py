@@ -190,13 +190,15 @@ class WebKitBrowserView(BrowserView):
 
     def scroll_to_anchor(self, anchor: str) -> None:
         """Scroll to the element with id/name *anchor*."""
-        anchor_js = dumps(anchor)
+        # The anchor comes from a link in the document: pass it only as a
+        # JSON string, never spliced into a selector or other script text.
         self._view.evaluate_javascript(
-            (
-                f"var el = document.getElementById({anchor_js})"
-                f" || document.querySelector('a[name={anchor_js}]');"
-                " if (el) el.scrollIntoView();"
-            ),
+            "(function (anchor) {"
+            " var el = document.getElementById(anchor) ||"
+            " Array.from(document.querySelectorAll('a[name]')).find("
+            "function (a) { return a.getAttribute('name') === anchor; });"
+            " if (el) el.scrollIntoView();"
+            f"}})({dumps(anchor)});",
             -1, None, None, None, None,
         )
 
