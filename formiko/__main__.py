@@ -1,8 +1,40 @@
 """Formiko module / main support."""
 
+import faulthandler
+import os
 import sys
 from contextlib import suppress
 from signal import SIGINT, signal
+
+# Dumps the Python-level stack of whichever call was in progress when a
+# native dependency (GTK, litehtml, cairo, ...) crashes, which would
+# otherwise just vanish. Needs a real stderr: a --windowed frozen build
+# started from the Windows menu has none (sys.stderr is None), and
+# faulthandler.enable() raises instead of skipping it.
+if sys.stderr is not None:
+    faulthandler.enable()
+
+if sys.platform == "win32" and getattr(sys, "frozen", False):
+    # MSYS2's GTK4/Pango stack uses the fontconfig/FreeType backend rather
+    # than native DirectWrite, libadwaita/GTK look up the
+    # org.gnome.desktop.interface GSettings schema internally even on
+    # Windows (an unknown schema is a fatal GLib error, not a warning),
+    # and GtkSourceView looks up the RelaxNG schemas it validates its
+    # language files against as real files under share/gtksourceview-5/.
+    # None of these has a "look next to the exe" fallback on Windows, so
+    # point them at the copies bundled alongside the frozen app (see
+    # build-windows-installer.yml's "Stage runtime files" step) before
+    # anything - including gi's own typelib loading - can touch them.
+    _bundle_dir = sys._MEIPASS  # noqa: SLF001
+    os.environ.setdefault(
+        "FONTCONFIG_PATH", os.path.join(_bundle_dir, "fontconfig"),
+    )
+    os.environ.setdefault(
+        "GSETTINGS_SCHEMA_DIR", os.path.join(_bundle_dir, "glib-schemas"),
+    )
+    os.environ.setdefault(
+        "XDG_DATA_DIRS", os.path.join(_bundle_dir, "share"),
+    )
 
 from gi import require_version
 

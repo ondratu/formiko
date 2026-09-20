@@ -31,6 +31,7 @@ from __future__ import annotations
 import ctypes
 import io
 import logging
+import sys
 import urllib.request
 import warnings
 from concurrent.futures import ThreadPoolExecutor
@@ -83,7 +84,14 @@ Box = tuple[float, float, float, float]
 _IMAGE_EXECUTOR = ThreadPoolExecutor(max_workers=4)
 _HTTP_TIMEOUT = 10  # seconds
 
-_libcairo = ctypes.CDLL("libcairo.so.2")
+if sys.platform == "win32":
+    _CAIRO_SONAME = "libcairo-2.dll"
+elif sys.platform == "darwin":
+    _CAIRO_SONAME = "libcairo.2.dylib"
+else:
+    _CAIRO_SONAME = "libcairo.so.2"
+
+_libcairo = ctypes.CDLL(_CAIRO_SONAME)
 _libcairo.cairo_scale.argtypes = (
     ctypes.c_void_p,
     ctypes.c_double,
@@ -833,23 +841,26 @@ class LitehtmlBrowserView(BrowserView):
     ) -> cairo.ImageSurface:
         """Get the just-drawn page as a ``cairo.ImageSurface``.
 
-        Zero-copy on a litehtmlpy build with the ``get_data()`` patch:
-        wraps litehtml's own ARGB32 buffer directly (valid only until the
-        next ``surface()`` call, which is fine since we always rebuild
-        ``self._surface`` right alongside it). Falls back to a PNG
-        encode/decode round trip - slower, but keeps this backend usable
-        against a plain upstream build.
+        On a litehtmlpy build patched with ``get_data()``, copies its
+        raw ARGB32 buffer into our own ``bytearray`` up front - a plain
+        memcpy, not the PNG encode/decode round trip the plain-upstream
+        fallback below needs, so this stays fast. It does NOT wrap
+        ``get_data()``'s buffer directly (zero-copy): self._container
+        reuses that buffer across every render, and aliasing it caused
+        an intermittent, hard-to-reproduce Windows access violation
+        right after a render (faulthandler pinned it to the very next
+        "self._surface = surface", i.e. destroying the *previous*
+        surface once its backing memory had already been reused).
+        Copying now, while the buffer is still this render's own, costs
+        one memcpy and avoids that aliasing entirely.
         """
         if hasattr(self._container, "get_data"):
             stride = cairo.ImageSurface.format_stride_for_width(
                 cairo.FORMAT_ARGB32, pixel_width,
             )
+            data = bytearray(self._container.get_data())
             return cairo.ImageSurface.create_for_data(
-                self._container.get_data(),
-                cairo.FORMAT_ARGB32,
-                pixel_width,
-                pixel_height,
-                stride,
+                data, cairo.FORMAT_ARGB32, pixel_width, pixel_height, stride,
             )
         png_bytes = io.BytesIO()
         self._container.savestream(png_bytes.write)
