@@ -113,6 +113,19 @@ tests.
 full suite, including GTK integration tests, requires the private Mutter
 headless compositor described above.
 
+Commits
+-------
+
+* Keep each commit atomic: one logical change, working on its own, with
+  the tests and lint passing at that commit. A commit must never break
+  something that a later commit in the same PR repairs.
+* Prefer several small commits over one large commit that mixes
+  unrelated changes (for example a refactoring and a behaviour change).
+* Put the tests for a change into the same commit as the change.
+  Code that production does not use yet may be committed, but it should
+  be covered by tests too, as far as that is reasonably possible (see the
+  notes on testing UI code above).
+
 Commit messages
 ----------------
 
