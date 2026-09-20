@@ -1,0 +1,196 @@
+name: Windows installer build
+
+# Packages the litehtml + SourceView variant as a Windows installer via
+# PyInstaller + Inno Setup. Why the build looks the way it does, and how a
+# tagged release gets the installer attached: packaging/windows/README.md.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    tags: ['[0-9]*']
+  pull_request:
+    branches: [master]
+    paths:
+      - '.github/workflows/build-windows-installer.yml'
+      - 'formiko/**'
+      - 'icons/**'
+      - 'packaging/windows/**'
+      - 'pyproject.toml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Windows installer
+    runs-on: windows-latest
+    continue-on-error: true  # experimental - don't block on this yet
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gtk4
+            mingw-w64-x86_64-libadwaita
+            mingw-w64-x86_64-gtksourceview5
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-gobject
+            mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-python-setuptools
+            mingw-w64-x86_64-gobject-introspection
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-toolchain
+            mingw-w64-x86_64-python-pillow
+            mingw-w64-x86_64-gsettings-desktop-schemas
+            mingw-w64-x86_64-libspelling
+            mingw-w64-x86_64-hunspell-en
+            mingw-w64-x86_64-adwaita-icon-theme
+            mingw-w64-x86_64-hicolor-icon-theme
+            git
+
+      - name: Install Python dependencies
+        shell: msys2 {0}
+        run: |
+          pip install \
+            mistune Pygments m2r2 docutils-tinyhtmlwriter \
+            pyinstaller pyinstaller-hooks-contrib
+          # See packaging/windows/README.md#litehtmlpy
+          py_dot=$(python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
+          export CMAKE_ARGS="-DPython_LIBRARY=$MINGW_PREFIX/lib/libpython${py_dot}.dll.a -DLITEHTMLPY_INCLUDE_CAIRO_CONTAINERS=ON"
+          pip install -e '.[litehtml]'
+
+      - name: Fix litehtmlpy extension filename
+        shell: msys2 {0}
+        run: |
+          litehtmlpy_dir=$(python -c "import litehtmlpy, os; print(os.path.dirname(litehtmlpy.__file__))")
+          mv "$litehtmlpy_dir"/litehtmlpy.*.pyd "$litehtmlpy_dir"/litehtmlpy.pyd
+
+      - name: Build .ico from the SVG icon
+        shell: msys2 {0}
+        run: |
+          python -c "
+          from PIL import Image
+          Image.open('icons/512x512/formiko.png').save(
+              'formiko.ico',
+              sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)],
+          )
+          "
+
+      - name: Build installer wizard images
+        shell: msys2 {0}
+        run: python packaging/windows/make_wizard_images.py
+
+      - name: Generate version info and installer metadata
+        shell: msys2 {0}
+        run: python packaging/windows/generate_metadata.py
+
+      - name: Stage runtime files
+        shell: msys2 {0}
+        run: bash packaging/windows/stage_runtime.sh
+
+      - name: Build with PyInstaller
+        shell: msys2 {0}
+        run: |
+          # --add-data takes a single "src;dest" argument; MSYS2's
+          # automatic POSIX->Windows path mangling corrupts that.
+          export MSYS2_ARG_CONV_EXCL="*"
+          pyinstaller --noconfirm --windowed --name formiko \
+            --collect-all gi \
+            --collect-all gtksourceview5 \
+            --collect-all litehtmlpy \
+            --collect-all docutils \
+            --collect-all docutils_tinyhtml \
+            --collect-submodules mistune \
+            --copy-metadata Pygments \
+            --copy-metadata mistune \
+            --copy-metadata jsonpath-ng \
+            --add-data "dist-runtime/dlls;." \
+            --add-data "dist-runtime/gi_typelibs;gi_typelibs" \
+            --add-data "dist-runtime/fontconfig;fontconfig" \
+            --add-data "dist-runtime/glib-schemas;glib-schemas" \
+            --add-data "dist-runtime/share;share" \
+            --add-data "formiko/data;formiko/data" \
+            --version-file version_info.txt \
+            --contents-directory bin \
+            --icon formiko.ico \
+            formiko/__main__.py
+          # Enchant looks for its providers next to bin/, see README
+          cp -r dist-runtime/enchant/. dist/formiko/
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: iscc packaging\windows\formiko.iss
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: formiko-windows-installer
+          path: dist/installer/*.exe
+          retention-days: 14
+          if-no-files-found: warn
+
+  # Runs for pushed tags only. The release is created by hand from the tag
+  # (usually as a draft) while the build runs, so wait for it to appear.
+  # Rerun this job if the release was created too late.
+  release:
+    name: Attach installer to release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read     # download the artifact from this run
+      contents: write   # upload release assets, see draft releases
+
+    steps:
+      - name: Download installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name formiko-windows-installer --dir installer
+
+      # Draft releases are not found by tag (REST /releases/tags, gh release
+      # upload), so look the release up in the list and upload by its id.
+      - name: Attach installer to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          repo="repos/$GITHUB_REPOSITORY"
+          tag="$GITHUB_REF_NAME"
+
+          release_id=
+          for _ in $(seq 60); do
+            ids=$(gh api "$repo/releases" --paginate \
+                  --jq ".[] | select(.tag_name == \"$tag\") | .id")
+            release_id=${ids%%$'\n'*}
+            [ -n "$release_id" ] && break
+            echo "No release for $tag yet, waiting..."
+            sleep 30
+          done
+          if [ -z "$release_id" ]; then
+            echo "::error::No release for tag $tag found within 30 minutes. Create it and rerun this job."
+            exit 1
+          fi
+
+          for file in installer/*.exe; do
+            name=$(basename "$file")
+            # replace the asset when the job is rerun
+            old_id=$(gh api "$repo/releases/$release_id/assets" \
+                     --jq ".[] | select(.name == \"$name\") | .id")
+            if [ -n "$old_id" ]; then
+              gh api --method DELETE "$repo/releases/assets/$old_id"
+            fi
+            gh api --method POST \
+              "https://uploads.github.com/$repo/releases/$release_id/assets?name=$name" \
+              -H "Content-Type: application/octet-stream" --input "$file"
+            echo "Attached $name to release $tag"
+          done
