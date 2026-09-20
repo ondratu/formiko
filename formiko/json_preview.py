@@ -241,8 +241,9 @@ class JSONPreview:
 
     def _show_error_dialog(self, message: str) -> bool:
         """Display an error dialog when JSONPath parsing fails."""
-        dialog = Gtk.AlertDialog.new("Invalid JSONPath Expression")
-        dialog.set_detail(message)
+        dialog = Gtk.AlertDialog(
+            message="Invalid JSONPath Expression", detail=message,
+        )
         dialog.show(self._win)
         return False
 
