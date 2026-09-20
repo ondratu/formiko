@@ -306,6 +306,10 @@ class Renderer(Overlay):
         self._pending_context = None
         self.pos = 0
         self.src = None  # None = no content yet; prevents spurious renders
+        # What the preview was last scrolled for; see _sync_scroll().
+        self._synced_pos = None
+        self._synced_html = None
+        self._pending_html = None
 
     @staticmethod
     def _rgba_to_hex(rgba):
@@ -619,7 +623,7 @@ class Renderer(Overlay):
         # empty HTML.
         if self.src is None:
             return
-        state, html, mime_type = self.render_output()
+        _, html, mime_type = self.render_output()
         if html and self.__win.running:
             if mime_type == "text/html" and "</head>" in html:
                 if not self.style:
@@ -648,7 +652,7 @@ class Renderer(Overlay):
                     if patched:
                         if hasattr(self.parser_instance, "inject_fold_js"):
                             self.parser_instance.inject_fold_js(self.webview)
-                        self.scroll_to_position(self.pos)
+                        self._sync_scroll(html)
                         return
             file_name = self.file_name or get_home_dir()
             self._pending_context = (
@@ -659,9 +663,23 @@ class Renderer(Overlay):
                 self.fgcolor,
                 self.linkcolor,
             )
+            self._pending_html = html
             self.webview.load(html, mime_type, "file://" + file_name)
-        if state:
-            self.scroll_to_position(self.pos)
+
+    def _sync_scroll(self, html, *, force=False):
+        """Scroll the preview to ``self.pos`` unless it is already there.
+
+        Otherwise every re-render that changed neither the position nor
+        the content would stomp on scrolling the user just did in the
+        preview by hand. *force* is for a freshly loaded document, which
+        always starts at the top.
+        """
+        if not force and (self.pos, html) == (
+            self._synced_pos, self._synced_html,
+        ):
+            return
+        self._synced_html = html
+        self.scroll_to_position(self.pos)
 
     def render(self, src, file_name, pos=0):
         """Add render task to ui queue."""
@@ -677,7 +695,7 @@ class Renderer(Overlay):
     def _on_load_finished(self):
         """Restore scroll position once a freshly loaded page is ready."""
         self._loaded_context = self._pending_context
-        self.scroll_to_position(None)
+        self._sync_scroll(self._pending_html, force=True)
 
     def owns_focus_widget(self, widget):
         """Return whether *widget* is this renderer's own focus target.
@@ -709,6 +727,7 @@ class Renderer(Overlay):
         """Scroll to right cursor position."""
         if position is not None:
             self.pos = position
+        self._synced_pos = self.pos
 
         if self.pos > 1:  # vim
             a, b = len(self.src[:self.pos]), len(self.src[self.pos:])

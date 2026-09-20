@@ -1,4 +1,4 @@
-"""Tests for restoring the preview's scroll position after a render.
+"""Tests for keeping the preview's scroll position in sync with the editor.
 
 The renderer is exercised through a duck-typed adapter (only the methods
 under test are borrowed from :class:`formiko.renderer.Renderer`) driving a
@@ -71,6 +71,9 @@ class _RendererAdapter:
         self.html = HEAD.format("one")
         self._loaded_context = None
         self._pending_context = None
+        self._pending_html = None
+        self._synced_pos = None
+        self._synced_html = None
 
     def render_output(self):
         return True, self.html, "text/html"
@@ -124,3 +127,24 @@ def test_typing_at_end_of_document_keeps_preview_at_the_end():
 
     assert renderer.webview.patches == 1
     assert renderer.webview.scroll == 1.0
+
+
+def test_unchanged_rerender_does_not_stomp_manual_preview_scroll():
+    """Re-rendering identical content leaves the user's own scroll alone."""
+    renderer = _loaded(0.4)
+    renderer.webview.scroll = 0.7  # scrolled by hand in the preview
+
+    renderer.render(HEAD.format("one"))
+
+    assert renderer.webview.patches == 1
+    assert renderer.webview.scroll == 0.7
+
+
+def test_editor_scroll_is_applied_to_preview():
+    """Moving the editor scrolls the preview and survives a re-render."""
+    renderer = _loaded(0.4)
+
+    renderer.scroll_to_position(0.6)
+    renderer.render(HEAD.format("one"))
+
+    assert renderer.webview.scroll == 0.6
