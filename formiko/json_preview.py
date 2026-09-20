@@ -347,7 +347,8 @@ class JSONPreview:
             css_classes.append("jhighlight")
         children = "".join(items)
         return (
-            f'<div class="{" ".join(css_classes)}" data-jpath="{path}">'
+            f'<div class="{" ".join(css_classes)}" '
+            f'data-jpath="{escape(path)}">'
             f"<span class='jtoggler'></span>{open_char}"
             f"<div class='children'>{children}</div>{close_char}</div>"
         )
@@ -374,7 +375,10 @@ class JSONPreview:
             base_class, text = "jnum", str(value)
         if is_highlighted:
             base_class = f"{base_class} jhighlight"
-        return f'<span class="{base_class}" data-jpath="{path}">{text}</span>'
+        return (
+            f'<span class="{base_class}" data-jpath="{escape(path)}">'
+            f"{text}</span>"
+        )
 
     def _render(
         self,
