@@ -1,8 +1,13 @@
 """Tests for the JSON preview HTML and its folding script."""
 
+import shutil
+import subprocess
 import sys
 from html.parser import HTMLParser
-from json import loads
+from importlib.resources import files
+from json import dumps, loads
+
+import pytest
 
 from formiko.browser import EVENT_LOAD_FINISHED
 from formiko.json_preview import JSONPreview
@@ -107,3 +112,33 @@ def test_fold_script_is_not_injected_by_later_loads():
     browser.finish_load()
 
     assert len(browser.scripts) == 1
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+def test_fold_script_toggles_once_however_often_it_is_injected():
+    """Incremental patches inject the script again into the same page."""
+    js = (files("formiko.data") / "jsonfold.js").read_text(encoding="utf-8")
+    harness = f"""
+    const vm = require('vm');
+    const listeners = [];
+    let collapsed = false;
+    const block = {{classList: {{toggle: () => (collapsed = !collapsed)}},
+                    querySelectorAll: () => []}};
+    const toggler = {{parentElement: block}};
+    globalThis.window = globalThis;
+    globalThis.document = {{
+      addEventListener: (type, fn) => listeners.push(fn),
+    }};
+    for (let i = 0; i < 2; i++) vm.runInThisContext({dumps(js)});
+    listeners.forEach((fn) => fn({{
+      target: {{closest: () => toggler}}, altKey: false,
+    }}));
+    console.log(JSON.stringify({{collapsed}}));
+    """
+    done = subprocess.run(
+        ["node", "-e", harness],  # noqa: S607
+        capture_output=True, text=True, check=False,
+    )
+
+    assert done.returncode == 0, done.stderr
+    assert loads(done.stdout) == {"collapsed": True}
