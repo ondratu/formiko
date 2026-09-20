@@ -3,6 +3,10 @@
 The ``WebView`` is replaced by a fake, so only formiko's own glue is run.
 """
 
+import shutil
+import subprocess
+from json import dumps
+
 import gi
 import pytest
 
@@ -122,3 +126,56 @@ def test_search_waits_without_spinning_the_cpu(browser_view):
     """Searching for new text sleeps in the main loop until answered."""
     assert browser_view.find_next("needle") is True
     assert all(browser_view._context.blocking)
+
+
+_ANCHORS = ["plain", "with space", "it's", "x'+PWNED()+'", 'q"uote', "a\\b"]
+
+
+def _run_anchor_script(script, *, known_id=None):
+    """Run *script* in node against a stub DOM; return the scrolled ids."""
+    harness = f"""
+    const scrolled = [];
+    const target = {{scrollIntoView() {{ scrolled.push('target'); }}}};
+    const document = {{
+      getElementById: (id) => (id === {dumps(known_id)} ? target : null),
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      getElementsByName: () => [],
+    }};
+    const PWNED = () => {{ throw new Error('anchor was executed'); }};
+    {script}
+    console.log(JSON.stringify(scrolled));
+    """
+    return subprocess.run(
+        ["node", "-e", harness],  # noqa: S607
+        capture_output=True, text=True, check=False,
+    )
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+@pytest.mark.parametrize("anchor", _ANCHORS)
+def test_scroll_to_anchor_never_runs_the_anchor_as_script(
+    browser_view, anchor,
+):
+    """An anchor comes from a link in the document: it is data only."""
+    browser_view.scroll_to_anchor(anchor)
+    (script,) = browser_view._view.scripts
+
+    done = _run_anchor_script(script)
+
+    assert done.returncode == 0, done.stderr
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="needs node")
+@pytest.mark.parametrize("anchor", _ANCHORS)
+def test_scroll_to_anchor_scrolls_to_the_element_with_that_id(
+    browser_view, anchor,
+):
+    """The element whose id equals the anchor is scrolled into view."""
+    browser_view.scroll_to_anchor(anchor)
+    (script,) = browser_view._view.scripts
+
+    done = _run_anchor_script(script, known_id=anchor)
+
+    assert done.returncode == 0, done.stderr
+    assert done.stdout.strip() == '["target"]'
