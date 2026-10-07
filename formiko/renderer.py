@@ -8,7 +8,6 @@ from urllib.parse import unquote
 
 from docutils import DataError
 from docutils.core import publish_string
-from docutils.parsers.rst import Parser as RstParser
 from docutils.writers.html4css1 import Writer as Writer4css1
 from docutils.writers.html5_polyglot import Writer as Html5Writer
 from docutils.writers.pep_html import Writer as WriterPep
@@ -36,6 +35,7 @@ from formiko.directives import HtmlPreview, Mark2Resturctured, TinyWriter
 from formiko.json_preview import JSONPreview
 from formiko.mistune_preview import MistunePreview
 from formiko.sourceview import LANG_BY_EXT
+from formiko.task_lists import TaskListRstParser
 from formiko.utils import Undefined
 from formiko.widgets import ImutableDict
 
@@ -77,7 +77,7 @@ PARSERS = {
     "rst": {
         "key": "rst",
         "title": "Docutils reStructuredText parser",
-        "class": RstParser,
+        "class": TaskListRstParser,
         "package": "docutils",
         "url": "http://docutils.sourceforge.net",
     },

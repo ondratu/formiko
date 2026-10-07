@@ -14,6 +14,8 @@ Version 2.1.0.dev
     definition lists, footnotes, formatting, math, ruby and spoilers
   * Render code blocks without syntax highlighting when the optional Pygments
     package is not installed
+  * Render Obsidian-style task list markers ([ ], [x], [?], [!] ...) as
+    Unicode symbols in reStructuredText and Markdown (m2r2)
   * Add WakaTime support (https://wakatime.com), configurable in
     Preferences
   * Keep the file browser up to date with the active document's folder

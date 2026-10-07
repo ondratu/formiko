@@ -75,6 +75,98 @@ reStructuredText and MarkDown (via M2R2) documents.
     .. mdinclude:: CONTRIBUTING.md
        :start-line: 3
 
+Task lists
+~~~~~~~~~~
+A list item starting with a marker in square brackets is rendered with a plain
+Unicode symbol instead, so it looks the same in every writer and needs no CSS.
+It works in reStructuredText and MarkDown (via M2R2) documents, in bullet and
+numbered lists. The set of markers follows Obsidian and its themes. Markers
+are case sensitive, except ``[X]``, which is the same as ``[x]``. Each item
+also gets a ``task-<name>`` class and its list gets the ``task-list`` class.
+
+Example::
+
+  * [x] done
+  * [ ] to do
+  * [?] question
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 20
+
+   * - Marker
+     - Meaning
+     - Symbol
+   * - ``[ ]``
+     - to do
+     - ☐
+   * - ``[x]`` ``[X]``
+     - done
+     - ☑
+   * - ``[/]``
+     - incomplete
+     - ◐
+   * - ``[-]``
+     - canceled
+     - ☒
+   * - ``[>]``
+     - forwarded
+     - ➔
+   * - ``[<]``
+     - scheduling
+     - ◷
+   * - ``[?]``
+     - question
+     - ⁇
+   * - ``[!]``
+     - important
+     - ‼
+   * - ``[*]``
+     - star
+     - ★
+   * - ``["]``
+     - quote
+     - ❝
+   * - ``[l]``
+     - location
+     - ⌖
+   * - ``[b]``
+     - bookmark
+     - ⚑
+   * - ``[i]``
+     - information
+     - ⓘ
+   * - ``[I]``
+     - idea
+     - ✦
+   * - ``[$]`` ``[S]``
+     - money
+     - $
+   * - ``[€]``
+     - money
+     - €
+   * - ``[p]``
+     - pros
+     - ⊕
+   * - ``[c]``
+     - cons
+     - ⊖
+   * - ``[f]``
+     - fire
+     - ♨
+   * - ``[k]``
+     - key
+     - ⚿
+   * - ``[w]``
+     - win
+     - ✪
+   * - ``[u]``
+     - up
+     - ▲
+   * - ``[d]``
+     - down
+     - ▼
+
 Vim support
 ~~~~~~~~~~~
 Formiko has Neovim editor support aka ``formiko-vim`` command. This runs `Neovim

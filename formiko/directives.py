@@ -6,9 +6,9 @@ from typing import ClassVar
 
 from docutils import nodes
 from docutils.parsers.rst import Directive
-from docutils.parsers.rst import Parser as RstParser
 from docutils.parsers.rst import directives as rst_directives
 
+from formiko.task_lists import TaskListRstParser
 from formiko.utils import Undefined
 
 try:
@@ -53,7 +53,7 @@ try:
 
     rst_directives.register_directive("mdinclude", StandaloneMdInclude)
 
-    class Mark2Resturctured(RstParser):
+    class Mark2Resturctured(TaskListRstParser):
         """Converting from MarkDown to reStructuredText before parse."""
 
         def parse(self, inputstring, document):

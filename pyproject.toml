@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "docutils>=0.12"]
+requires = ["setuptools>=64", "docutils>=0.18.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -29,7 +29,7 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: HTML",
     "Topic :: Utilities",
 ]
-dependencies = ["docutils>=0.12", "jsonpath-ng"]
+dependencies = ["docutils>=0.18.1", "jsonpath-ng"]
 
 [project.optional-dependencies]
 extra = [
