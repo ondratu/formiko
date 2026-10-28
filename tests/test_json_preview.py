@@ -7,12 +7,15 @@ from html.parser import HTMLParser
 from importlib.resources import files
 from json import dumps, loads
 
+import gi
 import pytest
 
-from formiko.browser import EVENT_LOAD_FINISHED
-from formiko.json_preview import JSONPreview
+gi.require_version("Gtk", "4.0")
 
-from .test_browser_view import _Minimal
+from formiko.browser import EVENT_LOAD_FINISHED  # noqa: E402
+from formiko.json_preview import JSONPreview  # noqa: E402
+
+from .test_browser_view import _Minimal  # noqa: E402
 
 
 class _ScriptingBrowser(_Minimal):

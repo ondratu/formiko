@@ -1,12 +1,24 @@
 """Tests for optional parser, writer, and syntax-highlighting dependencies."""
 
+import contextlib
+
+import gi
 from docutils.core import publish_parts
 from docutils.parsers.rst import Parser
 
-from formiko import renderer
-from formiko.renderer import PARSERS, WRITERS, component_available
-from formiko.user import UserPreferences
-from formiko.utils import Undefined
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
+
+from formiko import renderer  # noqa: E402
+from formiko.renderer import (  # noqa: E402
+    PARSERS,
+    WRITERS,
+    component_available,
+)
+from formiko.user import UserPreferences  # noqa: E402
+from formiko.utils import Undefined  # noqa: E402
 
 
 def test_missing_parser_is_reported_as_unavailable():
@@ -53,7 +65,7 @@ def test_renderer_disables_highlighting_without_pygments(monkeypatch):
     parts = publish_parts(
         source,
         parser=Parser(),
-        writer_name="html5",
+        writer="html5",
         settings_overrides=settings,
     )
 

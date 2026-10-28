@@ -7,11 +7,15 @@ by hand, inlining a user-selected ``.css`` file's content into the
 generated ``<head>``.
 """
 
+import contextlib
+
 import gi
 
 gi.require_version("Adw", "1")
 gi.require_version("GtkSource", "5")
 gi.require_version("WebKit", "6.0")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
 
 from formiko.renderer import Renderer  # noqa: E402
 

@@ -5,9 +5,17 @@ under test are borrowed from :class:`formiko.renderer.Renderer`) driving a
 fake browser view, so no GTK widget tree or display server is needed.
 """
 
+import contextlib
 from types import FunctionType, SimpleNamespace
 
-from formiko.renderer import Renderer
+import gi
+
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
+
+from formiko.renderer import Renderer  # noqa: E402
 
 HEAD = "<html><head></head><body>{}</body></html>"
 

@@ -1,10 +1,18 @@
 """Tests for desktop file open modes."""
 
+import contextlib
 from unittest.mock import Mock
 
-from formiko.application import Application
-from formiko.editor import EditorType
-from formiko.window import AppWindow
+import gi
+
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
+
+from formiko.application import Application  # noqa: E402
+from formiko.editor import EditorType  # noqa: E402
+from formiko.window import AppWindow  # noqa: E402
 
 
 def test_open_files_in_new_window_puts_all_files_in_one_window(monkeypatch):

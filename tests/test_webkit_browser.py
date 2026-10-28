@@ -10,13 +10,15 @@ from json import dumps
 import gi
 import pytest
 
+gi.require_version("Gtk", "4.0")
+gi.require_version("Gdk", "4.0")
 try:
     gi.require_version("WebKit", "6.0")
 except ValueError:
     pytest.skip("WebKit typelib is not installed", allow_module_level=True)
 
-from formiko import webkit_browser
-from formiko.webkit_browser import WebKitBrowserView
+from formiko import webkit_browser  # noqa: E402
+from formiko.webkit_browser import WebKitBrowserView  # noqa: E402
 
 
 class _FakeContext:

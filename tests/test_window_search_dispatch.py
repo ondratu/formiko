@@ -1,10 +1,15 @@
 """Tests for choosing whether search acts on the editor or the preview."""
 
+import contextlib
 from unittest.mock import Mock
 
 import gi
 
 gi.require_version("GLib", "2.0")
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
 
 from formiko.editor import EditorType  # noqa: E402
 from formiko.window import AppWindow, GtkSourceView  # noqa: E402

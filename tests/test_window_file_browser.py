@@ -6,11 +6,16 @@ rows is entirely up to whoever shows/hides the sidebar - see
 :mod:`tests.test_filebrowser` for ``refresh()``/``clear()`` themselves.
 """
 
+import contextlib
 from unittest.mock import Mock
 
 import gi
 
 gi.require_version("GLib", "2.0")
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
 
 from gi.repository import GLib  # noqa: E402
 

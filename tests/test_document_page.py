@@ -10,6 +10,7 @@ gi.require_version("GtkSource", "5")
 gi.require_version("Adw", "1")
 with contextlib.suppress(ValueError):
     gi.require_version("Spelling", "1")
+gi.require_version("Gtk", "4.0")
 
 from formiko.document_page import DocumentPage  # noqa: E402
 from formiko.editor import EditorType  # noqa: E402

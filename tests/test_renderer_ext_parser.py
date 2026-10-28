@@ -7,16 +7,24 @@ currently preferred markdown parser, so switching to Mistune in
 Preferences stays in effect across files.
 """
 
+import contextlib
+
+import gi
 import pytest
 
-from formiko.renderer import (
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+with contextlib.suppress(ValueError):
+    gi.require_version("Spelling", "1")
+
+from formiko.renderer import (  # noqa: E402
     EXTS,
     PARSERS,
     WRITERS,
     component_available,
     resolve_ext_parser,
 )
-from formiko.utils import Undefined
+from formiko.utils import Undefined  # noqa: E402
 
 MISTUNE_AVAILABLE = not issubclass(PARSERS["mistune"]["class"], Undefined)
 M2R_AVAILABLE = not issubclass(PARSERS["m2r"]["class"], Undefined)

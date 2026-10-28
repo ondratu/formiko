@@ -2,9 +2,13 @@
 
 import platform
 
+import gi
 import pytest
 
-from formiko import dialogs
+gi.require_version("Adw", "1")
+gi.require_version("GtkSource", "5")
+
+from formiko import dialogs  # noqa: E402
 
 FLATPAK_INFO = """\
 [Application]
