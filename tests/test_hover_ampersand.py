@@ -22,10 +22,11 @@ from gi.repository import GLib, Pango  # noqa: E402
 from formiko.browser import HoverTarget  # noqa: E402
 from formiko.renderer import (  # noqa: E402
     PARSERS,
-    WRITERS,
     Renderer,
     component_available,
 )
+
+from .renderer_adapter import make_render_adapter  # noqa: E402
 
 URL = "https://wiki.debian.org/Page?action=diff&rev2=85&rev1=83"
 
@@ -78,19 +79,9 @@ def test_hover_label_with_other_markup_characters():
 
 def _render(parser, src):
     """Run the real Renderer.render_output for *parser* on *src*."""
-    # ``Renderer`` is a Gtk.Overlay, which cannot be built without a
-    # display (the constructor segfaults), so borrow its method instead.
-    adapter = SimpleNamespace(
-        src=src,
-        file_name="doc.md",
-        tab_width=8,
-        style="",
-        parser_instance=PARSERS[parser]["class"](),
-        writer_instance=WRITERS["html4"]["class"](),
-        _embed_stylesheet=Renderer._embed_stylesheet,
+    adapter = make_render_adapter(
+        parser, src=src, file_name="doc.md",
     )
-    adapter._Renderer__parser = PARSERS[parser]
-    adapter._Renderer__writer = WRITERS["html4"]
     ok, html, _mime = Renderer.render_output(adapter)
     assert ok, html
     return html

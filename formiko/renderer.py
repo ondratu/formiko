@@ -563,7 +563,7 @@ class Renderer(Overlay):
                     "source": self.src,
                     "source_path": self.file_name,
                     "parser": self.parser_instance,
-                    "writer": self.writer_instance or Writer4css1(),
+                    "writer": self.writer_instance,
                     "settings_overrides": settings,
                 }
                 if self.__writer["key"] == "pep":
