@@ -11,8 +11,14 @@ permissions:
 
 jobs:
   pytest:
-    name: Run pytest
+    name: Run pytest${{ matrix.litehtml && ' with litehtmlpy' || '' }}
     runs-on: ubuntu-latest
+    strategy:
+      # litehtmlpy is not on PyPI and is built from source, so a failing
+      # build must not hide the results of the plain run.
+      fail-fast: false
+      matrix:
+        litehtml: [false, true]
 
     steps:
       - name: Checkout
@@ -31,27 +37,9 @@ jobs:
             gir1.2-gtksource-5 \
             gir1.2-spelling-1 \
             gir1.2-webkit-6.0
-      - name: Install optional Python dependencies
+      - name: Install build dependencies of litehtmlpy
+        if: matrix.litehtml
         run: |
-          python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
-          # Not `.[extra]`: it lists docutils-htmlwriter, which is not on PyPI.
-          "$RUNNER_TEMP/venv/bin/pip" install \
-            pynvim m2r2 mistune Pygments docutils-tinyhtmlwriter
-      - name: Run tests
-        run: |
-          env -u DISPLAY -u WAYLAND_DISPLAY \
-            "$RUNNER_TEMP/venv/bin/python" -m pytest -m "not gtk_integration" -q -rs
-  pytest-litehtml:
-    name: Run pytest with litehtmlpy
-    runs-on: ubuntu-latest
-    # litehtmlpy is not on PyPI and is built from source, so keep this
-    # separate: a failing build must not hide the results of the main job.
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
           sudo apt-get install --no-install-recommends --yes \
             build-essential \
             cmake \
@@ -61,24 +49,20 @@ jobs:
             ninja-build \
             pybind11-dev \
             python3-cairo \
-            python3-dev \
-            python3-docutils \
-            python3-gi \
-            python3-jsonpath-ng \
-            python3-pip \
-            python3-pytest \
-            python3-venv \
-            gir1.2-adw-1 \
-            gir1.2-gtksource-5 \
-            gir1.2-spelling-1 \
-            gir1.2-webkit-6.0
-      - name: Build litehtmlpy
+            python3-dev
+      - name: Install optional Python dependencies
         run: |
           python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
           # Not `.[extra]`: it lists docutils-htmlwriter, which is not on PyPI.
           "$RUNNER_TEMP/venv/bin/pip" install \
             pynvim m2r2 mistune Pygments docutils-tinyhtmlwriter
-          "$RUNNER_TEMP/venv/bin/pip" install '.[litehtml]'
+      - name: Build litehtmlpy
+        if: matrix.litehtml
+        # The same source as the `litehtml` extra in pyproject.toml, without
+        # installing formiko itself: the tests must import the checkout.
+        run: |
+          "$RUNNER_TEMP/venv/bin/pip" install \
+            'litehtmlpy @ git+https://github.com/m32/litehtmlpy.git'
       - name: Run tests
         run: |
           env -u DISPLAY -u WAYLAND_DISPLAY \
