@@ -4,6 +4,7 @@ from io import StringIO
 
 import pytest
 from docutils.core import publish_string
+from docutils.writers import get_writer_class
 
 import formiko.directives  # noqa: F401 — registers custom directives
 
@@ -21,7 +22,8 @@ def render(rst: str, source_path: str, writer: str = "pseudoxml") -> str:
     return publish_string(
         source=rst,
         source_path=source_path,
-        writer=writer,
+        # Docutils < 0.22 only accepts a writer instance here, not a name.
+        writer=get_writer_class(writer)(),
         settings_overrides={
             "warning_stream": StringIO(),
             "halt_level": 5,

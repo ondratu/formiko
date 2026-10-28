@@ -5,6 +5,7 @@ import contextlib
 import gi
 from docutils.core import publish_parts
 from docutils.parsers.rst import Parser
+from docutils.writers.html5_polyglot import Writer as Html5Writer
 
 gi.require_version("Adw", "1")
 gi.require_version("GtkSource", "5")
@@ -65,7 +66,7 @@ def test_renderer_disables_highlighting_without_pygments(monkeypatch):
     parts = publish_parts(
         source,
         parser=Parser(),
-        writer="html5",
+        writer=Html5Writer(),
         settings_overrides=settings,
     )
 
