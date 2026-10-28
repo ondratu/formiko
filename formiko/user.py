@@ -25,7 +25,9 @@ class View:
     def __new__(cls, value):
         """Create enum value from string or number value."""
         value = int(value)
-        assert 0 < value < View.BOTH + 1
+        if not View.EDITOR <= value <= View.BOTH:
+            msg = f"{value} is not a valid view"
+            raise ValueError(msg)
         return value
 
 
