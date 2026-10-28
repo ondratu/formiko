@@ -16,6 +16,7 @@ from gi.repository import Adw, Gdk, Gio, GObject, Gtk, Pango
 from gi.repository.GLib import (
     get_home_dir,
     idle_add,
+    markup_escape_text,
 )
 from gi.repository.Gtk import (
     Align,
@@ -427,7 +428,7 @@ class Renderer(Overlay):
             return
         prefix = {"link": "link: ", "image": "image:", "media": "media: "}
         text = prefix[target.kind] + target.uri
-        self.label.set_markup(MARKUP % text.replace("&", "&amp;"))
+        self.label.set_markup(MARKUP % markup_escape_text(text))
         self.label.show()
 
     def _on_link_clicked(self, uri):
