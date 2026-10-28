@@ -19,6 +19,8 @@ Version 2.1.0.dev
   * Add WakaTime support (https://wakatime.com), configurable in
     Preferences
   * Keep the file browser up to date with the active document's folder
+  * Update man pages for the GTK 4 version: describe the current stack and
+    document the Neovim terminal editor in formiko-vim
   * Preserve custom preview styles when switching parsers or writers
   * Add a light/dark/system appearance switch in Preferences
   * Fix preview colors not updating after switching the application theme

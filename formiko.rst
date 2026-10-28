@@ -16,10 +16,10 @@ formiko [options] [FILE]
 DESCRIPTION
 ~~~~~~~~~~~
 Formiko is reStructuredText and MarkDown editor and live previewer. It is
-written in Python with Gtk3 and Webkit2. It use Docutils and
-recommonmark Common Mark parser.
+written in Python with GTK 4, libadwaita and WebKit 6.0. It use Docutils
+for reStructuredText and optionally m2r2 or mistune for MarkDown.
 
-This version use SourceView as editor and GtkSpell3 as spell checker.
+This version use SourceView as editor and Spelling as spell checker.
 
 OPTIONS
 ~~~~~~~
