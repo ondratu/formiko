@@ -31,6 +31,42 @@ jobs:
             gir1.2-webkit-6.0
       - name: Run tests
         run: env -u DISPLAY -u WAYLAND_DISPLAY python3 -m pytest -m "not gtk_integration" -q
+  pytest-litehtml:
+    name: Run pytest with litehtmlpy
+    runs-on: ubuntu-latest
+    # litehtmlpy is not on PyPI and is built from source, so keep this
+    # separate: a failing build must not hide the results of the main job.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes \
+            build-essential \
+            cmake \
+            git \
+            libcairo2-dev \
+            python3-cairo \
+            python3-dev \
+            python3-docutils \
+            python3-gi \
+            python3-jsonpath-ng \
+            python3-pip \
+            python3-pytest \
+            python3-venv \
+            gir1.2-adw-1 \
+            gir1.2-gtksource-5 \
+            gir1.2-spelling-1 \
+            gir1.2-webkit-6.0
+      - name: Build litehtmlpy
+        run: |
+          python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install '.[litehtml]'
+      - name: Run tests
+        run: |
+          env -u DISPLAY -u WAYLAND_DISPLAY \
+            "$RUNNER_TEMP/venv/bin/python" -m pytest -m "not gtk_integration" -q -rs
   gtk-integration:
     name: Run GTK integration tests
     runs-on: ubuntu-latest
