@@ -14,7 +14,7 @@ def render_rst(source, parser=None):
     return publish_parts(
         source=source,
         parser=(parser or TaskListRstParser)(),
-        writer_name="html5",
+        writer="html5",
         settings_overrides={"warning_stream": StringIO()},
     )["fragment"]
 

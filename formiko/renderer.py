@@ -562,8 +562,7 @@ class Renderer(Overlay):
                     "source": self.src,
                     "source_path": self.file_name,
                     "parser": self.parser_instance,
-                    "writer": self.writer_instance,
-                    "writer_name": "html",
+                    "writer": self.writer_instance or "html",
                     "settings_overrides": settings,
                 }
                 if self.__writer["key"] == "pep":
