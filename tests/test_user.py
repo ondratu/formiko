@@ -77,7 +77,7 @@ def test_view_accepts_valid_values(value):
 @pytest.mark.parametrize("value", [0, 4, -1])
 def test_view_rejects_out_of_range(value):
     """Numbers outside 1-3 are refused."""
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="not a valid view"):
         View(value)
 
 
