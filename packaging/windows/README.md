@@ -1,7 +1,7 @@
 # Windows package
 
 The Windows installer is built by
-`.github/workflows/build-windows-installer.yml` on an MSYS2 (MINGW64)
+`.github/workflows/build-windows-installer.yml` on an MSYS2 (UCRT64)
 runner. It packages the litehtml + SourceView variant of Formiko (no WebKit,
 no Vte/vim) with PyInstaller and wraps it in an Inno Setup installer.
 
@@ -19,7 +19,7 @@ them as untrusted. Use "More info" -> "Run anyway" the first time.
 | `formiko.iss`             | Inno Setup script.                                              |
 
 The build is not tied to the CI. Run the steps from the workflow in an MSYS2
-MINGW64 shell from the repository root to build locally.
+UCRT64 shell from the repository root to build locally.
 
 ## Release flow
 

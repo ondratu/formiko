@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Stage everything the PyInstaller bundle needs that is not a Python package.
 #
-# Run from the repository root inside an MSYS2 MINGW64 shell (MINGW_PREFIX
+# Run from the repository root inside an MSYS2 UCRT64 shell (MINGW_PREFIX
 # set). Writes dist-runtime/, which the PyInstaller step adds to the bundle.
 # See packaging/windows/README.md for why each part is needed.
 set -euo pipefail
@@ -44,7 +44,7 @@ echo '*:winspell,hunspell' > "$enchant"/share/enchant-2/enchant.ordering
 # winspell: our thread-safe build of Enchant's Windows provider. MSYS2 ships
 # no enchant-provider.h, so take it from the matching Enchant release.
 build=$(mktemp -d)
-ver=$(pacman -Q mingw-w64-x86_64-enchant | cut -d' ' -f2 | cut -d- -f1)
+ver=$(pacman -Q mingw-w64-ucrt-x86_64-enchant | cut -d' ' -f2 | cut -d- -f1)
 curl -fsSL \
     "https://raw.githubusercontent.com/rrthomas/enchant/v$ver/lib/enchant-provider.h" \
     -o "$build"/enchant-provider.h
