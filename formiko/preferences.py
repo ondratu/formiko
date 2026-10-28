@@ -31,8 +31,8 @@ def set_tooltip(item: Gtk.CheckButton, enabled: bool, val: dict):
 class ActionableFileButton(Gtk.Button, Gtk.Actionable, ActionHelper):
     """Button that opens a file chooser dialog and supports actions."""
 
-    action_name = GObject.property(type=str)
-    action_target = GObject.property(type=GObject.TYPE_VARIANT)
+    action_name = GObject.Property(type=str)
+    action_target = GObject.Property(type=GObject.TYPE_VARIANT)
 
     def __init__(self, action_name=None, filename="", **kwargs):
         Gtk.Button.__init__(
