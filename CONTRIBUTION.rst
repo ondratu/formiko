@@ -113,6 +113,35 @@ tests.
 full suite, including GTK integration tests, requires the private Mutter
 headless compositor described above.
 
+**Beware, unsetting the variables is not enough locally.** On a desktop
+session GTK still finds the compositor's socket through
+``XDG_RUNTIME_DIR`` (``$XDG_RUNTIME_DIR/wayland-0``) and connects to it, so
+the command above can pass on a developer machine and still crash in CI,
+where there is no display at all. To reproduce CI, hide the socket too::
+
+    env -u DISPLAY -u WAYLAND_DISPLAY XDG_RUNTIME_DIR=$(mktemp -d) \
+        python3 -m pytest -m "not gtk_integration" -q
+
+Without a display, ``Gdk.Display.get_default()`` and
+``Gtk.Settings.get_default()`` return ``None`` and constructing a real
+widget can crash the interpreter with a segmentation fault instead of
+raising. A crash has no Python traceback in the CI log, only
+``Segmentation fault (core dumped)``; run with ``-v`` to see the test that
+was running, and note that pytest may lose the ``faulthandler`` output (see
+below). Typical offenders and what to do instead:
+
+* Do not build widgets such as ``Renderer`` (a ``Gtk.Overlay``) or
+  ``Adw.*`` windows and dialogs in a plain test. Borrow the method under
+  test from the class and call it on a ``types.SimpleNamespace`` adapter
+  (see ``tests/test_renderer_logic.py`` and
+  ``tests/test_renderer_scroll_sync.py``), or move the test to the
+  ``gtk_integration`` job. Objects that need no display, such as
+  ``Gtk.FileFilter``, ``Gio.ListStore``, ``GtkSource.Buffer``,
+  ``Gdk.RGBA`` and ``Adw.Application``, are fine.
+* Do not import ``formiko.__main__`` at module level in a test: it calls
+  ``faulthandler.enable()`` on import, which redirects the crash dump into
+  pytest's captured stderr, so a segfault leaves no trace in the log.
+
 Commits
 -------
 
