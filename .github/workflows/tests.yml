@@ -57,6 +57,7 @@ jobs:
             cmake \
             git \
             libcairo2-dev \
+            libpango1.0-dev \
             ninja-build \
             pybind11-dev \
             python3-cairo \
