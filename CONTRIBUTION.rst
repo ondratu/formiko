@@ -135,9 +135,14 @@ below). Typical offenders and what to do instead:
   test from the class and call it on a ``types.SimpleNamespace`` adapter
   (see ``tests/test_renderer_logic.py`` and
   ``tests/test_renderer_scroll_sync.py``), or move the test to the
-  ``gtk_integration`` job. Objects that need no display, such as
-  ``Gtk.FileFilter``, ``Gio.ListStore``, ``GtkSource.Buffer``,
-  ``Gdk.RGBA`` and ``Adw.Application``, are fine.
+  ``gtk_integration`` job. These objects have been observed to work
+  without a display: ``Gtk.FileFilter``, ``Gio.ListStore``,
+  ``GtkSource.Buffer``, ``Gdk.RGBA`` and ``Adw.Application``. That is
+  what the CI runs have shown so far, not a guarantee, so run the
+  ``XDG_RUNTIME_DIR`` command above before relying on anything else.
+* Keep the adapter for ``Renderer`` in one place,
+  ``tests/renderer_adapter.py``, rather than copying its private
+  attributes into each test.
 * Do not import ``formiko.__main__`` at module level in a test: it calls
   ``faulthandler.enable()`` on import, which redirects the crash dump into
   pytest's captured stderr, so a segfault leaves no trace in the log.
