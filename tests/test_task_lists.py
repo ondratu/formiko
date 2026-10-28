@@ -4,6 +4,7 @@ from io import StringIO
 
 import pytest
 from docutils.core import publish_parts
+from docutils.writers.html5_polyglot import Writer as Html5Writer
 
 from formiko.directives import Mark2Resturctured
 from formiko.task_lists import TASK_MARKERS, TASK_NAMES, TaskListRstParser
@@ -14,7 +15,7 @@ def render_rst(source, parser=None):
     return publish_parts(
         source=source,
         parser=(parser or TaskListRstParser)(),
-        writer="html5",
+        writer=Html5Writer(),
         settings_overrides={"warning_stream": StringIO()},
     )["fragment"]
 
