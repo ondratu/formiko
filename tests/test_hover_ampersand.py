@@ -20,7 +20,12 @@ with contextlib.suppress(ValueError):
 from gi.repository import GLib, Pango  # noqa: E402
 
 from formiko.browser import HoverTarget  # noqa: E402
-from formiko.renderer import Renderer  # noqa: E402
+from formiko.renderer import (  # noqa: E402
+    PARSERS,
+    WRITERS,
+    Renderer,
+    component_available,
+)
 
 URL = "https://wiki.debian.org/Page?action=diff&rev2=85&rev1=83"
 
@@ -73,10 +78,20 @@ def test_hover_label_with_other_markup_characters():
 
 def _render(parser, src):
     """Run the real Renderer.render_output for *parser* on *src*."""
-    renderer = Renderer(SimpleNamespace(running=False), parser=parser)
-    renderer.src = src
-    renderer.file_name = "doc.md"
-    ok, html, _mime = renderer.render_output()
+    # ``Renderer`` is a Gtk.Overlay, which cannot be built without a
+    # display (the constructor segfaults), so borrow its method instead.
+    adapter = SimpleNamespace(
+        src=src,
+        file_name="doc.md",
+        tab_width=8,
+        style="",
+        parser_instance=PARSERS[parser]["class"](),
+        writer_instance=WRITERS["html4"]["class"](),
+        _embed_stylesheet=Renderer._embed_stylesheet,
+    )
+    adapter._Renderer__parser = PARSERS[parser]
+    adapter._Renderer__writer = WRITERS["html4"]
+    ok, html, _mime = Renderer.render_output(adapter)
     assert ok, html
     return html
 
@@ -84,8 +99,8 @@ def _render(parser, src):
 @pytest.mark.parametrize("parser", ["m2r", "mistune"])
 def test_markdown_ampersand_in_link_is_escaped_in_html(parser):
     """The Markdown converters emit ``&amp;`` in the generated HTML."""
-    if parser == "mistune":
-        pytest.importorskip("mistune")
+    if not component_available(PARSERS[parser]):
+        pytest.skip(f"{parser} is an optional dependency")
     html = _render(parser, f"[diff]({URL})\n\n<{URL}>\n")
 
     assert "&rev2" not in html
