@@ -34,25 +34,25 @@ jobs:
       - name: Set up MSYS2
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           update: true
           install: >-
-            mingw-w64-x86_64-gtk4
-            mingw-w64-x86_64-libadwaita
-            mingw-w64-x86_64-gtksourceview5
-            mingw-w64-x86_64-python
-            mingw-w64-x86_64-python-gobject
-            mingw-w64-x86_64-python-pip
-            mingw-w64-x86_64-python-setuptools
-            mingw-w64-x86_64-gobject-introspection
-            mingw-w64-x86_64-cmake
-            mingw-w64-x86_64-toolchain
-            mingw-w64-x86_64-python-pillow
-            mingw-w64-x86_64-gsettings-desktop-schemas
-            mingw-w64-x86_64-libspelling
-            mingw-w64-x86_64-hunspell-en
-            mingw-w64-x86_64-adwaita-icon-theme
-            mingw-w64-x86_64-hicolor-icon-theme
+            mingw-w64-ucrt-x86_64-gtk4
+            mingw-w64-ucrt-x86_64-libadwaita
+            mingw-w64-ucrt-x86_64-gtksourceview5
+            mingw-w64-ucrt-x86_64-python
+            mingw-w64-ucrt-x86_64-python-gobject
+            mingw-w64-ucrt-x86_64-python-pip
+            mingw-w64-ucrt-x86_64-python-setuptools
+            mingw-w64-ucrt-x86_64-gobject-introspection
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-toolchain
+            mingw-w64-ucrt-x86_64-python-pillow
+            mingw-w64-ucrt-x86_64-gsettings-desktop-schemas
+            mingw-w64-ucrt-x86_64-libspelling
+            mingw-w64-ucrt-x86_64-hunspell-en
+            mingw-w64-ucrt-x86_64-adwaita-icon-theme
+            mingw-w64-ucrt-x86_64-hicolor-icon-theme
             git
 
       - name: Install Python dependencies
