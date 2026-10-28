@@ -46,6 +46,7 @@ jobs:
             mingw-w64-ucrt-x86_64-python-setuptools
             mingw-w64-ucrt-x86_64-gobject-introspection
             mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-pybind11
             mingw-w64-ucrt-x86_64-toolchain
             mingw-w64-ucrt-x86_64-python-pillow
             mingw-w64-ucrt-x86_64-gsettings-desktop-schemas
