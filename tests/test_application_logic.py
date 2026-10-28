@@ -1,7 +1,8 @@
 """Display-less tests for command line handling and entry points."""
 
 import contextlib
-from unittest.mock import Mock
+import faulthandler
+from unittest.mock import Mock, patch
 
 import gi
 import pytest
@@ -11,7 +12,10 @@ gi.require_version("GtkSource", "5")
 with contextlib.suppress(ValueError):
     gi.require_version("Spelling", "1")
 
-from formiko import __main__ as entry  # noqa: E402
+# Importing the module enables faulthandler, which would redirect crash
+# dumps into pytest's captured stderr and hide them from the CI log.
+with patch.object(faulthandler, "enable"):
+    from formiko import __main__ as entry
 from formiko import application  # noqa: E402
 from formiko.application import Application  # noqa: E402
 from formiko.editor import EditorType  # noqa: E402
