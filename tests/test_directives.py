@@ -6,7 +6,7 @@ import pytest
 from docutils.core import publish_string
 from docutils.writers import get_writer_class
 
-import formiko.directives  # noqa: F401 — registers custom directives
+import formiko.directives
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -292,3 +292,33 @@ class TestStandaloneMdInclude:
         out = render(rst, source(tmp_path))
         assert "Line 0" in out
         assert "Line 4" not in out
+
+
+def test_standalone_env_stub_provides_every_m2r2_config_option():
+    """The Sphinx stand-in has every ``m2r_*`` option m2r2 reads.
+
+    m2r2 reads its options from ``env.config``; a new m2r2 release that
+    reads one more breaks ``mdinclude`` with an ``AttributeError``. This
+    names the missing option instead of failing deep inside m2r2.
+    """
+    import re
+    from importlib.util import find_spec
+    from pathlib import Path
+
+    if find_spec("m2r2") is None:
+        pytest.skip("m2r2 is an optional dependency")
+    sphinx_dir = Path(find_spec("m2r2").origin).parent / "sphinx"
+    if not sphinx_dir.is_dir():
+        pytest.skip("this m2r2 has no Sphinx integration")
+
+    used = set()
+    for source in sphinx_dir.glob("*.py"):
+        used |= set(re.findall(
+            r"config\.(m2r_\w+|no_underscore_emphasis)",
+            source.read_text(encoding="utf-8"),
+        ))
+    missing = sorted(
+        name for name in used
+        if not hasattr(formiko.directives._M2RConfig, name)
+    )
+    assert not missing, f"_M2RConfig lacks m2r2 options: {missing}"
