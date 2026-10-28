@@ -33,10 +33,14 @@ try:
         m2r_parse_relative_links = False
         m2r_anonymous_references = False
         m2r_disable_inline_math = False
+        m2r_inline_math = "legacy"  # m2r2 >= 2.1, same as the old default
         m2r_use_mermaid = False
 
     class _M2REnv:
         config = _M2RConfig()
+
+        def note_included(self, filename):
+            """Ignore the Sphinx hook that m2r2 >= 2.1 calls on include."""
 
     class StandaloneMdInclude(MdInclude):
         """MdInclude with standalone docutils support.

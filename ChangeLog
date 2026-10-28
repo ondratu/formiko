@@ -3,6 +3,7 @@ Changelog
 
 Version 2.1.0.dev
 
+  * Fix the mdinclude directive failing with the newest m2r2 (2.1)
   * Add desktop actions to open documents in a new window or as new tabs
     in an existing window
   * Add a "Mistune Markdown" parser option: renders Markdown straight to
