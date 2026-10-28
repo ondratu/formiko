@@ -34,7 +34,9 @@ jobs:
       - name: Install optional Python dependencies
         run: |
           python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install '.[extra]'
+          # Not `.[extra]`: it lists docutils-htmlwriter, which is not on PyPI.
+          "$RUNNER_TEMP/venv/bin/pip" install \
+            pynvim m2r2 mistune Pygments docutils-tinyhtmlwriter
       - name: Run tests
         run: |
           env -u DISPLAY -u WAYLAND_DISPLAY \
@@ -72,7 +74,10 @@ jobs:
       - name: Build litehtmlpy
         run: |
           python3 -m venv --system-site-packages "$RUNNER_TEMP/venv"
-          "$RUNNER_TEMP/venv/bin/pip" install '.[extra,litehtml]'
+          # Not `.[extra]`: it lists docutils-htmlwriter, which is not on PyPI.
+          "$RUNNER_TEMP/venv/bin/pip" install \
+            pynvim m2r2 mistune Pygments docutils-tinyhtmlwriter
+          "$RUNNER_TEMP/venv/bin/pip" install '.[litehtml]'
       - name: Run tests
         run: |
           env -u DISPLAY -u WAYLAND_DISPLAY \
