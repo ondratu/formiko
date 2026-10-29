@@ -28,6 +28,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends --yes \
             python3-docutils \
+            python3-editorconfig \
             python3-gi \
             python3-jsonpath-ng \
             python3-pip \
@@ -80,6 +81,7 @@ jobs:
             dbus \
             mutter \
             python3-docutils \
+            python3-editorconfig \
             python3-gi \
             python3-jsonpath-ng \
             python3-pytest \

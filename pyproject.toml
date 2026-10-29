@@ -29,7 +29,7 @@ classifiers = [
     "Topic :: Text Processing :: Markup :: HTML",
     "Topic :: Utilities",
 ]
-dependencies = ["docutils>=0.18.1", "jsonpath-ng"]
+dependencies = ["docutils>=0.18.1", "jsonpath-ng", "editorconfig"]
 
 [project.optional-dependencies]
 extra = [
@@ -68,6 +68,10 @@ include = ["formiko*"]
 testpaths = ["tests"]
 markers = [
     "gtk_integration: tests that require a headless GTK display backend",
+]
+filterwarnings = [
+    # editorconfig-core-py 0.17 still uses codecs.open (deprecated in 3.14)
+    "ignore:codecs.open\\(\\) is deprecated:DeprecationWarning:editorconfig.ini",
 ]
 
 [tool.codespell]
