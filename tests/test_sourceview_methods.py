@@ -19,7 +19,9 @@ with contextlib.suppress(ValueError):
 from gi.repository import GtkSource  # noqa: E402
 
 from formiko import sourceview  # noqa: E402
+from formiko.editorconfig import EditorConfigSettings  # noqa: E402
 from formiko.sourceview import LANG_BY_EXT, SourceView  # noqa: E402
+from formiko.user import EditorPreferences  # noqa: E402
 
 GtkSource.init()
 
@@ -34,6 +36,10 @@ class _Adapter:
     get_selection_offsets = _SV.get_selection_offsets
     do_file_type = _SV.do_file_type
     read_from_file = _SV.read_from_file
+    apply_editorconfig = _SV.apply_editorconfig
+    refresh_editorconfig = _SV.refresh_editorconfig
+    reopen_with_encoding = _SV.reopen_with_encoding
+    set_spaces_instead_of_tabs = _SV.set_spaces_instead_of_tabs
     save_to_file = _SV.save_to_file
     save = _SV.save
     save_as = _SV.save_as
@@ -55,6 +61,9 @@ class _Adapter:
         )
         self.search_mark = None
         self.source_view = Mock()
+        self._editor_pref = EditorPreferences()
+        self.editorconfig = EditorConfigSettings()
+        self._file_info = None
         self._SourceView__file_name = ""
         self._SourceView__last_changes = 0
         self._SourceView__last_ctime = 0
@@ -194,7 +203,7 @@ def test_read_from_file_loads_text_and_resets_modified(tmp_path, idle):
     assert not sv.is_modified
     assert sv._SourceView__last_changes == 1
     assert sv._SourceView__last_ctime == path.stat().st_ctime
-    sv.emit.assert_called_once_with("file_type", ".rst")
+    sv.emit.assert_called_with("file_type", ".rst")
     assert idle
 
 
@@ -385,3 +394,174 @@ def test_external_change_ignore_remembers_ctime(monkeypatch):
     assert sv._SourceView__last_ctime == 99
     assert sv._SourceView__pause_period is False
     assert timers
+
+
+# --- EditorConfig -----------------------------------------------------
+
+def test_apply_editorconfig_sets_indentation_and_margin():
+    """Specified properties go to the view; the preferences stay untouched."""
+    sv = _Adapter()
+    sv.apply_editorconfig(
+        EditorConfigSettings(
+            indent_style="space",
+            indent_size=2,
+            tab_width=4,
+            max_line_length=72,
+        ),
+    )
+    view = sv.source_view
+    view.set_insert_spaces_instead_of_tabs.assert_called_with(True)
+    view.set_tab_width.assert_called_with(4)
+    view.set_indent_width.assert_called_with(2)
+    view.set_right_margin_position.assert_called_with(72)
+    sv.emit.assert_called_with("editorconfig-changed")
+    assert sv._editor_pref.tab_width == EditorPreferences.tab_width
+    assert sv._editor_pref.right_margin_value == (
+        EditorPreferences.right_margin_value
+    )
+
+
+def test_apply_editorconfig_falls_back_to_preferences():
+    """Unspecified properties use the user preferences."""
+    sv = _Adapter()
+    sv._editor_pref.spaces_instead_of_tabs = True
+    sv._editor_pref.tab_width = 3
+    sv._editor_pref.right_margin_value = 90
+    sv.apply_editorconfig(EditorConfigSettings())
+    view = sv.source_view
+    view.set_insert_spaces_instead_of_tabs.assert_called_with(True)
+    view.set_tab_width.assert_called_with(3)
+    view.set_indent_width.assert_called_with(-1)
+    view.set_right_margin_position.assert_called_with(90)
+
+
+def test_apply_editorconfig_indent_size_tab_follows_tab_width():
+    """``indent_size = tab`` lets the view use the tab width."""
+    sv = _Adapter()
+    sv.apply_editorconfig(
+        EditorConfigSettings(indent_style="tab", indent_size=-1),
+    )
+    sv.source_view.set_indent_width.assert_called_with(-1)
+    sv.source_view.set_insert_spaces_instead_of_tabs.assert_called_with(
+        False,
+    )
+
+
+def test_read_from_file_applies_editorconfig(tmp_path):
+    """Opening a file picks up the .editorconfig that applies to it."""
+    (tmp_path / ".editorconfig").write_text(
+        "root = true\n[*.rst]\nindent_size = 3\n",
+        encoding="utf-8",
+    )
+    doc = tmp_path / "a.rst"
+    doc.write_text("text\n", encoding="utf-8")
+    sv = _Adapter()
+    sv.read_from_file(str(doc))
+    sv.source_view.set_indent_width.assert_called_with(3)
+    sv.source_view.set_tab_width.assert_called_with(3)
+
+
+def _editorconfig_dir(tmp_path, section):
+    (tmp_path / ".editorconfig").write_text(
+        f"root = true\n[*.rst]\n{section}\n",
+        encoding="utf-8",
+    )
+    return tmp_path / "a.rst"
+
+
+def test_read_keeps_crlf_and_latin1_on_save(tmp_path):
+    """Without EditorConfig a save writes back the original format."""
+    doc = tmp_path / "a.rst"
+    doc.write_bytes("café\r\nx\r\n".encode("latin-1"))
+    sv = _Adapter()
+    sv.read_from_file(str(doc))
+    assert sv.text == "café\nx\n"
+    sv.save_to_file()
+    assert doc.read_bytes() == "café\r\nx\r\n".encode("latin-1")
+
+
+def test_save_applies_editorconfig(tmp_path):
+    """charset, end_of_line, trimming and final newline are applied on save."""
+    doc = _editorconfig_dir(
+        tmp_path,
+        "charset = utf-8-bom\nend_of_line = crlf\n"
+        "trim_trailing_whitespace = true\ninsert_final_newline = true",
+    )
+    doc.write_bytes(b"a  \nb")
+    sv = _Adapter()
+    sv.read_from_file(str(doc))
+    sv.save_to_file()
+    assert doc.read_bytes() == b"\xef\xbb\xbfa\r\nb\r\n"
+    # the editor buffer is left alone
+    assert sv.text == "a  \nb"
+
+
+def test_save_new_file_uses_editorconfig(tmp_path):
+    """A document opened as a new name still gets its EditorConfig."""
+    doc = _editorconfig_dir(tmp_path, "end_of_line = cr")
+    sv = _Adapter("x\ny\n")
+    sv.read_from_file(str(doc))
+    sv.text_buffer.set_text("x\ny\n")
+    sv.save_to_file()
+    assert doc.read_bytes() == b"x\ry\r"
+
+
+def test_editorconfig_can_be_disabled(tmp_path):
+    """With the preference off, .editorconfig is ignored."""
+    doc = _editorconfig_dir(tmp_path, "indent_size = 3\nend_of_line = cr")
+    doc.write_bytes(b"a\nb\n")
+    sv = _Adapter()
+    sv._editor_pref.use_editorconfig = False
+    sv.read_from_file(str(doc))
+    sv.source_view.set_indent_width.assert_called_with(-1)
+    sv.save_to_file()
+    assert doc.read_bytes() == b"a\nb\n"
+
+
+def test_refresh_editorconfig_follows_the_preference(tmp_path):
+    """Turning the preference on later applies the file's settings."""
+    doc = _editorconfig_dir(tmp_path, "indent_size = 3")
+    sv = _Adapter()
+    sv._editor_pref.use_editorconfig = False
+    sv.read_from_file(str(doc))
+    sv._editor_pref.use_editorconfig = True
+    sv.refresh_editorconfig()
+    sv.source_view.set_indent_width.assert_called_with(3)
+
+
+def test_save_with_unencodable_text_keeps_the_file(tmp_path):
+    """Failing to encode must not touch the original file."""
+    doc = tmp_path / "a.rst"
+    doc.write_bytes("café\n".encode("latin-1"))
+    sv = _Adapter()
+    sv.read_from_file(str(doc))
+    sv.text_buffer.set_text("příliš\n")
+    sv.save_to_file()
+    assert doc.read_bytes() == "café\n".encode("latin-1")
+    assert not (tmp_path / "a.rst~").exists()
+    assert sv.text_buffer.get_modified()
+
+
+def test_reopen_with_encoding_replaces_text_and_keeps_cursor(tmp_path):
+    """Choosing another encoding re-decodes the file and saves in it."""
+    doc = tmp_path / "a.rst"
+    raw = "příliš\n".encode("cp1250")
+    doc.write_bytes(raw)
+    sv = _Adapter()
+    sv.read_from_file(str(doc))
+    assert sv._file_info.guessed
+    sv.text_buffer.place_cursor(sv.text_buffer.get_iter_at_offset(3))
+    assert sv.reopen_with_encoding(raw, "cp1250")
+    assert sv.text == "příliš\n"
+    assert sv.cursor_offset() == 3
+    assert not sv.text_buffer.get_modified()
+    sv.text_buffer.set_text("žluťoučký\n")
+    sv.save_to_file()
+    assert doc.read_bytes() == "žluťoučký\n".encode("cp1250")
+
+
+def test_reopen_with_unfit_encoding_changes_nothing():
+    """Bytes that don't fit the encoding leave the text alone."""
+    sv = _Adapter("old")
+    assert not sv.reopen_with_encoding(b"\x81", "cp1250")
+    assert sv.text == "old"

@@ -24,12 +24,14 @@ from gi.repository.GtkSource import (
 
 from formiko.dialogs import (
     LANG_BY_EXT,
+    EncodingDialog,
     FileChangedDialog,
     TraceBackDialog,
     build_save_filters,
     run_alert_dialog,
     save_file_dialog,
 )
+from formiko.editorconfig import EditorConfigSettings, resolve
 from formiko.format_utils import (
     compute_toggle_bullet,
     compute_toggle_format,
@@ -37,6 +39,13 @@ from formiko.format_utils import (
     compute_toggle_line_format,
     compute_toggle_ordered,
     compute_toggle_rst_header,
+)
+from formiko.textfile import (
+    ENCODING_CHOICES,
+    decode_as,
+    decode_text,
+    prepare_text,
+    save_parameters,
 )
 from formiko.widgets import ActionHelper, ImutableDict, ScrollDriftGuard
 
@@ -78,12 +87,16 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     __last_changes = 0
     __last_ctime = 0
     __pause_period = False
+    editorconfig = EditorConfigSettings()
+    _file_info = None  # TextFile of the last read file: encoding, newline
 
     __gsignals__ = ImutableDict(
         {
             "file-type": (GObject.SignalFlags.RUN_FIRST, None, (str,)),
             "scroll-changed": (GObject.SignalFlags.RUN_LAST, None, (float,)),
             "file-saved": (GObject.SignalFlags.RUN_FIRST, None, ()),
+            # Emitted after the EditorConfig settings of the file are applied.
+            "editorconfig-changed": (GObject.SignalFlags.RUN_FIRST, None, ()),
         },
     )
 
@@ -169,6 +182,8 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
             )
 
         editor_pref = preferences.editor
+        self._editor_pref = editor_pref
+        self.editorconfig = EditorConfigSettings()
         self.set_period_save(editor_pref.period_save)
         self.set_check_spelling(
             editor_pref.check_spelling,
@@ -435,6 +450,44 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         else:
             self.spell_adapter.set_enabled(False)
 
+    @property
+    def tab_width(self):
+        """Effective tab width of this document."""
+        return self.source_view.get_tab_width()
+
+    @property
+    def spaces_instead_of_tabs(self):
+        """Whether this document indents with spaces."""
+        return self.source_view.get_insert_spaces_instead_of_tabs()
+
+    def refresh_editorconfig(self):
+        """Apply the EditorConfig of the current file, if it is enabled."""
+        enabled = self._editor_pref.use_editorconfig
+        self.apply_editorconfig(
+            resolve(self.__file_name) if enabled else EditorConfigSettings(),
+        )
+
+    def apply_editorconfig(self, settings):
+        """Apply EditorConfig *settings* to this document only.
+
+        Properties the file doesn't specify fall back to the user
+        preferences. Nothing is written to the preferences.
+        """
+        pref = self._editor_pref
+        self.editorconfig = settings
+        self.set_spaces_instead_of_tabs(
+            pref.spaces_instead_of_tabs
+            if settings.indent_style is None
+            else settings.indent_style == "space",
+        )
+        self.source_view.set_tab_width(settings.tab_width or pref.tab_width)
+        # INDENT_SIZE_TAB (-1) and "not set" both mean "use the tab width"
+        self.source_view.set_indent_width(settings.indent_size or -1)
+        self.source_view.set_right_margin_position(
+            settings.max_line_length or pref.right_margin_value,
+        )
+        self.emit("editorconfig-changed")
+
     def set_spaces_instead_of_tabs(self, use_spaces):
         """Set spaces instead of tabs."""
         self.source_view.set_insert_spaces_instead_of_tabs(use_spaces)
@@ -506,19 +559,68 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def read_from_file(self, file_name, offset=0):
         """Read file and set all states."""
         self.__file_name = file_name
+        self._file_info = None
+        self.refresh_editorconfig()
         self.emit("file_type", self.file_ext)
 
         if isfile(file_name):
-            with open(file_name, encoding="utf-8") as src:
-                self.text_buffer.set_text(src.read())
-                self.__last_changes += 1
+            with open(file_name, "rb") as src:
+                raw = src.read()
                 self.__last_ctime = fstat(src.fileno()).st_ctime
+            self._file_info = decode_text(raw, self.editorconfig.charset)
+            self.text_buffer.set_text(self._file_info.text)
+            self.__last_changes += 1
+            if self._file_info.guessed and self.__win:
+                timeout_add(200, self._ask_encoding, raw, self._file_info)
 
         self.text_buffer.set_modified(False)
         if offset > -1:
             cursor = self.text_buffer.get_iter_at_offset(offset)
             self.text_buffer.place_cursor(cursor)
             idle_add(self.scroll_to_cursor, cursor)
+
+    def _ask_encoding(self, raw, info):
+        """Offer other encodings for a file that is not valid UTF-8.
+
+        Called from GLib.timeout_add; returns True to wait until the
+        window is shown.
+        """
+        if not self.__win.get_realized():
+            return True
+        if self._file_info is info:  # not reloaded in the meantime
+            dialog = EncodingDialog(self.file_name, ENCODING_CHOICES)
+            dialog.connect("response", self._on_encoding_response, raw, info)
+            dialog.present(self.__win)
+        return False
+
+    def _on_encoding_response(self, dialog, response, raw, info):
+        """Reopen the file text in the encoding chosen in the dialog."""
+        if response == "ok" and self._file_info is info:
+            codec = dialog.selected_codec
+            if not self.reopen_with_encoding(raw, codec):
+                stderr.write(f"{self.file_name} can't be read as {codec}\n")
+                self._ask_encoding(raw, info)  # ask again
+
+    def reopen_with_encoding(self, raw, codec):
+        """Replace the text with *raw* decoded as *codec*, keep the cursor.
+
+        Returns False and changes nothing if *raw* doesn't fit *codec*.
+        """
+        info = decode_as(raw, codec)
+        if not info:
+            return False
+        cursor = self.text_buffer.get_insert()
+        offset = self.text_buffer.get_iter_at_mark(cursor).get_offset()
+        self._file_info = info
+        self.text_buffer.set_text(info.text)
+        self.text_buffer.set_modified(False)
+        self.__last_changes += 1
+        self.text_buffer.place_cursor(
+            self.text_buffer.get_iter_at_offset(
+                min(offset, self.text_buffer.get_char_count()),
+            ),
+        )
+        return True
 
     def scroll_to_cursor(self, cursor):
         """Scroll so that the cursor is at the top of the view.
@@ -538,10 +640,23 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
     def save_to_file(self):
         """Save text to file."""
         try:
+            encoding, newline = save_parameters(
+                self.editorconfig,
+                self._file_info,
+            )
+            text = prepare_text(self.text, self.editorconfig)
+            # Fail before the original is renamed and truncated when the
+            # text has characters the encoding can't hold.
+            text.encode(encoding)
             if exists(self.__file_name):
                 rename(self.__file_name, self.__file_name + "~")
-            with open(self.__file_name, "w", encoding="utf-8") as src:
-                src.write(self.text)
+            with open(
+                self.__file_name,
+                "w",
+                encoding=encoding,
+                newline=newline,
+            ) as src:
+                src.write(text)
                 src.flush()
                 self.__last_ctime = fstat(src.fileno()).st_ctime
             self.text_buffer.set_modified(False)
@@ -569,6 +684,7 @@ class SourceView(Gtk.ScrolledWindow, ActionHelper):
         """Apply new file name and save."""
         if file_name:
             self.__file_name = file_name
+            self.refresh_editorconfig()
             self.emit("file_type", self.file_ext)
             self.save_to_file()
 

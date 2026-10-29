@@ -35,6 +35,12 @@ class EditorActionGroup(SimpleActionGroup):
             self.on_tab_indent_bullet,
         )
 
+        self.create_toggle_action(
+            "use-editorconfig-toggle",
+            self.editor_pref.use_editorconfig,
+            self.on_use_editorconfig,
+        )
+
         action = SimpleAction.new("spell-lang", VariantType("s"))
         action.connect("activate", self.on_spell_lang)
         self.add_action(action)
@@ -142,28 +148,63 @@ class EditorActionGroup(SimpleActionGroup):
         self.editor.set_tab_indent_bullet(tab_indent_bullet)
         self.preferences.save()
 
+    def on_use_editorconfig(self, action, _):
+        """Save EditorConfig usage preferences and apply it to the file."""
+        use_editorconfig = not action.get_state().get_boolean()
+        action.set_state(Variant("b", use_editorconfig))
+        self.editor_pref.use_editorconfig = use_editorconfig
+        self.editor.refresh_editorconfig()
+        self.preferences.save()
+
     def on_spell_lang(self, _, param):
         """Save right spell lang preferences."""
         self.editor_pref.spell_lang = param.get_string()
         self.preferences.save()
 
+    def sync_with_editor(self):
+        """Show the settings the editor really uses (e.g. from EditorConfig).
+
+        Only the action state changes; nothing is saved to preferences.
+        """
+        editor = self.editor
+        self.lookup_action("use-spaces-toggle").set_state(
+            Variant("b", editor.spaces_instead_of_tabs),
+        )
+        self.lookup_action("tab-width").set_state(
+            Variant("i", editor.tab_width),
+        )
+        self.lookup_action("right-margin-value").set_state(
+            Variant(
+                "d",
+                float(editor.source_view.get_right_margin_position()),
+            ),
+        )
+
     def on_use_spaces(self, action, _):
-        """Save space vs tabs preferences."""
+        """Save space vs tabs preferences.
+
+        A document with ``indent_style`` from EditorConfig changes only itself.
+        """
         use_spaces = not action.get_state().get_boolean()
         action.set_state(Variant("b", use_spaces))
-        self.editor_pref.spaces_instead_of_tabs = use_spaces
         self.editor.set_spaces_instead_of_tabs(use_spaces)
-        self.preferences.save()
+        if self.editor.editorconfig.indent_style is None:
+            self.editor_pref.spaces_instead_of_tabs = use_spaces
+            self.preferences.save()
 
     def on_tab_width(self, action, param):
-        """Save tab width preferences."""
+        """Save tab width preferences.
+
+        A document with a tab width from EditorConfig changes only itself.
+        """
         width = param.get_int32()
-        if width != self.editor_pref.tab_width:
+        if width != self.editor.tab_width:
             action.set_state(Variant("i", width))
-            self.editor_pref.tab_width = width
             self.editor.source_view.set_tab_width(width)
             self.renderer.set_tab_width(width)
-            self.preferences.save()
+            if self.editor.editorconfig.tab_width is None:
+                self.editor_pref.tab_width = width
+                self.preferences.save()
 
     def on_auto_indent(self, action, _):
         """Save auto indent preferences."""
@@ -192,9 +233,10 @@ class EditorActionGroup(SimpleActionGroup):
     def on_right_margin_value(self, _, param):
         """Save right margin value preferences."""
         margin_value = int(param.get_double())
-        self.editor_pref.right_margin_value = margin_value
         self.editor.source_view.set_right_margin_position(margin_value)
-        self.preferences.save()
+        if self.editor.editorconfig.max_line_length is None:
+            self.editor_pref.right_margin_value = margin_value
+            self.preferences.save()
 
     def on_current_line(self, action, _):
         """Save highlighting current file preferences."""

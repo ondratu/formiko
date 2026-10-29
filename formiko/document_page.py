@@ -115,7 +115,6 @@ class DocumentPage(Gtk.Box):
                 self.editor,
                 self.renderer,
                 initial_parser,
-                self.preferences,
             )
             self.editor.set_list_features_enabled(
                 initial_parser in ("rst", "md", "m2r", "mistune"),
@@ -128,6 +127,9 @@ class DocumentPage(Gtk.Box):
                 "modified-changed", self._on_modified_changed,
             )
             self.editor.connect("file-saved", self._on_file_saved)
+            self.editor.connect(
+                "editorconfig-changed", self._on_editorconfig_changed,
+            )
 
         if file_name:
             self.editor.read_from_file(file_name)
@@ -197,6 +199,11 @@ class DocumentPage(Gtk.Box):
         self.emit("doc-state-changed")
         if self.editor_type == EditorType.SOURCE:
             self._window.wakatime.heartbeat(self.file_path, parser)
+
+    def _on_editorconfig_changed(self, _editor):
+        self.renderer.set_tab_width(self.editor.tab_width)
+        self.editor_actions.sync_with_editor()
+        self.emit("doc-state-changed")
 
     def _on_modified_changed(self, _buf):
         self.emit("doc-state-changed")

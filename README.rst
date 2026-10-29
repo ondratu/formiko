@@ -19,6 +19,7 @@ Features:
 * json and html preview
 * spell check
 * linked file opening
+* `EditorConfig <https://editorconfig.org/>`__ support
 
 It supports these parsers and writers:
 
@@ -28,6 +29,26 @@ It supports these parsers and writers:
 * Docutils HTML4, HTML5, S5/HTML slide show and PEP HTML writer -
   http://docutils.sourceforge.net
 * Tiny HTML writer - https://github.com/ondratu/docutils-tinyhtmlwriter
+
+EditorConfig
+~~~~~~~~~~~~
+Formiko reads the ``.editorconfig`` files that apply to the opened file. The
+settings are used for that document only and are never written to the user
+preferences. They can be turned off with *Use .editorconfig* in the status bar
+Editor menu.
+
+* ``indent_style``, ``indent_size``, ``tab_width`` - indentation
+* ``max_line_length`` - position of the right margin
+* ``charset`` - encoding of the file (``latin1``, ``utf-8``, ``utf-8-bom``,
+  ``utf-16be``, ``utf-16le``)
+* ``end_of_line`` - line endings (``lf``, ``cr``, ``crlf``)
+* ``trim_trailing_whitespace``, ``insert_final_newline`` - applied when the
+  file is saved
+
+Without ``charset`` and ``end_of_line`` a file keeps the encoding and line
+endings it was opened with. Be careful with ``trim_trailing_whitespace`` in
+MarkDown: two trailing spaces are a line break there, so use
+``trim_trailing_whitespace = false`` in a ``[*.md]`` section.
 
 Custom directives
 ~~~~~~~~~~~~~~~~~
@@ -202,6 +223,7 @@ Requirements:
 * vte - neovim support
 * docutils - reStructuredText support
 * jsonpath-ng - JSON Search path support
+* editorconfig - EditorConfig support (editorconfig-core-py)
 
 recommended:
 ~~~~~~~~~~~~
@@ -249,8 +271,8 @@ gtksource or webkit2 may have a different version name.
 
     # python3, gtk4 etc are in dependencies
     apt install python3-pip python3-gi python3-docutils python3-jsonpath-ng \
-                python3-pygments gir1.2-gtksource-5 gir1.2-webkit-6.0 \
-                gir1.2-spelling-1 gir1.2-adw
+                python3-editorconfig python3-pygments gir1.2-gtksource-5 \
+                gir1.2-webkit-6.0 gir1.2-spelling-1 gir1.2-adw
 
     pip3 install formiko --break-system-packages
 
@@ -277,7 +299,7 @@ pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
     # python3.13 is in dependencies, as is gtk4
     pkgin install py313-pip py313-gobject3 py313-docutils gtksourceview5 \
                   libadwaita librsvg webkit-gtk
-    pip3.6 install jsonpath-ng formiko
+    pip3.6 install jsonpath-ng editorconfig formiko
 
     # optionally
     pkgin install neovim pynvim

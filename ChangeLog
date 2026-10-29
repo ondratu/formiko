@@ -31,6 +31,12 @@ Version 2.1.0.dev
   * Fix GTK warning "Entity did not end with a semicolon" when hovering a
     link, image or media URL containing "&" (and escape "<", ">" and
     quotes too) in the preview's address label (Debian bug #933622)
+  * Support EditorConfig (https://editorconfig.org/): indentation, right
+    margin, encoding, line endings, trailing whitespace trimming and the final
+    newline are taken from the .editorconfig of the opened file. It applies to
+    that document only and can be turned off in the status bar Editor menu
+  * Keep the encoding and line endings of a file when saving it, and ask which
+    encoding to use for a file that is not valid UTF-8
 
 Version 2.0.0
 

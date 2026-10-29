@@ -150,6 +150,7 @@ def test_preferences_round_trip(isolated_dirs):
     prefs.editor.tab_width = 3
     prefs.editor.line_numbers = False
     prefs.editor.spell_lang = "cs"
+    prefs.editor.use_editorconfig = False
     prefs.save()
     assert (config / "formiko.ini").exists()
 
@@ -166,6 +167,7 @@ def test_preferences_round_trip(isolated_dirs):
     assert loaded.editor.tab_width == 3
     assert loaded.editor.line_numbers is False
     assert loaded.editor.spell_lang == "cs"
+    assert loaded.editor.use_editorconfig is False
 
 
 def test_save_creates_missing_config_directory(isolated_dirs, monkeypatch):
@@ -199,6 +201,7 @@ def test_editor_preferences_defaults():
     """EditorPreferences exposes its documented defaults."""
     editor = EditorPreferences()
     assert editor.tab_width == 8
+    assert editor.use_editorconfig is True
     assert editor.right_margin_value == 80
 
 
