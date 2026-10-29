@@ -71,8 +71,8 @@ class VimEditor(Vte.Terminal):
                 GLib.SpawnFlags.DEFAULT,
             )
         except GLib.Error as error:
-            dialog = TraceBackDialog(self.__win, str(error))
-            dialog.present()
+            dialog = TraceBackDialog(str(error))
+            dialog.present(self.__win)
             return
 
         while not exists(self._uuid):

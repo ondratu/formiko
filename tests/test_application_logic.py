@@ -231,12 +231,6 @@ def test_sigint_handler_exits_with_error():
     assert info.value.code == 1
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=TypeError,
-    reason="on_traceback() passes (window, text) but TraceBackDialog "
-    "only accepts the traceback text",
-)
 def test_on_traceback_shows_dialog(monkeypatch):
     """The traceback action presents a dialog with the given text."""
     dialog = Mock()
@@ -247,6 +241,7 @@ def test_on_traceback_shows_dialog(monkeypatch):
 
     monkeypatch.setattr(application, "TraceBackDialog", real_signature)
     obj = Application()
-    obj.get_active_window = Mock(return_value=None)
+    window = Mock()
+    obj.get_active_window = Mock(return_value=window)
     obj.on_traceback(None, Mock(**{"get_string.return_value": "tb"}))
-    dialog.present.assert_called_once_with()
+    dialog.present.assert_called_once_with(window)
