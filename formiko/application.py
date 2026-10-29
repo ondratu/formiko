@@ -216,8 +216,8 @@ class Application(Adw.Application):
 
     def on_traceback(self, action, param):
         """'traceback' action handler."""
-        dialog = TraceBackDialog(self.get_active_window(), param.get_string())
-        dialog.present()
+        dialog = TraceBackDialog(param.get_string())
+        dialog.present(self.get_active_window())
 
     def show_missing_dependency(self, dependency):
         """Show a user-facing error for a missing optional dependency."""
