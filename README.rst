@@ -316,11 +316,11 @@ On FreeBSD you must install all these packages:
 
 .. code:: sh
 
-    pkg install py311-pygobject py311-docutils py311-pygments py311-pip \
-        gtksourceview5 webkit2-gtk_60 libspelling py311-jsonpath-ng \
+    pkg install py312-pygobject py312-docutils py312-pygments py312-pip \
+        gtksourceview5 webkit2-gtk_60 libspelling py312-jsonpath-ng \
         libadwaita
 
-    pip-3.11 install formiko
+    pip-3.12 install formiko
 
 
 
@@ -329,10 +329,10 @@ On FreeBSD you must install all these packages:
 .. code:: sh
 
     # MarkDown, and tiny writer support
-    pip-3.11 install m2r2 docutils-tinyhtmlwriter
+    pip-3.12 install m2r2 docutils-tinyhtmlwriter
 
     # languages
     pkg install en-hunspell  # or other language you want
 
     # neovim
-    pkg install vte3 neovim py311-pynvim py311-typing-extensions
+    pkg install vte3 neovim py312-pynvim py312-typing-extensions
