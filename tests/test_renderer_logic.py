@@ -52,11 +52,6 @@ def test_render_output_rst():
     assert "Title" in html
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="render_output() builds the NOT_FOUND page but then falls "
-    "through and returns the raw source instead",
-)
 def test_render_output_missing_parser():
     """A missing parser renders the "not found" page."""
     ns = make_render_adapter()
@@ -67,11 +62,6 @@ def test_render_output_missing_parser():
     assert mime == "text/html"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="render_output() builds the NOT_FOUND page but then falls "
-    "through and returns the raw source instead",
-)
 def test_render_output_missing_writer():
     """A missing writer renders the "not found" page."""
     ns = make_render_adapter()

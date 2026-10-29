@@ -539,21 +539,29 @@ class Renderer(Overlay):
             return False, "", "text/plain"
         try:
             if self.__parser["class"] is None:
-                html = NOT_FOUND.format(**self.__parser)
-            elif self.__writer["class"] is None:
-                html = NOT_FOUND.format(**self.__writer)
-            elif issubclass(self.__parser["class"], JSONPreview):
+                return (
+                    False,
+                    NOT_FOUND.format(**self.__parser),
+                    "text/html",
+                )
+            if self.__writer["class"] is None:
+                return (
+                    False,
+                    NOT_FOUND.format(**self.__writer),
+                    "text/html",
+                )
+            if issubclass(self.__parser["class"], JSONPreview):
                 try:
                     parser = self.parser_instance
                     html = parser.to_html(self.src, self.tab_width)
                 except (ValueError, TypeError) as e:
                     return False, DATA_ERROR % ("JSON", str(e)), "text/html"
                 return True, html, "text/html"
-            elif issubclass(self.__parser["class"], MistunePreview):
+            if issubclass(self.__parser["class"], MistunePreview):
                 html = self.parser_instance.to_html(self.src, self.tab_width)
                 html = self._embed_stylesheet(html, self.style)
                 return True, html, "text/html"
-            elif not issubclass(self.__parser["class"], HtmlPreview):
+            if not issubclass(self.__parser["class"], HtmlPreview):
                 settings = _docutils_settings(
                     self.tab_width,
                     self.file_name,
