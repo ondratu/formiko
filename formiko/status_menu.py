@@ -265,6 +265,13 @@ class Statusbar(Gtk.Box):
 
         return pop
 
+    def set_tab_width(self, width, from_editorconfig=False):
+        """Show the tab width of the active document."""
+        self.width_btn.set_label(f"Tabulator width {width}")
+        self.width_btn.set_tooltip_text(
+            "Set by .editorconfig" if from_editorconfig else None,
+        )
+
     def on_tab_spaces(self, widget):
         """Set label when radio buttons was toggled."""
         if widget.get_active():
@@ -305,6 +312,12 @@ class Statusbar(Gtk.Box):
             action_name="editor.tab-indent-bullet-toggle",
         )
         box.append(tab_indent_btn)
+
+        editorconfig_btn = Gtk.CheckButton(
+            label="Use .editorconfig",
+            action_name="editor.use-editorconfig-toggle",
+        )
+        box.append(editorconfig_btn)
 
         return pop
 

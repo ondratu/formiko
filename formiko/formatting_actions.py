@@ -91,11 +91,11 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
 
     # ------------------------------------------------------------------ block
     # Block markup values may be a plain ``(before, after)`` tuple or a
-    # callable ``(editor_pref) -> (before, after)`` for formats whose markers
+    # callable ``(editor) -> (before, after)`` for formats whose markers
     # depend on editor settings (e.g. RST indentation).
     _MARKUP_BLOCKQUOTE: ClassVar = {
-        "rst": lambda pref: (
-            " " * pref.tab_width if pref.spaces_instead_of_tabs else "\t",
+        "rst": lambda editor: (
+            " " * editor.tab_width if editor.spaces_instead_of_tabs else "\t",
             "",
         ),
         "md": ("> ", ""),
@@ -112,20 +112,17 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
         ),
     )
 
-    def __init__(self, editor, renderer, parser, preferences):
+    def __init__(self, editor, renderer, parser):
         """Create all formatting actions.
 
         :param editor: The :class:`~formiko.sourceview.SourceView` instance.
         :param renderer: The :class:`~formiko.renderer.Renderer` instance used
             to query the active parser via ``renderer.get_parser()``.
         :param parser: The initial parser name (used to set enabled state).
-        :param preferences: The :class:`~formiko.user.UserPreferences` object;
-            its ``.editor`` attribute is consulted for RST indent settings.
         """
         super().__init__()
         self._editor = editor
         self._renderer = renderer
-        self._editor_pref = preferences.editor
 
         is_markup = parser in FORMATTING_PARSERS
         self._actions: dict[str, Gio.SimpleAction] = {}
@@ -291,7 +288,7 @@ class FormattingActionGroup(Gio.SimpleActionGroup):
             fmt = _format_key(parser)
             markup = markup_dict[fmt]
             if callable(markup):
-                before, after = markup(self._editor_pref)
+                before, after = markup(self._editor)
             else:
                 before, after = markup
             if fmt == "rst":

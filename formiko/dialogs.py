@@ -246,6 +246,7 @@ def _build_debug_info(prefs=None):
             f"  white_chars:          {e.white_chars}",
             f"  auto_bullet:          {e.auto_bullet}",
             f"  tab_indent_bullet:    {e.tab_indent_bullet}",
+            f"  use_editorconfig:     {e.use_editorconfig}",
         ]
     return "\n".join(lines)
 
@@ -354,6 +355,31 @@ class FileChangedDialog(Adw.AlertDialog):
         self.add_response("yes", "Reload")
         self.set_default_response("yes")
         self.set_close_response("no")
+
+
+class EncodingDialog(Adw.AlertDialog):
+    """Ask which encoding to read a file that is not valid UTF-8 with."""
+
+    def __init__(self, file_name, choices):
+        super().__init__(
+            heading="Unknown file encoding",
+            body=f"Document `{file_name}` is not valid UTF-8.\n"
+            "Choose the encoding to read it with.",
+        )
+        self._codecs = [codec for codec, _ in choices]
+        self._drop_down = Gtk.DropDown.new_from_strings(
+            [label for _, label in choices],
+        )
+        self.set_extra_child(self._drop_down)
+        self.add_response("keep", "Keep as is")
+        self.add_response("ok", "Reopen")
+        self.set_default_response("ok")
+        self.set_close_response("keep")
+
+    @property
+    def selected_codec(self):
+        """Python codec name of the selected encoding."""
+        return self._codecs[self._drop_down.get_selected()]
 
 
 def open_file_dialog(

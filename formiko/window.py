@@ -917,6 +917,10 @@ class AppWindow(Adw.ApplicationWindow):
         ):
             self.status_bar.set_words_count(doc.words_count)
             self.status_bar.set_chars_count(doc.chars_count)
+            self.status_bar.set_tab_width(
+                doc.editor.tab_width,
+                doc.editor.editorconfig.tab_width is not None,
+            )
             self._apply_pygments_ui(doc.parser)
 
     def _on_doc_state_changed(self, doc):
