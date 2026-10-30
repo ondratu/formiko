@@ -218,9 +218,7 @@ Requirements:
 * PyGObject
 * WebKitGTK 6.x
 * GtkSourceView 5.x
-* libspelling 1.x
 * gir files for all Gtk libraries
-* vte - neovim support
 * docutils - reStructuredText support
 * jsonpath-ng - JSON Search path support
 * editorconfig - EditorConfig support (editorconfig-core-py)
@@ -229,6 +227,7 @@ recommended:
 ~~~~~~~~~~~~
 * m2r2 - converting MarkDown to reStructuredText
 * Pygments - syntax color in html output code blocks
+* libspelling 1.x - spell checking
 * docutils-tinyhtmlwriter - Tiny HTML Writer
 
 **formiko-vim**:
@@ -267,43 +266,70 @@ Debian-based distributions sometimes use versions in package names. Here is an
 example for the Debian Forky version. If you use a different version, your
 gtksource or webkit2 may have a different version name.
 
+On Debian based distributions you must install all these packages:
+
 .. code:: sh
 
     # python3, gtk4 etc are in dependencies
     apt install python3-pip python3-gi python3-docutils python3-jsonpath-ng \
-                python3-editorconfig python3-pygments gir1.2-gtksource-5 \
-                gir1.2-webkit-6.0 gir1.2-spelling-1 gir1.2-adw
+                python3-editorconfig gir1.2-gtksource-5 gir1.2-webkit-6.0 \
+                gir1.2-adw
 
     pip3 install formiko --break-system-packages
 
+**Optionally**
+
+.. code:: sh
+
+    # syntax highlighting in code blocks
+    apt install python3-pygments
+
+    # spell checking
+    apt install gir1.2-spelling-1
+
     # languages
     apt install hunspell-en-us  # or other language you want
+
+    # MarkDown, and tiny writer support
+    pip3 install m2r2 docutils-tinyhtmlwriter --break-system-packages
 
     # neovim
     apt install gir1.2-vte-3.91 neovim python3-pynvim
 
 NetBSD
 ~~~~~~
-**Broken at this moment - the WebKit with GTK4 and the libspelling packages are not available at this moment**
-
-Installation process can be different for each BSD releases. It's about which
+Installation process can be different for each NetBSD releases. It's about which
 Python release is default. By this, you can change ``py313`` to your right
 version.
 
-NetBSD use pkgsrc, so some binaries are stored in ``/usr/pkg/bin`` directory.
-Formiko call neovim directly. If you want to use neovim version with
-pkgsrc, you must fix ``VIM_PATH`` variable in ``formiko/vim.py`` file.
+On NetBSD you must install all these packages:
 
 .. code:: sh
 
     # python3.13 is in dependencies, as is gtk4
     pkgin install py313-pip py313-gobject3 py313-docutils gtksourceview5 \
-                  libadwaita librsvg webkit-gtk
-    pip3.6 install jsonpath-ng editorconfig formiko
+                  libadwaita librsvg webkit-gtk60 adwaita-icon-theme
 
-    # optionally
-    pkgin install neovim pynvim
-    pip3.6 install m2r2 docutils-tinyhtmlwriter
+    pip3.13 install jsonpath-ng editorconfig formiko
+
+**Optionally**
+
+.. code:: sh
+
+    # syntax highlighting in code blocks
+    pkgin install py313-pygments
+
+    # spell checking
+    pkgin install libspelling
+
+    # languages
+    pkgin install en-hunspell  # or other language you want
+
+    # MarkDown, and tiny writer support
+    pip3.13 install m2r2 docutils-tinyhtmlwriter
+
+.. note:: ``formiko-vim`` is not available on NetBSD, because ``vte`` with GTK4
+          support is not available in pkgsrc, so neovim cannot be embedded.
 
 FreeBSD
 ~~~~~~~
