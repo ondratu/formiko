@@ -47,6 +47,16 @@ def icons_data():
                 [f"icons/{size}x{size}/formiko.png"],
             ),
         )
+    # toolbar icons missing from the stock Adwaita theme
+    icons.append(
+        (
+            f"{_path}/scalable/actions",
+            [
+                f"icons/symbolic/{name}"
+                for name in sorted(listdir("icons/symbolic"))
+            ],
+        ),
+    )
     return icons
 
 

@@ -37,6 +37,8 @@ Version 2.1.0.dev
     that document only and can be turned off in the status bar Editor menu
   * Keep the encoding and line endings of a file when saving it, and ask which
     encoding to use for a file that is not valid UTF-8
+  * Fix missing toolbar icons for inline code, blockquote and header level
+    when installed with pip
 
 Version 2.0.0
 
